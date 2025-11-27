@@ -1,0 +1,37 @@
+Starting Full System Verification...
+
+[1] System Health Check
+   Connecting to 192.168.1.51...
+   [OK] Connection Successful
+   [OK] All Required Tables Exist
+
+[2] Payroll Logic Verification
+   Mock Salary: 30,000.00
+   Expected Daily Rate: 1,000.00
+   Expected Hourly Rate: 125.00
+   Scenario: Absent 1 day, Late 2 hours
+   Expected Deduction: 1,250.00
+   [OK] Formula Verified (Logic matches standard HR practices)
+
+[2.5] OT Calculation Verification
+   Mock Salary: 12,000.00
+   Hourly Rate: 50.00
+   OT Rate (1.5x): 75.00
+   Scan Out: 19:00:00 (Standard: 17:00:00)
+   OT Duration: 2.00 hours (120.0 mins)
+   Expected OT Pay: 150.00 THB
+   [OK] OT Calculation Logic Correct (2 hrs * 75 = 150)
+
+[3] Tax Calculation Verification
+   Test Monthly Salary: 50,000.00
+   Annual Income: 600,000.00
+   Expected Annual Tax: 20,600.00
+   Expected Monthly Tax: 1,716.67
+   [OK] Tax Logic seems reasonable (Progressive rate applied)
+
+[4] PDF Generation Test
+   [OK] Font Found
+   [OK] PDF Created Successfully: test_verify.pdf
+   [OK] Test File Cleaned Up
+
+Verification Complete.

@@ -1,0 +1,742 @@
+# (ไฟล์: attendance_module.py)
+# (เวอร์ชันอัปเกรด - รองรับ "ลารายชั่วโมง")
+
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog, simpledialog # <--- (1. เพิ่ม simpledialog)
+from custom_widgets import DateDropdown 
+import hr_database
+from datetime import datetime, time, timedelta
+import os
+import shutil
+
+NETWORK_UPLOAD_PATH = r"\\192.168.1.51\HR_System_Documents"
+
+class AttendanceModule(ttk.Frame):
+    
+    def __init__(self, parent, controller, current_user):
+        super().__init__(parent)
+        self.controller = controller
+        self.current_user = current_user
+
+        self.selected_emp_id = tk.StringVar()
+        self.selected_emp_name = tk.StringVar()
+
+        self.current_att_warning_doc_id = None
+        self.current_att_warning_file_path = None
+        
+        # (3. สร้าง List เวลา 00:00 - 23:45)
+        self.time_options = [f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 15, 30, 45)]
+        
+        self._create_main_layout()
+        self._build_list_panel()
+        self._build_form_panel()
+        self._load_employee_list()
+
+    def _create_main_layout(self):
+        """สร้างโครงสร้างหลักแบบ 2 คอลัมน์ (Master-Detail)"""
+        
+        list_container = ttk.Frame(self, width=400)
+        list_container.pack(side="left", fill="y", padx=15, pady=10)
+        
+        form_container = ttk.Frame(self)
+        form_container.pack(side="right", fill="both", expand=True, padx=(0, 15), pady=10)
+
+        self.form_panel = form_container 
+        self.list_panel = list_container
+
+    def _build_list_panel(self):
+        """สร้าง UI ด้านซ้าย (รายชื่อพนักงาน)"""
+        
+        search_frame = ttk.Frame(self.list_panel)
+        search_frame.pack(fill="x", pady=(5, 10))
+        
+        ttk.Label(search_frame, text="🔍 ค้นหา:", font=("Segoe UI", 10)).pack(side="left", padx=(0, 5))
+        self.search_entry = ttk.Entry(search_frame, width=30, font=("Segoe UI", 10))
+        self.search_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        self.search_entry.bind("<KeyRelease>", self._search_employees)
+
+        tree_frame = ttk.LabelFrame(self.list_panel, text="  เลือกพนักงาน  ", padding=10)
+        tree_frame.pack(fill="both", expand=True)
+        tree_container = ttk.Frame(tree_frame)
+        tree_container.pack(fill="both", expand=True)
+
+        scrollbar_y = ttk.Scrollbar(tree_container, orient="vertical")
+        scrollbar_y.pack(side="right", fill="y")
+
+        self.employee_tree = ttk.Treeview(
+            tree_container,
+            columns=("id", "name", "position"),
+            show="headings",
+            yscrollcommand=scrollbar_y.set,
+            height=25
+        )
+        self.employee_tree.heading("id", text="รหัส")
+        self.employee_tree.heading("name", text="ชื่อ-นามสกุล")
+        self.employee_tree.heading("position", text="ตำแหน่ง")
+
+        self.employee_tree.column("id", width=60, anchor="center")
+        self.employee_tree.column("name", width=180, anchor="w")
+        self.employee_tree.column("position", width=120, anchor="w")
+        
+        self.employee_tree.pack(side="left", fill="both", expand=True)
+        scrollbar_y.config(command=self.employee_tree.yview)
+        
+        self.employee_tree.bind("<<TreeviewSelect>>", self._on_employee_selected)
+
+    def _build_form_panel(self):
+        """สร้าง UI ด้านขวา (ฟอร์มกรอกข้อมูล)"""
+        
+        header_frame = ttk.Frame(self.form_panel)
+        header_frame.pack(fill="x", pady=(5, 10))
+        
+        ttk.Label(header_frame, text="บันทึกข้อมูลสำหรับ:", font=("Segoe UI", 12)).pack(side="left")
+        self.selected_emp_label = ttk.Label(header_frame, textvariable=self.selected_emp_name, 
+                                            font=("Segoe UI", 12, "bold"), foreground="#007bff")
+        self.selected_emp_label.pack(side="left", padx=5)
+        self.selected_emp_name.set("--- (ยังไม่ได้เลือกพนักงาน) ---") 
+
+        canvas = tk.Canvas(self.form_panel)
+        scrollbar = ttk.Scrollbar(self.form_panel, orient="vertical", command=canvas.yview)
+        self.scroll_frame = ttk.Frame(canvas, padding=(20, 10))
+        
+        self.scroll_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=self.scroll_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        report_frame = ttk.LabelFrame(self.scroll_frame, text="  📊 สรุปประวัติ (Report)  ", padding=20)
+        report_frame.pack(fill="x", pady=(0, 15))
+        
+        self.report_year_label = ttk.Label(report_frame, text="สรุปประจำปี ....", font=("Segoe UI", 11, "bold"))
+        self.report_year_label.grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 10))
+        
+        ttk.Label(report_frame, text="ลาป่วย:", font=("Segoe UI", 10)).grid(row=1, column=0, sticky="e", padx=(10,5))
+        self.report_leave_sick_val = ttk.Label(report_frame, text="- วัน", font=("Segoe UI", 10, "bold"), width=10, anchor="w")
+        self.report_leave_sick_val.grid(row=1, column=1, sticky="w")
+        
+        ttk.Label(report_frame, text="ลากิจ:", font=("Segoe UI", 10)).grid(row=2, column=0, sticky="e", padx=(10,5))
+        self.report_leave_biz_val = ttk.Label(report_frame, text="- วัน", font=("Segoe UI", 10, "bold"), width=10, anchor="w")
+        self.report_leave_biz_val.grid(row=2, column=1, sticky="w")
+        
+        ttk.Label(report_frame, text="ลาพักร้อน:", font=("Segoe UI", 10)).grid(row=3, column=0, sticky="e", padx=(10,5))
+        self.report_leave_vac_val = ttk.Label(report_frame, text="- วัน", font=("Segoe UI", 10, "bold"), width=10, anchor="w")
+        self.report_leave_vac_val.grid(row=3, column=1, sticky="w")
+        
+        ttk.Label(report_frame, text="รวมวันลา:", font=("Segoe UI", 10, "bold")).grid(row=4, column=0, sticky="e", padx=(10,5), pady=5)
+        self.report_leave_total_val = ttk.Label(report_frame, text="- วัน", font=("Segoe UI", 10, "bold"), width=10, anchor="w")
+        self.report_leave_total_val.grid(row=4, column=1, sticky="w", pady=5)
+
+        ttk.Label(report_frame, text="มาสาย (รวม):", font=("Segoe UI", 10)).grid(row=1, column=2, sticky="e", padx=(20,5))
+        self.report_late_times_val = ttk.Label(report_frame, text="- ครั้ง", font=("Segoe UI", 10, "bold"), width=12, anchor="w")
+        self.report_late_times_val.grid(row=1, column=3, sticky="w")
+        
+        ttk.Label(report_frame, text="รวมนาทีสาย:", font=("Segoe UI", 10)).grid(row=2, column=2, sticky="e", padx=(20,5))
+        self.report_late_mins_val = ttk.Label(report_frame, text="- นาที", font=("Segoe UI", 10, "bold"), width=12, anchor="w")
+        self.report_late_mins_val.grid(row=2, column=3, sticky="w")
+
+        ttk.Label(report_frame, text="เฉลี่ยสาย:", font=("Segoe UI", 10)).grid(row=3, column=2, sticky="e", padx=(20,5))
+        self.report_late_avg_val = ttk.Label(report_frame, text="- นาที/ครั้ง", font=("Segoe UI", 10, "bold"), width=12, anchor="w")
+        self.report_late_avg_val.grid(row=3, column=3, sticky="w")
+        
+        ttk.Label(report_frame, text="ใบเตือน:", font=("Segoe UI", 10, "bold")).grid(row=4, column=2, sticky="e", padx=(20,5), pady=5)
+        self.report_warn_val = ttk.Label(report_frame, text="- ครั้ง", font=("Segoe UI", 10, "bold"), width=12, anchor="w")
+        self.report_warn_val.grid(row=4, column=3, sticky="w", pady=5)
+        
+        
+        # --- (!!! เริ่มแก้ไข UI การลา ตรงนี้ !!!) ---
+        leave_frame = ttk.LabelFrame(self.scroll_frame, text="  📝 บันทึกการลา (ป่วย/กิจ/พักร้อน)  ", padding=20)
+        leave_frame.pack(fill="x", pady=(10, 15))
+        
+        row = 0
+        # (แก้ไข Label)
+        ttk.Label(leave_frame, text="ลาตั้งแต่วันที่:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=10)
+        self.att_leave_date = DateDropdown(leave_frame, font=("Segoe UI", 10))
+        self.att_leave_date.grid(row=row, column=1, sticky="w", pady=10)
+
+        # (เพิ่ม "ถึงวันที่")
+        ttk.Label(leave_frame, text="ถึงวันที่:", font=("Segoe UI", 10)).grid(row=row, column=2, sticky="e", padx=(20, 10), pady=10)
+        self.att_leave_date_end = DateDropdown(leave_frame, font=("Segoe UI", 10))
+        self.att_leave_date_end.grid(row=row, column=3, sticky="w", pady=10)
+        
+        # (เพิ่ม Trace เพื่อ ล็อก/ปลดล็อก ช่อง "ระยะเวลา")
+        self.att_leave_date_end.day_var.trace_add("write", self._on_end_date_changed)
+        self.att_leave_date_end.month_var.trace_add("write", self._on_end_date_changed)
+        self.att_leave_date_end.year_var.trace_add("write", self._on_end_date_changed)
+        
+        row += 1
+        ttk.Label(leave_frame, text="ประเภท:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=10)
+        self.att_leave_type = ttk.Combobox(leave_frame, width=20, font=("Segoe UI", 10),
+                                           values=["ลาป่วย", "ลากิจ", "ลาพักร้อน", "ลาอื่นๆ"], state="readonly")
+        self.att_leave_type.grid(row=row, column=1, sticky="w", pady=10)
+
+        
+        ttk.Label(leave_frame, text="ระยะเวลา:", font=("Segoe UI", 10)).grid(row=row, column=2, sticky="e", padx=(20, 10), pady=10)
+        self.att_leave_duration_type = ttk.Combobox(leave_frame, width=18, font=("Segoe UI", 10),
+                                           values=["เต็มวัน (1.0)", "ครึ่งวัน (0.5)", "ระบุเวลา (ชม.)"], 
+                                           state="readonly")
+        self.att_leave_duration_type.grid(row=row, column=3, sticky="w", pady=10)
+        self.att_leave_duration_type.set("เต็มวัน (1.0)")
+        self.att_leave_duration_type.bind("<<ComboboxSelected>>", self._toggle_leave_time_entries)
+
+        # (Frame ซ่อนเวลา - เหมือนเดิม)
+        self.att_leave_time_frame = ttk.Frame(leave_frame)
+        self.att_leave_time_frame.grid(row=row+1, column=3, sticky="w", pady=0, padx=0)
+        
+        ttk.Label(self.att_leave_time_frame, text="ตั้งแต่:").pack(side="left")
+        self.att_leave_start_time = ttk.Combobox(self.att_leave_time_frame, values=self.time_options, 
+                                                 width=6, font=("Segoe UI", 10))
+        self.att_leave_start_time.pack(side="left", padx=5)
+        
+        ttk.Label(self.att_leave_time_frame, text="ถึง:").pack(side="left")
+        self.att_leave_end_time = ttk.Combobox(self.att_leave_time_frame, values=self.time_options, 
+                                               width=6, font=("Segoe UI", 10))
+        self.att_leave_end_time.pack(side="left", padx=5)
+        
+        self.att_leave_time_frame.grid_remove() # (ซ่อนไว้ก่อน)
+        
+        row += 2 # (ขยับลงมา 2 แถว)
+        ttk.Label(leave_frame, text="เหตุผล:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="ne", padx=(0, 10), pady=10)
+        self.att_leave_reason = tk.Text(leave_frame, width=50, height=3, font=("Segoe UI", 10))
+        self.att_leave_reason.grid(row=row, column=1, columnspan=3, sticky="w", pady=10)
+        
+        row += 1
+        self.save_leave_btn = ttk.Button(leave_frame, text="💾 บันทึกการลา", command=self._save_leave_record, 
+                   width=20, style="Primary.TButton", state="disabled") 
+        self.save_leave_btn.grid(row=row, column=1, columnspan=3, sticky="e", pady=10)
+        # --- (จบส่วนแก้ไข UI การลา) ---
+
+
+        # --- กรอบสำหรับ "บันทึกการมาสาย" ---
+        late_frame = ttk.LabelFrame(self.scroll_frame, text="  🏃 บันทึกการมาสาย  ", padding=20)
+        late_frame.pack(fill="x", pady=(0, 15))
+        
+        row = 0
+        ttk.Label(late_frame, text="วันที่มาสาย:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=10)
+        self.att_late_date = DateDropdown(late_frame, font=("Segoe UI", 10))
+        self.att_late_date.grid(row=row, column=1, sticky="w", pady=10)
+        ttk.Label(late_frame, text="จำนวนนาที:", font=("Segoe UI", 10)).grid(row=row, column=2, sticky="e", padx=(20, 10), pady=10)
+        self.att_late_minutes = ttk.Entry(late_frame, width=15, font=("Segoe UI", 10))
+        self.att_late_minutes.grid(row=row, column=3, sticky="w", pady=10)
+        row += 1
+        ttk.Label(late_frame, text="เหตุผล:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="ne", padx=(0, 10), pady=10)
+        self.att_late_reason = tk.Text(late_frame, width=50, height=3, font=("Segoe UI", 10))
+        self.att_late_reason.grid(row=row, column=1, columnspan=3, sticky="w", pady=10)
+        row += 1
+        self.save_late_btn = ttk.Button(late_frame, text="💾 บันทึกการมาสาย", command=self._save_late_record, 
+                   width=20, style="Primary.TButton", state="disabled")
+        self.save_late_btn.grid(row=row, column=1, columnspan=3, sticky="e", pady=10)
+
+        # --- กรอบสำหรับ "บันทึกใบเตือน" ---
+        warn_frame = ttk.LabelFrame(self.scroll_frame, text="  📜 หนังสือเตือน  ", padding=20)
+        warn_frame.pack(fill="x", pady=(0, 15))
+        
+        row = 0
+        ttk.Label(warn_frame, text="วันที่เตือน:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=10)
+        self.att_warn_date = DateDropdown(warn_frame, font=("Segoe UI", 10))
+        self.att_warn_date.grid(row=row, column=1, sticky="w", pady=10)
+        ttk.Label(warn_frame, text="ระดับ:", font=("Segoe UI", 10)).grid(row=row, column=2, sticky="e", padx=(20, 10), pady=10)
+        
+        self.warning_options_list = [
+            "ตักเตือนทางวาจา ครั้ง 1",
+            "ตักเตือนทางวาจา ครั้ง 2",
+            "ตักเตือนทางวาจา มากกว่า 2 ครั้ง",
+            "หนังสือตักเตือนครั้งที่ 1",
+            "หนังสือตักเตือนครั้งที่ 2",
+            "หนังสือเลิกจ้าง"
+        ]
+        self.att_warn_level = ttk.Combobox(warn_frame, width=30, font=("Segoe UI", 10),
+                                           values=self.warning_options_list, state="readonly")
+        self.att_warn_level.grid(row=row, column=3, sticky="w", pady=10)
+        row += 1
+        ttk.Label(warn_frame, text="เหตุผล/คำอธิบาย:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="ne", padx=(0, 10), pady=10)
+        self.att_warn_reason = tk.Text(warn_frame, width=50, height=3, font=("Segoe UI", 10))
+        self.att_warn_reason.grid(row=row, column=1, columnspan=3, sticky="w", pady=10)
+        row += 1
+        self.att_warn_doc_label = ttk.Label(warn_frame, text="ไฟล์แนบ (ใบเตือน):", font=("Segoe UI", 10))
+        self.att_warn_doc_label.grid(row=row, column=0, sticky="ne", padx=(0, 10), pady=10)
+        
+        self.att_warn_file_display = ttk.Label(warn_frame, text="ยังไม่มีไฟล์อัปโหลด", font=("Segoe UI", 9, "italic"), foreground="gray", width=40, anchor="w")
+        self.att_warn_file_display.grid(row=row, column=1, columnspan=2, sticky="w", pady=(10,0))
+        
+        self.att_warn_btn_frame = ttk.Frame(warn_frame) 
+        self.att_warn_btn_frame.grid(row=row, column=3, sticky="w", pady=5)
+        
+        self.att_warn_upload_btn = ttk.Button(self.att_warn_btn_frame, text="อัปโหลด", command=self._att_upload_warning_doc, width=10, state="disabled")
+        self.att_warn_upload_btn.pack(side="left", padx=(0, 5))
+        
+        self.att_warn_view_btn = ttk.Button(self.att_warn_btn_frame, text="ดูไฟล์", command=self._att_view_warning_doc, width=10, state="disabled")
+        self.att_warn_view_btn.pack(side="left", padx=5)
+        
+        self.att_warn_delete_btn = ttk.Button(self.att_warn_btn_frame, text="ลบ", command=self._att_delete_warning_doc, width=5, state="disabled")
+        self.att_warn_delete_btn.pack(side="left", padx=5)
+        row += 1
+        self.save_warn_btn = ttk.Button(warn_frame, text="💾 บันทึกใบเตือน", command=self._save_warning_record, 
+                   width=20, style="Primary.TButton", state="disabled")
+        self.save_warn_btn.grid(row=row, column=1, columnspan=3, sticky="e", pady=10)
+
+        canvas.pack(side="left", fill="both", expand=True, padx=(0, 5))
+        scrollbar.pack(side="right", fill="y")
+        
+        canvas.bind("<Enter>", lambda e, c=canvas: c.bind_all("<MouseWheel>", lambda ev: self._on_mousewheel(ev, c)))
+        canvas.bind("<Leave>", lambda e: self.unbind_all("<MouseWheel>"))
+
+    # --- !! (5. เพิ่มฟังก์ชันใหม่นี้) !! ---
+
+    def _toggle_leave_time_entries(self, event=None):
+        """(เหมือนเดิม) ซ่อน/แสดง ช่องกรอกเวลาลา"""
+        if self.att_leave_duration_type.get() == "ระบุเวลา (ชม.)":
+            self.att_leave_time_frame.grid() 
+        else:
+            self.att_leave_time_frame.grid_remove() 
+            self.att_leave_start_time.set("")
+            self.att_leave_end_time.set("")
+
+    def _on_end_date_changed(self, *args):
+        """(ใหม่) เมื่อมีการเปลี่ยนแปลง 'ถึงวันที่'"""
+        try:
+            # (พยายามดึงวันที่สิ้นสุด)
+            end_date = self.att_leave_date_end.get_date()
+            if end_date:
+                # ถ้ามีวันที่สิ้นสุด (ลาแบบช่วง)
+                self.att_leave_duration_type.set("เต็มวัน (1.0)")
+                self.att_leave_duration_type.config(state="disabled")
+                self._toggle_leave_time_entries() # (สั่งซ่อนช่องกรอกเวลา)
+            else:
+                # ถ้าไม่มีวันที่สิ้นสุด (ลาวันเดียว)
+                self.att_leave_duration_type.config(state="normal")
+        except Exception:
+            # ถ้าวันที่ยังเลือกไม่ครบ (เช่น เลือกแค่วัน แต่ยังไม่เลือกเดือน)
+            self.att_leave_duration_type.config(state="normal")
+
+    def _on_mousewheel(self, event, widget):
+        try:
+            widget.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        except tk.TclError:
+            pass 
+
+    def _load_employee_list(self):
+        for item in self.employee_tree.get_children():
+            self.employee_tree.delete(item)
+            
+        try:
+            all_employees = hr_database.load_all_employees()
+            for emp in all_employees:
+                display_name = f"{emp.get('fname','')} {emp.get('lname','')}"
+                self.employee_tree.insert("", "end", iid=emp.get("id"), values=(
+                    emp.get("id", ""),
+                    display_name,
+                    emp.get("position", "") 
+                ))
+        except Exception as e:
+            messagebox.showerror("Load Error", f"ไม่สามารถโหลดรายชื่อพนักงานได้:\n{e}")
+
+        self._load_att_warning_doc_status()
+
+    def _on_employee_selected(self, event=None):
+        selection = self.employee_tree.selection()
+        if not selection:
+            self.selected_emp_id.set("")
+            self.selected_emp_name.set("--- (ยังไม่ได้เลือกพนักงาน) ---")
+            self.save_leave_btn.config(state="disabled")
+            self.save_late_btn.config(state="disabled")
+            self.save_warn_btn.config(state="disabled")
+            self.att_warn_upload_btn.config(state="disabled")
+            self._clear_forms()
+            self._load_attendance_report("") 
+            self._load_att_warning_doc_status() 
+            return
+
+        item = self.employee_tree.item(selection[0])
+        emp_id = item["values"][0]
+        emp_name = item["values"][1]
+        
+        if emp_id:
+            self.selected_emp_id.set(emp_id)
+            self.selected_emp_name.set(f"{emp_name} (ID: {emp_id})")
+            
+            self.save_leave_btn.config(state="normal")
+            self.save_late_btn.config(state="normal")
+            self.save_warn_btn.config(state="normal")
+            self.att_warn_upload_btn.config(state="normal")
+            
+            self._clear_forms()
+            self._load_attendance_report(emp_id) 
+            self._load_att_warning_doc_status()
+            
+        else:
+             self.selected_emp_id.set("")
+             self.selected_emp_name.set("--- (ยังไม่ได้เลือกพนักงาน) ---")
+             self.save_leave_btn.config(state="disabled")
+             self.save_late_btn.config(state="disabled")
+             self.save_warn_btn.config(state="disabled")
+             self.att_warn_upload_btn.config(state="disabled")
+             self._clear_forms()
+             self._load_attendance_report("")
+             self._load_att_warning_doc_status()
+
+    def _search_employees(self, event=None):
+        search_term = self.search_entry.get().lower()
+        
+        for item in self.employee_tree.get_children():
+            self.employee_tree.delete(item)
+            
+        all_employees = hr_database.load_all_employees()
+        for emp in all_employees:
+            display_name = f"{emp.get('fname','')} {emp.get('lname','')}"
+            
+            if (search_term in emp.get("id", "").lower() or
+                search_term in display_name.lower() or
+                search_term in emp.get("position", "").lower()):
+                
+                self.employee_tree.insert("", "end", iid=emp.get("id"), values=(
+                    emp.get("id", ""),
+                    display_name,
+                    emp.get("position", "") 
+                ))
+    
+    def _clear_forms(self):
+        """(Helper) ล้างค่าในฟอร์มกรอกข้อมูล 3 อัน (ด้านขวา)"""
+        try:
+            self.att_leave_date.clear()
+            self.att_leave_type.set("")
+            # --- !! (6. แก้ไข: ล้าง UI การลา) !! ---
+            self.att_leave_duration_type.set("เต็มวัน (1.0)")
+            self._toggle_leave_time_entries() # (สั่งซ่อน)
+            # --- (จบส่วนแก้ไข) ---
+            self.att_leave_reason.delete("1.0", tk.END)
+            
+            self.att_late_date.clear()
+            self.att_late_minutes.delete(0, tk.END)
+            self.att_late_reason.delete("1.0", tk.END)
+
+            self.att_warn_date.clear()
+            self.att_warn_level.set("") 
+            self.att_warn_reason.delete("1.0", tk.END)
+            
+            self._load_att_warning_doc_status()
+        except AttributeError:
+            pass 
+    
+    def _load_attendance_report(self, emp_id):
+        if not emp_id:
+            self.report_year_label.config(text="สรุปประจำปี ....")
+            self.report_leave_sick_val.config(text="- วัน")
+            self.report_leave_biz_val.config(text="- วัน")
+            self.report_leave_vac_val.config(text="- วัน")
+            self.report_leave_total_val.config(text="- วัน")
+            self.report_late_times_val.config(text="- ครั้ง")
+            self.report_late_mins_val.config(text="- นาที")
+            self.report_late_avg_val.config(text="- นาที/ครั้ง")
+            self.report_warn_val.config(text="- ครั้ง")
+            return
+            
+        current_year = datetime.now().year
+        
+        summary = hr_database.get_attendance_summary(emp_id, current_year)
+        
+        try:
+            self.report_year_label.config(text=f"สรุปประจำปี {current_year + 543}")
+            
+            self.report_leave_sick_val.config(text=f"{summary['leave_by_type'].get('ลาป่วย', 0.0):.1f} วัน")
+            self.report_leave_biz_val.config(text=f"{summary['leave_by_type'].get('ลากิจ', 0.0):.1f} วัน")
+            self.report_leave_vac_val.config(text=f"{summary['leave_by_type'].get('ลาพักร้อน', 0.0):.1f} วัน")
+            self.report_leave_total_val.config(text=f"{summary['total_leave_days']:.1f} วัน")
+            
+            self.report_late_times_val.config(text=f"{summary['total_late_times']} ครั้ง")
+            self.report_late_mins_val.config(text=f"{summary['total_late_minutes']} นาที")
+            self.report_late_avg_val.config(text=f"{summary['avg_late_minutes']:.1f} นาที/ครั้ง")
+            
+            self.report_warn_val.config(text=f"{summary['total_warnings']} ครั้ง")
+
+        except AttributeError:
+            print("DEBUG: Labels for report are not created yet.")
+        except Exception as e:
+            messagebox.showerror("Report UI Error", f"ไม่สามารถอัปเดตหน้า Report ได้:\n{e}")
+            
+    # --- !! (7. "ผ่าตัด" ฟังก์ชันนี้) !! ---
+    def _save_leave_record(self):
+        emp_id = self.selected_emp_id.get()
+        if not emp_id:
+            messagebox.showwarning("ข้อผิดพลาด", "กรุณาเลือกพนักงานก่อน")
+            return
+            
+        try:
+            start_date = self.att_leave_date.get_date() 
+            end_date = self.att_leave_date_end.get_date() # (อ่าน "ถึงวันที่")
+        except Exception:
+            messagebox.showwarning("ข้อมูลไม่ครบ", "กรุณาเลือกวันที่ลาให้ครบถ้วน")
+            return
+            
+        if not start_date:
+            messagebox.showwarning("ข้อมูลไม่ครบ", "กรุณาเลือก 'ลาตั้งแต่วันที่'")
+            return
+            
+        leave_type = self.att_leave_type.get()
+        duration_type = self.att_leave_duration_type.get()
+        reason = self.att_leave_reason.get("1.0", "end-1c")
+
+        if not leave_type:
+            messagebox.showwarning("ข้อมูลไม่ครบ", "กรุณาเลือก 'ประเภท' การลา")
+            return
+        
+        # --- (!!! LOGIC ใหม่ เริ่มตรงนี้ !!!) ---
+        
+        try:
+            # === กรณีที่ 1: ลาแบบช่วง (เลือก "ถึงวันที่") ===
+            if end_date:
+                if end_date < start_date:
+                    messagebox.showwarning("วันที่ผิดพลาด", "วันที่สิ้นสุด ต้องอยู่หลังวันที่เริ่มต้น")
+                    return
+                
+                # (ดึงวันหยุดบริษัทมาเช็ก)
+                try:
+                    holidays_list = hr_database.get_company_holidays(start_date.year)
+                    # (ถ้าลาข้ามปี ให้ดึงวันหยุดของปีถัดไปด้วย)
+                    if end_date.year > start_date.year:
+                         holidays_list.extend(hr_database.get_company_holidays(end_date.year))
+                    holidays_set = {h['holiday_date'] for h in holidays_list}
+                except Exception as e_hol:
+                    print(f"Warning: ไม่สามารถโหลดวันหยุดได้: {e_hol}")
+                    holidays_set = set()
+
+                current_date = start_date
+                days_booked = 0
+                days_skipped = 0
+                
+                # (วนลูปบันทึกทีละวัน)
+                while current_date <= end_date:
+                    weekday = current_date.weekday()
+                    
+                    # (ข้ามวันอาทิตย์ (weekday == 6))
+                    if weekday == 6: 
+                        days_skipped += 1
+                    # (ข้ามวันหยุดบริษัท)
+                    elif current_date in holidays_set:
+                        days_skipped += 1
+                    else:
+                        # (บันทึกเฉพาะวันทำงาน)
+                        hr_database.add_employee_leave(
+                            emp_id, current_date, leave_type, 1.0, reason, 
+                            None, None # (การลาแบบช่วง ถือเป็นเต็มวันเสมอ)
+                        )
+                        days_booked += 1
+                    
+                    # (ไปวันถัดไป)
+                    current_date += timedelta(days=1)
+                
+                messagebox.showinfo("สำเร็จ", 
+                                    f"บันทึกการลา (แบบช่วง) เรียบร้อย\n\n"
+                                    f"วันที่บันทึก: {days_booked} วัน\n"
+                                    f"วันที่ข้าม (ส-อา/หยุด): {days_skipped} วัน")
+
+            # === กรณีที่ 2: ลาวันเดียว (ไม่ได้เลือก "ถึงวันที่") ===
+            else:
+                num_days = 0.0
+                leave_start_time = None
+                leave_end_time = None
+                
+                if duration_type == "เต็มวัน (1.0)":
+                    num_days = 1.0
+                elif duration_type == "ครึ่งวัน (0.5)":
+                    num_days = 0.5
+                elif duration_type == "ระบุเวลา (ชม.)":
+                    start_str = self.att_leave_start_time.get()
+                    end_str = self.att_leave_end_time.get()
+                    if not start_str or not end_str:
+                        raise ValueError("กรุณาระบุเวลา เริ่มต้น และ สิ้นสุด")
+                    
+                    leave_start_time = datetime.strptime(start_str, '%H:%M').time()
+                    leave_end_time = datetime.strptime(end_str, '%H:%M').time()
+                    if leave_start_time >= leave_end_time:
+                        raise ValueError("เวลาสิ้นสุด ต้องมากกว่าเวลาเริ่มต้น")
+                    
+                    dummy_date = datetime.today().date()
+                    duration_seconds = (datetime.combine(dummy_date, leave_end_time) - 
+                                        datetime.combine(dummy_date, leave_start_time)).total_seconds()
+                    
+                    num_days = round((duration_seconds / 3600) / 8.0, 4) # (สมมติ 8 ชม./วัน)
+                
+                # (บันทึกข้อมูล)
+                success = hr_database.add_employee_leave(
+                    emp_id, start_date, leave_type, num_days, reason, 
+                    leave_start_time, leave_end_time
+                )
+                if not success:
+                    raise Exception("ไม่สามารถบันทึกข้อมูลลงฐานข้อมูลได้")
+                
+                messagebox.showinfo("สำเร็จ", "บันทึกข้อมูลการลา (วันเดียว) เรียบร้อยแล้ว")
+            
+            # (ล้างฟอร์ม และ โหลด Report ใหม่)
+            self._clear_forms() 
+            self._load_attendance_report(emp_id) 
+
+        except ValueError as ve:
+             messagebox.showwarning("ข้อมูลผิดพลาด", f"{ve}")
+        except Exception as e:
+            messagebox.showerror("เกิดข้อผิดพลาด", f"ไม่สามารถบันทึกข้อมูลได้:\n{e}")
+
+    def _save_late_record(self):
+        emp_id = self.selected_emp_id.get()
+        if not emp_id:
+            messagebox.showwarning("ข้อผิดพลาด", "กรุณาเลือกพนักงานก่อน")
+            return
+            
+        late_date = self.att_late_date.get_date()
+        if not late_date:
+            messagebox.showwarning("ข้อมูลไม่ครบ", "กรุณาเลือกวันที่มาสายให้ครบถ้วน")
+            return
+            
+        minutes_str = self.att_late_minutes.get()
+        reason = self.att_late_reason.get("1.0", "end-1c")
+        if not minutes_str:
+            messagebox.showwarning("ข้อมูลไม่ครบ", "กรุณากรอกจำนวนนาทีที่สาย")
+            return
+        try:
+            minutes_late = int(minutes_str)
+        except ValueError:
+            messagebox.showwarning("ข้อมูลผิดพลาด", "จำนวนนาทีต้องเป็นตัวเลข")
+            return
+            
+        success = hr_database.add_employee_late(emp_id, late_date, minutes_late, reason)
+        if success:
+            messagebox.showinfo("สำเร็จ", "บันทึกข้อมูลการมาสายเรียบร้อยแล้ว")
+            
+            self.att_late_date.clear()
+            self.att_late_minutes.delete(0, tk.END)
+            self.att_late_reason.delete("1.0", tk.END)
+            
+            self._load_attendance_report(emp_id) 
+
+    def _save_warning_record(self):
+        emp_id = self.selected_emp_id.get()
+        if not emp_id:
+            messagebox.showwarning("ข้อผิดพลาด", "กรุณาเลือกพนักงานก่อน")
+            return
+        
+        warn_date = self.att_warn_date.get_date()
+        if not warn_date:
+            messagebox.showwarning("ข้อมูลไม่ครบ", "กรุณาเลือกวันที่เตือนให้ครบถ้วน")
+            return
+            
+        reason = self.att_warn_reason.get("1.0", "end-1c")
+        level = self.att_warn_level.get() 
+        
+        if not reason or not level: 
+            messagebox.showwarning("ข้อมูลไม่ครบ", "กรุณากรอกเหตุผล และเลือกระดับการเตือน")
+            return
+            
+        success = hr_database.add_employee_warning(emp_id, warn_date, reason, level)
+        if success:
+            messagebox.showinfo("สำเร็จ", "บันทึกข้อมูลใบเตือนเรียบร้อยแล้ว")
+            
+            self.att_warn_date.clear() 
+            self.att_warn_reason.delete("1.0", tk.END)
+            self.att_warn_level.set("") 
+            
+            self._load_attendance_report(emp_id)
+
+    def _load_att_warning_doc_status(self):
+        emp_id = self.selected_emp_id.get() 
+        
+        if not emp_id:
+            self.att_warn_file_display.config(text="ยังไม่มีไฟล์อัปโหลด", foreground="gray")
+            self.att_warn_view_btn.config(state="disabled")
+            self.att_warn_delete_btn.config(state="disabled")
+            self.att_warn_upload_btn.config(text="อัปโหลด", state="disabled") 
+            self.current_att_warning_doc_id = None
+            self.current_att_warning_file_path = None
+            return
+
+        doc_info = hr_database.get_document_by_description(emp_id, "เอกสารใบเตือน")
+        
+        if doc_info and doc_info.get('file_path'):
+            self.current_att_warning_doc_id = doc_info['doc_id']
+            self.current_att_warning_file_path = doc_info['file_path']
+            filename = os.path.basename(doc_info['file_path'])
+            self.att_warn_file_display.config(text=filename, foreground="#007bff")
+            self.att_warn_view_btn.config(state="normal")
+            self.att_warn_delete_btn.config(state="normal")
+            self.att_warn_upload_btn.config(text="แทนที่", state="normal")
+        else:
+            self.att_warn_file_display.config(text="ยังไม่มีไฟล์อัปโหลด", foreground="gray")
+            self.att_warn_view_btn.config(state="disabled")
+            self.att_warn_delete_btn.config(state="disabled")
+            self.att_warn_upload_btn.config(text="อัปโหลด", state="normal") 
+            self.current_att_warning_doc_id = None
+            self.current_att_warning_file_path = None
+
+    def _att_upload_warning_doc(self):
+        emp_id = self.selected_emp_id.get()
+        if not emp_id:
+            messagebox.showwarning("ข้อผิดพลาด", "กรุณาเลือกพนักงานก่อนอัปโหลดไฟล์")
+            return
+        if not os.path.exists(NETWORK_UPLOAD_PATH):
+            messagebox.showerror("Network Error", f"ไม่พบโฟลเดอร์สำหรับอัปโหลดที่ Server:\n{NETWORK_UPLOAD_PATH}")
+            return
+
+        source_path = filedialog.askopenfilename(
+            title="เลือกไฟล์ (PDF, JPG, PNG)",
+            filetypes=[("เอกสาร", "*.pdf *.jpg *.jpeg *.png"), ("All Files", "*.*")]
+        )
+        if not source_path: return
+
+        original_filename, file_extension = os.path.splitext(os.path.basename(source_path))
+        timestamp = int(datetime.now().timestamp())
+        unique_filename = f"{emp_id}_warning_{timestamp}{file_extension}"
+        destination_path = os.path.join(NETWORK_UPLOAD_PATH, unique_filename)
+
+        try:
+            shutil.copy(source_path, destination_path)
+            
+            if self.current_att_warning_doc_id:
+                old_path = self.current_att_warning_file_path
+                hr_database.delete_document(self.current_att_warning_doc_id)
+                if old_path and os.path.exists(old_path):
+                    try: os.remove(old_path)
+                    except Exception as e: print(f"Warning: ไม่สามารถลบไฟล์เก่า {old_path} ได้: {e}")
+
+            success = hr_database.add_employee_document(emp_id, "เอกสารใบเตือน", destination_path)
+            
+            if success:
+                messagebox.showinfo("สำเร็จ", f"อัปโหลดไฟล์ {unique_filename} เรียบร้อย")
+                self._load_att_warning_doc_status()
+            
+        except Exception as e:
+            messagebox.showerror("Upload Failed", f"ไม่สามารถอัปโหลดไฟล์ได้:\n{e}")
+
+    def _att_view_warning_doc(self):
+        if not self.current_att_warning_file_path:
+            messagebox.showwarning("ไม่พบไฟล์", "ไม่พบข้อมูลไฟล์ที่ระบุ")
+            return
+        try:
+            if not os.path.exists(self.current_att_warning_file_path):
+                 messagebox.showerror("เปิดไฟล์ล้มเหลว", f"ไม่พบไฟล์ที่: {self.current_att_warning_file_path}")
+                 return
+            os.startfile(self.current_att_warning_file_path)
+        except Exception as e:
+            messagebox.showerror("เปิดไฟล์ล้มเหลว", f"ไม่สามารถเปิดไฟล์ได้:\n{e}")
+
+    def _att_delete_warning_doc(self):
+        if not self.current_att_warning_doc_id or not self.current_att_warning_file_path:
+            messagebox.showwarning("ไม่พบไฟล์", "ไม่พบข้อมูลไฟล์ที่จะลบ")
+            return
+        
+        filename = os.path.basename(self.current_att_warning_file_path)
+        if not messagebox.askyesno("ยืนยันการลบ", f"คุณต้องการลบไฟล์ '{filename}' ใช่หรือไม่?"):
+            return
+
+        try:
+            success_db = hr_database.delete_document(self.current_att_warning_doc_id)
+            if success_db:
+                if os.path.exists(self.current_att_warning_file_path):
+                    try: os.remove(self.current_att_warning_file_path)
+                    except Exception as e: messagebox.showwarning("ลบไฟล์สำเร็จ (แต่)", f"ลบข้อมูลไฟล์ออกจากระบบแล้ว\nแต่ไม่สามารถลบไฟล์จริงออกจาก Server ได้: {e}")
+                else: messagebox.showinfo("สำเร็จ", "ลบข้อมูลไฟล์เรียบร้อย")
+                
+                self._load_att_warning_doc_status()
+            else:
+                messagebox.showerror("ล้มเหลว", "ไม่สามารถลบข้อมูลออกจากฐานข้อมูลได้")
+        except Exception as e:
+            messagebox.showerror("ลบไฟล์ล้มเหลว", f"เกิดข้อผิดพลาด: {e}")
+
+    def _load_employee_dropdown(self):
+        self._load_employee_list()
