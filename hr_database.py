@@ -1614,10 +1614,10 @@ def add_manual_scan_log(emp_id, scan_timestamp_obj):
             return True
     except Exception as e:
         conn.rollback()
-        messagebox.showerror("DB Error (Add Scan)", f"ไม่สามารถเพิ่ม Log สแกนได้:\n{e}")
-        return False
-    finally:
-        if conn: conn.close()
+    if base_salary > 15000:
+        base_salary = 15000.0
+    deduction = round(base_salary * 0.05) 
+    return float(deduction)
 
 def process_attendance_summary(start_date, end_date):
     """
@@ -1626,7 +1626,9 @@ def process_attendance_summary(start_date, end_date):
     - คำนวณ Late / Absent / OT ตามจริง
     """
     conn = get_db_connection()
-    if not conn: return []
+    if not conn: 
+        print("DEBUG: DB Connection failed in process_attendance_summary")
+        return []
     
     summary_report = []
 
@@ -1641,6 +1643,7 @@ def process_attendance_summary(start_date, end_date):
                 ORDER BY emp_id
             """)
             employees = [dict(row) for row in cursor.fetchall()]
+            print(f"DEBUG: Found {len(employees)} active employees.")
             
             # 2. ดึงวันหยุดบริษัท
             cursor.execute("SELECT holiday_date FROM company_holidays WHERE holiday_date BETWEEN %s AND %s", (start_date, end_date))
@@ -1679,8 +1682,9 @@ def process_attendance_summary(start_date, end_date):
             }
 
             # 6. วนลูปประมวลผล (ตามช่วงวันที่)
-            import pandas as pd # ต้อง import pandas ข้างบนไฟล์ด้วยนะครับ
+            # import pandas as pd # (Moved to top)
             date_range = pd.date_range(start_date, end_date)
+            print(f"DEBUG: Processing {len(employees)} employees over {len(date_range)} days.")
 
             for current_dt in date_range:
                 current_date = current_dt.date()
@@ -1771,14 +1775,6 @@ def process_attendance_summary(start_date, end_date):
         if conn: conn.close()
         
     return summary_report
-
-def _calculate_social_security(base_salary):
-    if base_salary < 1650:
-        base_salary = 1650.0
-    if base_salary > 15000:
-        base_salary = 15000.0
-    deduction = round(base_salary * 0.05) 
-    return float(deduction)
 
 def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=None):
     """
