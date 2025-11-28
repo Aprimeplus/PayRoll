@@ -162,6 +162,71 @@ def init_db():
             """)
 
             cursor.execute("""
+                CREATE TABLE IF NOT EXISTS payroll_records (
+                    payroll_id SERIAL PRIMARY KEY,
+                    emp_id TEXT NOT NULL,
+                    period_month INTEGER NOT NULL,
+                    period_year INTEGER NOT NULL,
+                    payment_date DATE,
+                    base_salary REAL DEFAULT 0,
+                    position_allowance REAL DEFAULT 0,
+                    ot_pay REAL DEFAULT 0,
+                    commission REAL DEFAULT 0,
+                    bonus REAL DEFAULT 0,
+                    driving_allowance REAL DEFAULT 0,
+                    other_income REAL DEFAULT 0,
+                    total_income REAL DEFAULT 0,
+                    sso_deduct REAL DEFAULT 0,
+                    tax_deduct REAL DEFAULT 0,       
+                    provident_fund REAL DEFAULT 0,
+                    loan_deduct REAL DEFAULT 0,
+                    late_deduct REAL DEFAULT 0,
+                    other_deduct REAL DEFAULT 0,
+                    total_deduct REAL DEFAULT 0,
+                    net_salary REAL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (emp_id) REFERENCES employees (emp_id) ON DELETE CASCADE,
+                    UNIQUE(emp_id, period_month, period_year)
+                );
+            """)
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS payroll_records (
+                    payroll_id SERIAL PRIMARY KEY,
+                    emp_id TEXT NOT NULL,
+                    period_month INTEGER NOT NULL,
+                    period_year INTEGER NOT NULL,  -- ปี ค.ศ.
+                    payment_date DATE,
+                    
+                    -- รายได้
+                    base_salary REAL DEFAULT 0,
+                    position_allowance REAL DEFAULT 0,
+                    ot_pay REAL DEFAULT 0,
+                    commission REAL DEFAULT 0,
+                    bonus REAL DEFAULT 0,
+                    driving_allowance REAL DEFAULT 0,
+                    other_income REAL DEFAULT 0,
+                    total_income REAL DEFAULT 0,
+                    
+                    -- รายหัก
+                    sso_deduct REAL DEFAULT 0,
+                    tax_deduct REAL DEFAULT 0,       
+                    provident_fund REAL DEFAULT 0,
+                    loan_deduct REAL DEFAULT 0,
+                    late_deduct REAL DEFAULT 0,
+                    other_deduct REAL DEFAULT 0,
+                    total_deduct REAL DEFAULT 0,
+                    
+                    -- สุทธิ
+                    net_salary REAL DEFAULT 0,
+                    
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (emp_id) REFERENCES employees (emp_id) ON DELETE CASCADE,
+                    UNIQUE(emp_id, period_month, period_year) -- ห้ามจ่ายซ้ำเดือนเดิม
+                );
+            """)
+
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS employee_driving_details (
                     detail_id SERIAL PRIMARY KEY,
                     emp_id TEXT NOT NULL,
@@ -443,6 +508,218 @@ def get_company_setting(key):
         return ""
     finally:
         if conn: conn.close()
+
+def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=None):
+    """
+    (สมองหลัก Payroll V20.0 - Full Option)
+    - รองรับ OT Auto
+    - รองรับ ค่าเที่ยว (กระบะ/เฮี๊ยบ/ฟรี)
+    - รองรับ การหักสาย/ขาดงาน (คืนชีพ Logic กลับมา)
+    """
+    if user_inputs is None: user_inputs = {}
+
+    # 1. กำหนดกฎการเข้างาน
+    WORK_RULES = {
+        "สำนักงานใหญ่": { "standard_in": time(9,0), "tier_1_cutoff": time(9,30), "penalty_1_mins": 60, "penalty_2_mins": 120, "work_hours_per_day": 8.0, "required_duration_minutes": 480, "break_start": time(12,0), "break_end": time(13,0) },
+        "คลังสินค้า": { "standard_in": time(8,0), "tier_1_cutoff": time(8,30), "penalty_1_mins": 60, "penalty_2_mins": 120, "work_hours_per_day": 8.0, "required_duration_minutes": 480, "break_start": time(12,0), "break_end": time(13,0) },
+        "default": { "standard_in": time(9,0), "tier_1_cutoff": time(9,30), "penalty_1_mins": 60, "penalty_2_mins": 120, "work_hours_per_day": 8.0, "required_duration_minutes": 480, "break_start": time(12,0), "break_end": time(13,0) }
+    }
+
+    result = {
+        "emp_id": emp_id, 
+        "base_salary": 0.0, "position_allowance": 0.0,
+        "ot": 0.0, "commission": 0.0, "bonus": 0.0, "other_income": 0.0, 
+        "driving_allowance": 0.0, 
+        "total_income": 0.0,
+        "sso": 0.0, "tax": 0.0, "provident_fund": 0.0, "loan": 0.0, 
+        "late_deduct": 0.0, "other_deduct": 0.0, 
+        "total_deduct": 0.0,
+        "net_salary": 0.0,
+        "debug_penalty_hours": 0.0, "debug_absent_days": 0.0, "debug_worked_days": 0.0 
+    }
+
+    conn = get_db_connection()
+    if not conn: return result
+
+    try:
+        with conn.cursor(cursor_factory=extras.DictCursor) as cursor:
+            # 1. ข้อมูลพนักงาน
+            emp_info = load_single_employee(emp_id)
+            if not emp_info or not emp_info.get("salary"): return result
+
+            salary_from_db = float(emp_info.get("salary", 0.0))
+            emp_type = emp_info.get("emp_type", "")
+            
+            cursor.execute("SELECT position_allowance FROM salary_history WHERE emp_id = %s ORDER BY history_id DESC LIMIT 1", (emp_id,))
+            pos_row = cursor.fetchone()
+            result["position_allowance"] = float(pos_row[0]) if pos_row and pos_row[0] else 0.0
+
+            # 2. User Inputs
+            manual_ot = float(user_inputs.get('ot', 0)) 
+            result["commission"] = float(user_inputs.get('commission', 0))
+            result["bonus"] = float(user_inputs.get('bonus', 0))
+            result["other_income"] = float(user_inputs.get('other_income', 0))
+            result["tax"] = float(user_inputs.get('tax', 0))
+            result["provident_fund"] = float(user_inputs.get('provident_fund', 0))
+            result["loan"] = float(user_inputs.get('loan', 0))
+            result["other_deduct"] = float(user_inputs.get('other_deduct', 0))
+
+            # 3. ดึงข้อมูลประกอบ (วันหยุด, ลา, สแกนนิ้ว, ค่าเที่ยว)
+            work_location = emp_info.get('work_location', "default") or "default"
+            if work_location not in WORK_RULES: work_location = "default"
+            rules = WORK_RULES[work_location]
+            
+            cursor.execute("SELECT holiday_date FROM company_holidays WHERE holiday_date BETWEEN %s AND %s", (start_date, end_date))
+            holiday_dates_set = {row['holiday_date'] for row in cursor.fetchall()}
+            
+            cursor.execute("SELECT leave_date, num_days, leave_type, leave_start_time, leave_end_time FROM employee_leave_records WHERE emp_id = %s AND leave_date BETWEEN %s AND %s", (emp_id, start_date, end_date))
+            leave_records_dict = {}
+            for row in cursor.fetchall():
+                leave_records_dict[row['leave_date']] = dict(row)
+
+            cursor.execute("SELECT scan_timestamp FROM time_attendance_logs WHERE emp_id = %s AND scan_timestamp::date BETWEEN %s AND %s ORDER BY scan_timestamp", (emp_id, start_date, end_date))
+            scans = cursor.fetchall()
+            scans_by_date = {}
+            for scan in scans:
+                d = scan['scan_timestamp'].date()
+                if d not in scans_by_date: scans_by_date[d] = []
+                scans_by_date[d].append(scan['scan_timestamp'])
+
+            cursor.execute("""
+                SELECT work_date, total_amount, ot_hours 
+                FROM employee_daily_records 
+                WHERE emp_id = %s AND work_date BETWEEN %s AND %s
+            """, (emp_id, start_date, end_date))
+            daily_records_dict = {}
+            for row in cursor.fetchall():
+                daily_records_dict[row['work_date']] = dict(row)
+
+            # --- 4. เริ่มคำนวณ (Loop รายวัน) ---
+            total_penalty_minutes = 0.0
+            total_absent_days = 0.0
+            actual_worked_days = 0.0
+            auto_driving_allowance = 0.0
+            total_ot_money = 0.0
+            
+            all_dates = pd.date_range(start_date, end_date, freq='D')
+
+            for current_date in all_dates:
+                c_date = current_date.date()
+                is_holiday = (current_date.weekday() == 6 or c_date in holiday_dates_set)
+                
+                daily_rec = daily_records_dict.get(c_date)
+                leave_info = leave_records_dict.get(c_date)
+                scans_today = scans_by_date.get(c_date)
+                
+                # A. ค่าเที่ยว
+                if daily_rec:
+                    auto_driving_allowance += float(daily_rec.get('total_amount', 0) or 0)
+
+                # B. OT
+                ot_hrs = float(daily_rec.get('ot_hours', 0) or 0) if daily_rec else 0
+                if ot_hrs > 0:
+                    # สูตร OT (1.5 เท่า)
+                    base_calc = salary_from_db / 30.0 if "รายวัน" not in emp_type else salary_from_db
+                    hourly_rate = base_calc / 8.0
+                    daily_ot_pay = ot_hrs * hourly_rate * 1.5
+                    total_ot_money += daily_ot_pay
+
+                # C. เช็คการมาทำงาน / สาย / ขาด
+                is_present = False
+                if scans_today: is_present = True
+                if daily_rec and (daily_rec.get('total_amount',0) > 0 or daily_rec.get('ot_hours',0) > 0): is_present = True
+                
+                # ถ้าลา ก็ถือว่าไม่ขาด (แต่จะหักเงินไหม อยู่ที่ประเภทลา)
+                is_leave = False
+                if leave_info: is_leave = True
+
+                if not is_holiday and not is_leave:
+                    if not is_present:
+                        # ขาดงาน (Absent)
+                        total_absent_days += 1.0
+                    elif scans_today:
+                        # มาทำงาน -> เช็คสาย (Late)
+                        t_in = min(scans_today).time()
+                        
+                        # Logic เช็คสายตามกฎ (Tier 1/2)
+                        # ถ้าลาชั่วโมง (เช่น ลาเช้า) ต้องขยับเวลาเข้างานตามจริง
+                        effective_start = rules["standard_in"]
+                        
+                        if t_in > rules["tier_1_cutoff"]:
+                            total_penalty_minutes += rules["penalty_2_mins"]
+                        elif t_in > rules["standard_in"]:
+                            total_penalty_minutes += rules["penalty_1_mins"]
+                            
+                        actual_worked_days += 1.0
+                    else:
+                         # มาทำงาน (มี record) แต่ไม่สแกน (เช่น ขับรถ) -> นับว่ามา ไม่สาย
+                         actual_worked_days += 1.0
+                
+                elif is_holiday and is_present:
+                    # มาทำวันหยุด
+                    actual_worked_days += 1.0 # (รายวันได้ตังเพิ่ม)
+
+            # --- 5. สรุปยอด ---
+            result["driving_allowance"] = auto_driving_allowance
+            result["ot"] = manual_ot + total_ot_money
+            
+            # คำนวณหักสาย/ขาด (Late Deduct)
+            penalty_hours = total_penalty_minutes / 60.0
+            
+            # สูตรคำนวณเงินหัก
+            deduct_amount = 0.0
+            
+            if salary_from_db > 0:
+                if "รายวัน" in emp_type or "daily" in str(emp_type).lower():
+                    # รายวัน:
+                    # - ฐานเงินเดือน = ค่าแรง x วันที่มาทำจริง
+                    # - สาย = หักเป็นนาที/ชั่วโมง จากวันที่มา
+                    # - ขาด = ไม่ได้ตังอยู่แล้ว (ไม่ต้องหักซ้ำ)
+                    result["base_salary"] = salary_from_db * actual_worked_days
+                    
+                    daily_rate = salary_from_db
+                    hourly_rate = daily_rate / 8.0
+                    deduct_amount = penalty_hours * hourly_rate
+                    
+                else:
+                    # รายเดือน:
+                    # - ฐานเงินเดือน = เต็มเดือน
+                    # - สาย = หักตามจริง
+                    # - ขาด = หักตามวัน (Daily Rate)
+                    result["base_salary"] = salary_from_db
+                    
+                    daily_rate = salary_from_db / 30.0
+                    hourly_rate = daily_rate / 8.0
+                    
+                    deduct_absent = total_absent_days * daily_rate
+                    deduct_late = penalty_hours * hourly_rate
+                    deduct_amount = deduct_absent + deduct_late
+
+            result["late_deduct"] = deduct_amount
+
+            # --- 6. Final Sum ---
+            result["sso"] = round(result["base_salary"] * 0.05)
+            if result["sso"] > 750: result["sso"] = 750
+            if result["sso"] < 83: result["sso"] = 83
+
+            result["total_income"] = (
+                result["base_salary"] + result["position_allowance"] + 
+                result["ot"] + result["commission"] + result["bonus"] + result["other_income"] +
+                result["driving_allowance"] 
+            )
+            result["total_deduct"] = (
+                result["sso"] + result["tax"] + result["provident_fund"] + 
+                result["late_deduct"] + result["loan"] + result["other_deduct"]
+            )
+            result["net_salary"] = result["total_income"] - result["total_deduct"]
+
+    except Exception as e:
+        print(f"Payroll Error: {e}")
+        return None
+    finally:
+        if conn: conn.close()
+        
+    return result
 
 def save_company_setting(key, value):
     conn = get_db_connection()
@@ -1621,155 +1898,162 @@ def add_manual_scan_log(emp_id, scan_timestamp_obj):
 
 def process_attendance_summary(start_date, end_date):
     """
-    (ฉบับแก้ไขสมบูรณ์) ประมวลผลข้อมูลการเข้างาน (Attendance)
-    - เลือกกฎตาม Work Location
-    - คำนวณ Late / Absent / OT ตามจริง
+    (ฉบับแก้ไข V14.0 - บันทึก OT ลง Database อัตโนมัติ เฉพาะคลังสินค้า)
     """
     conn = get_db_connection()
-    if not conn: 
-        print("DEBUG: DB Connection failed in process_attendance_summary")
-        return []
+    if not conn: return []
     
     summary_report = []
 
     try:
         with conn.cursor(cursor_factory=extras.DictCursor) as cursor:
             
-            # 1. ดึงข้อมูลพนักงานทุกคน (พร้อม Location)
+            # 1. ดึงข้อมูลพนักงาน
             cursor.execute("""
-                SELECT emp_id, fname, lname, work_location 
-                FROM employees 
-                WHERE status = 'Active' OR status IS NULL OR status = '' 
-                ORDER BY emp_id
-            """)
+                SELECT emp_id, fname, lname, work_location, department, position, emp_type
+                FROM employees
+                WHERE status IS NULL 
+                   OR status NOT IN ('พ้นสภาพพนักงาน', 'ลาออก')
+                   OR (termination_date >= %s)
+                ORDER BY emp_id ASC
+            """, (start_date,))
             employees = [dict(row) for row in cursor.fetchall()]
-            print(f"DEBUG: Found {len(employees)} active employees.")
             
-            # 2. ดึงวันหยุดบริษัท
-            cursor.execute("SELECT holiday_date FROM company_holidays WHERE holiday_date BETWEEN %s AND %s", (start_date, end_date))
-            holidays = set(row[0] for row in cursor.fetchall())
+            # 2. ดึงข้อมูลวันหยุด / ลา / สแกนนิ้ว (เหมือนเดิม)
+            cursor.execute("SELECT holiday_date, description FROM company_holidays WHERE holiday_date BETWEEN %s AND %s", (start_date, end_date))
+            holiday_dict = {row['holiday_date']: row['description'] for row in cursor.fetchall()}
             
-            # 3. ดึงข้อมูลการลา
-            cursor.execute("SELECT emp_id, leave_date, leave_type FROM employee_leave_records WHERE leave_date BETWEEN %s AND %s", (start_date, end_date))
+            cursor.execute("SELECT emp_id, leave_date, leave_type, num_days FROM employee_leave_records WHERE leave_date BETWEEN %s AND %s", (start_date, end_date))
             leaves = {}
             for row in cursor.fetchall():
-                key = (row['emp_id'], row['leave_date'])
-                leaves[key] = row['leave_type']
+                leaves[(row['emp_id'], row['leave_date'])] = row
 
-            # 4. ดึงข้อมูล Scan Logs (เข้า-ออก)
             cursor.execute("""
-                SELECT emp_id, scan_timestamp 
-                FROM time_attendance_logs 
-                WHERE DATE(scan_timestamp) BETWEEN %s AND %s
-                ORDER BY scan_timestamp ASC
+                SELECT emp_id, scan_timestamp FROM time_attendance_logs 
+                WHERE DATE(scan_timestamp) BETWEEN %s AND %s ORDER BY scan_timestamp ASC
             """, (start_date, end_date))
-            all_logs = cursor.fetchall()
-            
-            logs_by_emp_date = {}
-            for row in all_logs:
-                e_id = row['emp_id']
-                ts = row['scan_timestamp']
-                d = ts.date()
-                if (e_id, d) not in logs_by_emp_date:
-                    logs_by_emp_date[(e_id, d)] = []
-                logs_by_emp_date[(e_id, d)].append(ts)
+            logs_map = {}
+            for row in cursor.fetchall():
+                eid = row['emp_id']
+                dt = row['scan_timestamp'].date()
+                if (eid, dt) not in logs_map: logs_map[(eid, dt)] = []
+                logs_map[(eid, dt)].append(row['scan_timestamp'])
 
-            # 5. กำหนดกฎการเข้างาน (Work Rules)
+            # 3. กฎการเข้างาน
             WORK_RULES = {
                 "สำนักงานใหญ่": { "standard_in": time(9,0), "standard_out": time(18,0), "tier_1_cutoff": time(9,30), "penalty_1_mins": 60, "penalty_2_mins": 120 },
                 "คลังสินค้า": { "standard_in": time(8,0), "standard_out": time(17,0), "tier_1_cutoff": time(8,30), "penalty_1_mins": 60, "penalty_2_mins": 120 },
                 "default": { "standard_in": time(9,0), "standard_out": time(18,0), "tier_1_cutoff": time(9,30), "penalty_1_mins": 60, "penalty_2_mins": 120 }
             }
 
-            # 6. วนลูปประมวลผล (ตามช่วงวันที่)
-            # import pandas as pd # (Moved to top)
-            date_range = pd.date_range(start_date, end_date)
-            print(f"DEBUG: Processing {len(employees)} employees over {len(date_range)} days.")
-
-            for current_dt in date_range:
-                current_date = current_dt.date()
-                is_holiday = current_date in holidays
-                is_weekend = current_date.weekday() == 6 # Sunday = 6
+            all_dates = pd.date_range(start_date, end_date).date
+            
+            for emp in employees:
+                emp_id = emp['emp_id']
+                emp_name = f"{emp['fname']} {emp['lname']}"
+                loc = emp.get('work_location', 'default') or 'default'
+                if loc not in WORK_RULES: loc = 'default'
+                rule = WORK_RULES[loc]
                 
-                for emp in employees:
-                    emp_id = emp['emp_id']
-                    emp_name = f"{emp['fname']} {emp['lname']}"
-                    
-                    # เลือกกฎตาม Location
-                    loc = emp.get('work_location', 'default')
-                    if loc not in WORK_RULES: loc = 'default'
-                    rule = WORK_RULES[loc]
-                    
-                    # ดึงข้อมูลประจำวัน
-                    daily_logs = logs_by_emp_date.get((emp_id, current_date), [])
-                    scan_in_dt = daily_logs[0] if daily_logs else None
-                    scan_out_dt = daily_logs[-1] if len(daily_logs) > 1 else None # ต้องมีอย่างน้อย 2 ครั้งถึงจะมี scan_out
-                    
-                    leave_type = leaves.get((emp_id, current_date))
-                    
-                    # --- Logic การตัดสินสถานะ ---
-                    status = "Normal"
-                    is_late = False
-                    is_absent = False
-                    late_minutes = 0
-                    ot_minutes = 0
-                    
-                    # 1. กรณีวันหยุด/ลา
-                    if leave_type:
-                        status = f"Leave ({leave_type})"
-                    elif is_holiday:
-                        status = "Holiday"
-                    elif is_weekend:
-                        status = "Weekend"
-                        
-                    # 2. กรณีวันทำงานปกติ
-                    else:
-                        if not scan_in_dt:
-                            status = "Absent"
-                            is_absent = True
-                        else:
-                            # มีการสแกนเข้า -> เช็คสาย
-                            scan_in_time = scan_in_dt.time()
-                            
-                            if scan_in_time > rule['tier_1_cutoff']: 
-                                # สายเกิน 30 นาที (Tier 2)
-                                is_late = True
-                                late_minutes = rule['penalty_2_mins']
-                                status = "Late (>30m)"
-                            elif scan_in_time > rule['standard_in']:
-                                # สายไม่เกิน 30 นาที (Tier 1)
-                                is_late = True
-                                late_minutes = rule['penalty_1_mins']
-                                status = "Late (<30m)"
-                            else:
-                                status = "Normal"
+                # เช็คว่าเป็นคนคลังหรือไม่ (เพื่อคิด OT)
+                is_warehouse = (loc == "คลังสินค้า")
 
-                            # คำนวณ OT (เฉพาะถ้ามีการสแกนออก)
-                            if scan_out_dt:
-                                scan_out_time = scan_out_dt.time()
-                                if scan_out_time > rule['standard_out']:
-                                    # คำนวณส่วนต่างเวลา
-                                    dummy_date = datetime.today().date()
-                                    t_out = datetime.combine(dummy_date, scan_out_time)
-                                    t_std = datetime.combine(dummy_date, rule['standard_out'])
+                total_late_mins = 0
+                total_absent_days = 0.0
+                daily_details = []
+                
+                for curr_date in all_dates:
+                    status = "ปกติ"
+                    late_mins = 0
+                    ot_minutes = 0
+                    ot_hours_to_save = 0.0 # ตัวแปรสำหรับบันทึก
+                    
+                    scan_in_str = "-"
+                    scan_out_str = "-"
+                    
+                    day_logs = logs_map.get((emp_id, curr_date), [])
+                    leave_info = leaves.get((emp_id, curr_date))
+                    is_holiday = curr_date in holiday_dict
+                    is_sunday = (curr_date.weekday() == 6)
+
+                    if day_logs:
+                        scan_in = min(day_logs).time()
+                        scan_out = max(day_logs).time()
+                        scan_in_str = scan_in.strftime("%H:%M")
+                        if len(day_logs) > 1:
+                            scan_out_str = scan_out.strftime("%H:%M")
+                            
+                            # --- คำนวณ OT (เฉพาะคลัง + มีสแกนออก + ไม่ใช่วันลาเต็มวัน) ---
+                            if is_warehouse and not leave_info:
+                                if scan_out > rule['standard_out']:
+                                    dummy = datetime.today()
+                                    t_out = datetime.combine(dummy, scan_out)
+                                    t_std = datetime.combine(dummy, rule['standard_out'])
                                     diff = t_out - t_std
                                     ot_minutes = int(diff.total_seconds() / 60)
+                                    
+                                    # กฎ: ต้องทำเกิน 30 นาทีถึงจะเริ่มนับ (แล้วแต่นโยบาย)
+                                    # สมมติ: คิดตามจริงทุกนาที
+                                    if ot_minutes > 0:
+                                        ot_hours_to_save = round(ot_minutes / 60.0, 2)
+                    else:
+                        scan_in = None
 
-                    # เพิ่มผลลัพธ์ลง List
-                    summary_report.append({
-                        "emp_id": emp_id,
-                        "name": emp_name,
-                        "date": current_date,
-                        "scan_in": scan_in_dt.strftime("%H:%M:%S") if scan_in_dt else "-",
-                        "scan_out": scan_out_dt.strftime("%H:%M:%S") if scan_out_dt else "-",
+                    # --- บันทึก OT ลง Database ทันที (Upsert) ---
+                    # (จะบันทึกทับลงไปในตารางรายวันเลย เพื่อให้ Payroll ดึงไปใช้)
+                    if ot_hours_to_save > 0:
+                        cursor.execute("""
+                            INSERT INTO employee_daily_records (emp_id, work_date, ot_hours, status)
+                            VALUES (%s, %s, %s, 'ทำงาน')
+                            ON CONFLICT (emp_id, work_date) DO UPDATE SET
+                            ot_hours = EXCLUDED.ot_hours;
+                        """, (emp_id, curr_date, ot_hours_to_save))
+                    # -------------------------------------------
+
+                    # Logic สถานะ (ย่อ)
+                    if leave_info:
+                        status = f"ลา {leave_info['leave_type']}"
+                    elif is_holiday or is_sunday:
+                        status = "วันหยุด"
+                        if scan_in: status += " (มาทำ)" # มาทำวันหยุด อาจได้ OT (ยังไม่ได้ทำส่วนคูณ 2 แรง)
+                    elif not scan_in:
+                        status = "ขาดงาน"
+                        total_absent_days += 1.0
+                    else:
+                        status = "ทำงาน"
+                        if scan_in > rule['tier_1_cutoff']: 
+                            late_mins = rule['penalty_2_mins']
+                            status = "สาย (>30)"
+                        elif scan_in > rule['standard_in']: 
+                            late_mins = rule['penalty_1_mins']
+                            status = "สาย (<30)"
+                        total_late_mins += late_mins
+
+                    daily_details.append({
+                        "date": curr_date.strftime("%d/%m/%Y"),
                         "status": status,
-                        "late_minutes": late_minutes,
-                        "ot_minutes": ot_minutes,
-                        "is_absent": is_absent
+                        "scan_in": scan_in_str,
+                        "scan_out": scan_out_str,
+                        "penalty_mins": late_mins,
+                        "ot_hrs": ot_hours_to_save # ส่งไปโชว์ในตารางหน้าจอ
                     })
 
+                summary_report.append({
+                    "emp_id": emp_id,
+                    "name": emp_name,
+                    "emp_type": emp.get('emp_type', ''),
+                    "department": emp.get('department', '-'),
+                    "position": emp.get('position', '-'),
+                    "total_late_minutes": total_late_mins,
+                    "total_late_hours": total_late_mins / 60.0,
+                    "absent_days": total_absent_days,
+                    "details": daily_details
+                })
+            
+            conn.commit() # ยืนยันการบันทึก OT
+
     except Exception as e:
-        print(f"Error processing attendance: {e}")
+        print(f"Error processing: {e}")
         return []
     finally:
         if conn: conn.close()
@@ -1778,29 +2062,20 @@ def process_attendance_summary(start_date, end_date):
 
 def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=None):
     """
-    (สมองหลัก Payroll V18.0 - รองรับค่าเที่ยวรถแบบ "เที่ยวฟรี" โดยดึงยอดเงินจริง)
+    (สมองหลัก Payroll V21.1 - Debug Mode)
+    เพิ่ม Print เพื่อตรวจสอบสาเหตุที่ยอดหักเป็น 0
     """
     if user_inputs is None: user_inputs = {}
 
-    # 1. กำหนดกฎการเข้างาน
+    # 1. กฎการเข้างาน
     WORK_RULES = {
-        "สำนักงานใหญ่": { "standard_in": time(9,0), "tier_1_cutoff": time(9,30), "penalty_1_mins": 60, "penalty_2_mins": 120, "work_hours_per_day": 8.0, "required_duration_minutes": 480, "break_start": time(12,0), "break_end": time(13,0) },
-        "คลังสินค้า": { "standard_in": time(8,0), "tier_1_cutoff": time(8,30), "penalty_1_mins": 60, "penalty_2_mins": 120, "work_hours_per_day": 8.0, "required_duration_minutes": 480, "break_start": time(12,0), "break_end": time(13,0) },
-        "default": { "standard_in": time(9,0), "tier_1_cutoff": time(9,30), "penalty_1_mins": 60, "penalty_2_mins": 120, "work_hours_per_day": 8.0, "required_duration_minutes": 480, "break_start": time(12,0), "break_end": time(13,0) }
+        "สำนักงานใหญ่": { "standard_in": time(9,0), "tier_1_cutoff": time(9,30), "penalty_1_mins": 60, "penalty_2_mins": 120 },
+        "คลังสินค้า": { "standard_in": time(8,0), "tier_1_cutoff": time(8,30), "penalty_1_mins": 60, "penalty_2_mins": 120 },
+        "default": { "standard_in": time(9,0), "tier_1_cutoff": time(9,30), "penalty_1_mins": 60, "penalty_2_mins": 120 }
     }
 
     result = {
-        "emp_id": emp_id, 
-        "base_salary": 0.0, "position_allowance": 0.0,
-        "ot": 0.0, "commission": 0.0, "bonus": 0.0, "other_income": 0.0, 
-        "driving_allowance": 0.0, 
-        "total_income": 0.0,
-        "sso": 0.0, "tax": 0.0, "provident_fund": 0.0, "loan": 0.0, 
-        "late_deduct": 0.0, "other_deduct": 0.0, 
-        "total_deduct": 0.0,
-        "net_salary": 0.0,
-        "debug_penalty_hours": 0.0, "debug_absent_days": 0.0,
-        "debug_worked_days": 0.0 
+        "emp_id": emp_id, "base_salary": 0.0, "position_allowance": 0.0, "ot": 0.0, "commission": 0.0, "bonus": 0.0, "other_income": 0.0, "driving_allowance": 0.0, "total_income": 0.0, "sso": 0.0, "tax": 0.0, "provident_fund": 0.0, "loan": 0.0, "late_deduct": 0.0, "other_deduct": 0.0, "total_deduct": 0.0, "net_salary": 0.0
     }
 
     conn = get_db_connection()
@@ -1808,21 +2083,21 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
 
     try:
         with conn.cursor(cursor_factory=extras.DictCursor) as cursor:
-            
-            # --- 1. ดึงข้อมูลพนักงาน ---
             emp_info = load_single_employee(emp_id)
             if not emp_info or not emp_info.get("salary"): return result
 
             salary_from_db = float(emp_info.get("salary", 0.0))
             emp_type = emp_info.get("emp_type", "")
             
-            # ดึงค่าตำแหน่ง
+            # (Debug) เช็คเงินเดือน
+            print(f"\n--- เริ่มคำนวณ {emp_id} ---")
+            print(f"   > เงินเดือน: {salary_from_db}, ประเภท: {emp_type}")
+
+            # ดึงค่าต่างๆ (ย่อ)
             cursor.execute("SELECT position_allowance FROM salary_history WHERE emp_id = %s ORDER BY history_id DESC LIMIT 1", (emp_id,))
             pos_row = cursor.fetchone()
-            position_allowance = float(pos_row[0]) if pos_row and pos_row[0] else 0.0
-            result["position_allowance"] = position_allowance
-
-            # --- 2. รับค่าจาก User Inputs ---
+            result["position_allowance"] = float(pos_row[0]) if pos_row and pos_row[0] else 0.0
+            
             manual_ot = float(user_inputs.get('ot', 0))
             result["commission"] = float(user_inputs.get('commission', 0))
             result["bonus"] = float(user_inputs.get('bonus', 0))
@@ -1832,20 +2107,21 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
             result["loan"] = float(user_inputs.get('loan', 0))
             result["other_deduct"] = float(user_inputs.get('other_deduct', 0))
 
-            # --- 3. ดึงข้อมูลประกอบ ---
             work_location = emp_info.get('work_location', "default") or "default"
             if work_location not in WORK_RULES: work_location = "default"
             rules = WORK_RULES[work_location]
             
-            try:
-                cursor.execute("SELECT holiday_date FROM company_holidays WHERE holiday_date BETWEEN %s AND %s", (start_date, end_date))
-                holiday_dates_set = {row['holiday_date'] for row in cursor.fetchall()}
-            except: conn.rollback(); holiday_dates_set = set()
+            # ดึงข้อมูลประกอบ
+            cursor.execute("SELECT holiday_date FROM company_holidays WHERE holiday_date BETWEEN %s AND %s", (start_date, end_date))
+            holiday_dates_set = {row['holiday_date'] for row in cursor.fetchall()}
             
-            try:
-                cursor.execute("SELECT leave_date, leave_type, num_days, leave_start_time, leave_end_time FROM employee_leave_records WHERE emp_id = %s AND leave_date BETWEEN %s AND %s", (emp_id, start_date, end_date))
-                leave_records_dict = {row['leave_date']: {'type': row['leave_type'], 'days': float(row['num_days'] or 1.0), 'start': row['leave_start_time'], 'end': row['leave_end_time']} for row in cursor.fetchall()}
-            except: conn.rollback(); leave_records_dict = {}
+            cursor.execute("SELECT leave_date, num_days, leave_type FROM employee_leave_records WHERE emp_id = %s AND leave_date BETWEEN %s AND %s", (emp_id, start_date, end_date))
+            leave_records_dict = {}
+            for row in cursor.fetchall(): leave_records_dict[row['leave_date']] = dict(row)
+
+            cursor.execute("SELECT late_date, minutes_late FROM employee_late_records WHERE emp_id = %s AND late_date BETWEEN %s AND %s", (emp_id, start_date, end_date))
+            manual_late_dict = {}
+            for row in cursor.fetchall(): manual_late_dict[row['late_date']] = row['minutes_late']
 
             cursor.execute("SELECT scan_timestamp FROM time_attendance_logs WHERE emp_id = %s AND scan_timestamp::date BETWEEN %s AND %s ORDER BY scan_timestamp", (emp_id, start_date, end_date))
             scans = cursor.fetchall()
@@ -1855,22 +2131,16 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
                 if d not in scans_by_date: scans_by_date[d] = []
                 scans_by_date[d].append(scan['scan_timestamp'])
 
-            # (!!! SQL สำคัญ: ดึง total_amount มาด้วย !!!)
-            cursor.execute("""
-                SELECT work_date, status, ot_hours, trip_pickup, trip_crane, total_amount 
-                FROM employee_daily_records 
-                WHERE emp_id = %s AND work_date BETWEEN %s AND %s
-            """, (emp_id, start_date, end_date))
-            
+            cursor.execute("SELECT work_date, total_amount, ot_hours FROM employee_daily_records WHERE emp_id = %s AND work_date BETWEEN %s AND %s", (emp_id, start_date, end_date))
             daily_records_dict = {}
-            for row in cursor.fetchall():
-                 daily_records_dict[row['work_date']] = dict(row)
-                 
-            # --- 4. วนลูปคำนวณ ---
+            for row in cursor.fetchall(): daily_records_dict[row['work_date']] = dict(row)
+
+            # --- เริ่ม Loop ---
             total_penalty_minutes = 0.0
             total_absent_days = 0.0
-            actual_worked_days = 0.0 
-            auto_driving_allowance = 0.0 
+            actual_worked_days = 0.0
+            auto_driving_allowance = 0.0
+            total_ot_money = 0.0
             
             all_dates = pd.date_range(start_date, end_date, freq='D')
 
@@ -1878,116 +2148,88 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
                 c_date = current_date.date()
                 is_holiday = (current_date.weekday() == 6 or c_date in holiday_dates_set)
                 
-                scans_today = scans_by_date.get(c_date)
-                leave_info = leave_records_dict.get(c_date)
                 daily_rec = daily_records_dict.get(c_date)
-
-                # (1) คำนวณค่าเที่ยว (!!! แก้ไข: ใช้ยอดเงินจริงจาก total_amount !!!)
-                # เพราะถ้าใช้ (pickup*50) มันจะไม่รู้ว่าอันไหนฟรี
-                if daily_rec:
-                    trip_money = float(daily_rec.get('total_amount', 0) or 0)
-                    auto_driving_allowance += trip_money
+                leave_info = leave_records_dict.get(c_date)
+                scans_today = scans_by_date.get(c_date)
+                manual_late_mins = manual_late_dict.get(c_date, 0)
                 
-                if is_holiday: continue
+                # A. ค่าเที่ยว
+                if daily_rec: auto_driving_allowance += float(daily_rec.get('total_amount', 0) or 0)
 
+                # B. OT
+                ot_hrs = float(daily_rec.get('ot_hours', 0) or 0) if daily_rec else 0
+                if ot_hrs > 0:
+                    base_calc = salary_from_db / 30.0 if "รายวัน" not in emp_type else salary_from_db
+                    hourly_rate = base_calc / 8.0
+                    total_ot_money += (ot_hrs * hourly_rate * 1.5)
+
+                # C. เช็คสถานะ
                 is_present = False
                 if scans_today: is_present = True
-                if daily_rec: is_present = True 
-                if leave_info: is_present = True 
+                if daily_rec and (daily_rec.get('total_amount',0) > 0 or daily_rec.get('ot_hours',0) > 0): is_present = True
+                if manual_late_mins > 0: is_present = True
 
-                if is_present:
+                is_leave = False
+                if leave_info: is_leave = True
+
+                if not is_holiday and not is_leave:
+                    if not is_present:
+                        # ขาดงาน
+                        total_absent_days += 1.0
+                        print(f"   - {c_date}: ขาดงาน (Absent)") # Debug
+                    else:
+                        actual_worked_days += 1.0
+                        
+                        # เช็คสาย
+                        daily_late = 0
+                        if scans_today:
+                            t_in = min(scans_today).time()
+                            if t_in > rules["tier_1_cutoff"]:
+                                daily_late = rules["penalty_2_mins"]
+                                print(f"   - {c_date}: สาย Tier 2 ({daily_late} นาที) - เข้า {t_in}") # Debug
+                            elif t_in > rules["standard_in"]:
+                                daily_late = rules["penalty_1_mins"]
+                                print(f"   - {c_date}: สาย Tier 1 ({daily_late} นาที) - เข้า {t_in}") # Debug
+                        
+                        if manual_late_mins > 0:
+                            daily_late += manual_late_mins
+                            print(f"   - {c_date}: สาย Manual ({manual_late_mins} นาที)") # Debug
+                            
+                        total_penalty_minutes += daily_late
+                elif is_holiday and is_present:
                     actual_worked_days += 1.0
-                
-                effective_start = rules["standard_in"]
-                effective_tier1 = rules["tier_1_cutoff"]
-                num_leave = 0.0
-                leave_type_today = None
-                
-                if leave_info:
-                    num_leave = leave_info['days']
-                    leave_type_today = leave_info.get('type')
-                    if num_leave >= 1.0: continue 
-                    if leave_info['start'] and leave_info['end']:
-                         if leave_info['start'] <= effective_start <= leave_info['end']:
-                             effective_start = leave_info['end']
-                             effective_tier1 = (datetime.combine(datetime.today(), effective_start) + timedelta(minutes=30)).time()
-                    elif num_leave < 1.0:
-                        effective_start = (datetime.combine(datetime.today(), effective_start) + timedelta(hours=(rules["work_hours_per_day"] * num_leave))).time()
-                        effective_tier1 = (datetime.combine(datetime.today(), effective_start) + timedelta(minutes=30)).time()
 
-                if not scans_today:
-                    if not daily_rec:
-                        total_absent_days += (1.0 - num_leave)
-                else:
-                    t_in = min(scans_today).time()
-                    t_out = max(scans_today).time()
-                    total_dur = 0
-                    if t_in != t_out:
-                         dur_diff = datetime.combine(datetime.today(), t_out) - datetime.combine(datetime.today(), t_in)
-                         total_dur = dur_diff.total_seconds() / 60
-                    
-                    break_deduct = 0
-                    if (t_in < rules["break_end"] and t_out > rules["break_start"]):
-                         ov_start = max(t_in, rules["break_start"])
-                         ov_end = min(t_out, rules["break_end"])
-                         break_deduct = (datetime.combine(datetime.today(), ov_end) - datetime.combine(datetime.today(), ov_start)).total_seconds() / 60
-                         if break_deduct < 0: break_deduct = 0
-                    actual_work = total_dur - break_deduct
-                    
-                    if t_in > effective_start:
-                        if effective_tier1 and t_in > effective_tier1: total_penalty_minutes += rules["penalty_2_mins"]
-                        else: total_penalty_minutes += rules["penalty_1_mins"]
-                    elif (actual_work < rules["required_duration_minutes"]) and (leave_type_today != "ลากิจ"):
-                        total_penalty_minutes += rules["penalty_1_mins"]
-
-            # --- 5. สรุปรายได้ ---
-            penalty_hours = total_penalty_minutes / 60.0
-            result["debug_penalty_hours"] = penalty_hours
-            result["debug_absent_days"] = total_absent_days
-            result["debug_worked_days"] = actual_worked_days
-            
-            # บันทึกค่าเที่ยวรวม (ยอดเงินจริง)
+            # --- สรุปยอด ---
             result["driving_allowance"] = auto_driving_allowance
+            result["ot"] = manual_ot + total_ot_money
             
-            calculated_base_salary = 0.0
-            late_deduction_amt = 0.0
+            penalty_hours = total_penalty_minutes / 60.0
+            deduct_amount = 0.0
             
             if salary_from_db > 0:
                 if "รายวัน" in emp_type or "daily" in str(emp_type).lower():
-                    # รายวัน
-                    calculated_base_salary = salary_from_db * actual_worked_days
-                    daily_rate = salary_from_db
-                    hourly_rate = daily_rate / 8.0
-                    late_deduction_amt = (hourly_rate * penalty_hours)
-                    
+                    result["base_salary"] = salary_from_db * actual_worked_days
+                    hourly_rate = salary_from_db / 8.0
+                    deduct_amount = penalty_hours * hourly_rate
+                    print(f"   > คำนวณรายวัน: หักสาย {deduct_amount} บาท ({penalty_hours} ชม.)") # Debug
                 else:
-                    # รายเดือน
-                    calculated_base_salary = salary_from_db
+                    result["base_salary"] = salary_from_db
                     daily_rate = salary_from_db / 30.0
                     hourly_rate = daily_rate / 8.0
-                    late_deduction_amt = (daily_rate * total_absent_days) + (hourly_rate * penalty_hours)
-            
-            result["base_salary"] = calculated_base_salary
-            result["late_deduct"] = late_deduction_amt
-            result["ot"] = manual_ot 
-            
-            # --- 6. ประกันสังคม & สรุป ---
-            sso_base = calculated_base_salary
-            if sso_base < 1650: sso_base = 1650
-            if sso_base > 15000: sso_base = 15000
-            result["sso"] = round(sso_base * 0.05)
+                    deduct_absent = total_absent_days * daily_rate
+                    deduct_late = penalty_hours * hourly_rate
+                    deduct_amount = deduct_absent + deduct_late
+                    print(f"   > คำนวณรายเดือน: หักขาด {deduct_absent} + หักสาย {deduct_late} = {deduct_amount}") # Debug
 
-            result["total_income"] = (
-                result["base_salary"] + position_allowance + 
-                result["ot"] + result["commission"] + result["bonus"] + result["other_income"] +
-                result["driving_allowance"] 
-            )
+            result["late_deduct"] = deduct_amount
             
-            result["total_deduct"] = (
-                result["sso"] + result["tax"] + result["provident_fund"] + 
-                result["late_deduct"] + result["loan"] + result["other_deduct"]
-            )
-            
+            # (คำนวณ Net เหมือนเดิม...)
+            result["sso"] = round(result["base_salary"] * 0.05)
+            if result["sso"] > 750: result["sso"] = 750
+            if result["sso"] < 83: result["sso"] = 83
+
+            result["total_income"] = (result["base_salary"] + result["position_allowance"] + result["ot"] + result["commission"] + result["bonus"] + result["other_income"] + result["driving_allowance"])
+            result["total_deduct"] = (result["sso"] + result["tax"] + result["provident_fund"] + result["late_deduct"] + result["loan"] + result["other_deduct"])
             result["net_salary"] = result["total_income"] - result["total_deduct"]
 
     except Exception as e:
@@ -2397,5 +2639,85 @@ def save_driving_details_list(emp_id, work_date, details_list):
     except Exception as e:
         print(f"Error saving driving details: {e}")
         return False
+    finally:
+        conn.close()
+
+def save_monthly_payroll(emp_id, month, year, pay_date, data):
+    """
+    บันทึกงวดเงินเดือนลง Database (ถ้ามีแล้วให้ Update ทับ)
+    """
+    conn = get_db_connection()
+    if not conn: return False
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO payroll_records (
+                    emp_id, period_month, period_year, payment_date,
+                    base_salary, position_allowance, ot_pay, commission, bonus,
+                    driving_allowance, other_income, total_income,
+                    sso_deduct, tax_deduct, provident_fund, loan_deduct,
+                    late_deduct, other_deduct, total_deduct, net_salary
+                ) VALUES (
+                    %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s,
+                    %s, %s, %s, %s,
+                    %s, %s, %s, %s
+                )
+                ON CONFLICT (emp_id, period_month, period_year) DO UPDATE SET
+                    payment_date = EXCLUDED.payment_date,
+                    base_salary = EXCLUDED.base_salary,
+                    position_allowance = EXCLUDED.position_allowance,
+                    ot_pay = EXCLUDED.ot_pay,
+                    commission = EXCLUDED.commission,
+                    bonus = EXCLUDED.bonus,
+                    driving_allowance = EXCLUDED.driving_allowance,
+                    other_income = EXCLUDED.other_income,
+                    total_income = EXCLUDED.total_income,
+                    sso_deduct = EXCLUDED.sso_deduct,
+                    tax_deduct = EXCLUDED.tax_deduct,
+                    provident_fund = EXCLUDED.provident_fund,
+                    loan_deduct = EXCLUDED.loan_deduct,
+                    late_deduct = EXCLUDED.late_deduct,
+                    other_deduct = EXCLUDED.other_deduct,
+                    total_deduct = EXCLUDED.total_deduct,
+                    net_salary = EXCLUDED.net_salary;
+            """, (
+                emp_id, month, year, pay_date,
+                data.get('base_salary', 0), data.get('position_allowance', 0),
+                data.get('ot', 0), data.get('commission', 0), data.get('bonus', 0),
+                data.get('driving_allowance', 0), data.get('other_income', 0), data.get('total_income', 0),
+                data.get('sso', 0), data.get('tax', 0), data.get('provident_fund', 0),
+                data.get('loan', 0), data.get('late_deduct', 0), data.get('other_deduct', 0),
+                data.get('total_deduct', 0), data.get('net_salary', 0)
+            ))
+            conn.commit()
+            return True
+    except Exception as e:
+        print(f"Error saving payroll record: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_monthly_payroll_records(month, year):
+    """ดึงข้อมูลเงินเดือนที่บันทึกไว้ (History) ตามเดือน/ปี"""
+    conn = get_db_connection()
+    if not conn: return []
+    try:
+        with conn.cursor(cursor_factory=extras.DictCursor) as cursor:
+            # ดึงข้อมูลจาก payroll_records + ชื่อพนักงาน
+            cursor.execute("""
+                SELECT pr.*, e.fname, e.lname, e.id_card, e.position, e.department,
+                       e.is_sales, e.sale_type, e.commission_plan
+                FROM payroll_records pr
+                JOIN employees e ON pr.emp_id = e.emp_id
+                WHERE pr.period_month = %s AND pr.period_year = %s
+                ORDER BY pr.emp_id ASC
+            """, (month, year))
+            
+            return [dict(row) for row in cursor.fetchall()]
+    except Exception as e:
+        print(f"Error fetching payroll history: {e}")
+        return []
     finally:
         conn.close()

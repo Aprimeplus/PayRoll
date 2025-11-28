@@ -55,6 +55,7 @@ class PayrollModule(ttk.Frame):
                 item['receiver_email'],
                 item['pdf_path']
             ))
+        
             
         # --- ฟังก์ชันกดดู PDF ---
         def preview_pdf(event):
@@ -358,6 +359,11 @@ class PayrollModule(ttk.Frame):
         self.pnd3_btn = ttk.Button(btn_frame, text="🏛️ ใบปะหน้า ภ.ง.ด.3", command=self._print_pnd3_summary, state="disabled")
         self.pnd3_btn.pack(side="left", padx=10)
 
+        self.save_db_btn = ttk.Button(btn_frame, text="💾 บันทึกงวดบัญชี (DB)", command=self._save_payroll_to_database, state="disabled")
+        self.save_db_btn.pack(side="left", padx=10)
+
+        ttk.Button(btn_frame, text="📜 ดูประวัติย้อนหลัง", command=self._open_history_window).pack(side="left", padx=10)
+
         self.email_req_btn = ttk.Button(btn_frame, text="📧 ขอส่งสลิป (Email)", command=self._request_email_approval, state="disabled")
         self.email_req_btn.pack(side="left", padx=10)
 
@@ -379,7 +385,90 @@ class PayrollModule(ttk.Frame):
         self.results_sheet.enable_bindings("single", "row_select", "column_width_resize", "arrowkeys", "copy")
 
     # --- ส่วน Logic ---
-    
+    def _open_history_window(self):
+        """เปิดหน้าต่างดูประวัติเงินเดือนย้อนหลัง"""
+        win = tk.Toplevel(self)
+        win.title("📜 ประวัติเงินเดือนย้อนหลัง (Payroll History)")
+        win.geometry("1200x700")
+        
+        # --- Filter Frame ---
+        top_frame = ttk.Frame(win, padding=10)
+        top_frame.pack(fill="x")
+        
+        ttk.Label(top_frame, text="เลือกงวด:").pack(side="left")
+        
+        # ปี
+        current_year = datetime.now().year + 543
+        years = [str(y) for y in range(current_year, current_year-5, -1)]
+        cb_year = ttk.Combobox(top_frame, values=years, width=6, state="readonly")
+        cb_year.set(current_year)
+        cb_year.pack(side="left", padx=5)
+        
+        # เดือน
+        months = list(self.THAI_MONTHS.values())
+        cb_month = ttk.Combobox(top_frame, values=months, width=10, state="readonly")
+        cb_month.set(self.THAI_MONTHS[datetime.now().month])
+        cb_month.pack(side="left", padx=5)
+        
+        # --- Sheet แสดงข้อมูล ---
+        sheet_frame = ttk.Frame(win)
+        sheet_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        history_sheet = Sheet(sheet_frame,
+                              headers=None,
+                              theme="light blue")
+        history_sheet.pack(fill="both", expand=True)
+        history_sheet.enable_bindings("single", "row_select", "column_width_resize", "arrowkeys", "copy")
+
+        # ฟังก์ชันโหลดข้อมูล
+        def load_history():
+            try:
+                y_be = int(cb_year.get())
+                y_ce = y_be - 543
+                m_name = cb_month.get()
+                m_int = self.MONTH_TO_INT[m_name]
+            except: return
+
+            records = hr_database.get_monthly_payroll_records(m_int, y_ce)
+            
+            if not records:
+                messagebox.showinfo("ไม่พบข้อมูล", f"ไม่พบประวัติเงินเดือนของงวด {m_name} {y_be}")
+                history_sheet.set_sheet_data([])
+                return
+
+            # แปลงข้อมูลลงตาราง
+            sheet_data = []
+            for r in records:
+                fullname = f"{r.get('fname','')} {r.get('lname','')}"
+                row = [
+                    r['emp_id'], fullname,
+                    f"{r['base_salary']:,.2f}", f"{r['position_allowance']:,.2f}",
+                    f"{r['ot_pay']:,.2f}", f"{r['commission']:,.2f}", f"{r['bonus']:,.2f}",
+                    f"{r['other_income']:,.2f}", f"{r['driving_allowance']:,.2f}",
+                    f"{r['total_income']:,.2f}",
+                    f"{r['sso_deduct']:,.2f}", f"{r['tax_deduct']:,.2f}", 
+                    f"{r['provident_fund']:,.2f}", f"{r['loan_deduct']:,.2f}",
+                    f"{r['late_deduct']:,.2f}", f"{r['other_deduct']:,.2f}",
+                    f"{r['total_deduct']:,.2f}",
+                    f"{r['net_salary']:,.2f}"
+                ]
+                sheet_data.append(row)
+            
+            headers = [
+                "รหัส", "ชื่อ-สกุล", 
+                "เงินเดือน", "ค่าตำแหน่ง", "OT", "คอมฯ", "โบนัส", "อื่นๆ(รับ)", "ค่าเที่ยว", "รวมรับ",
+                "ประกันสังคม", "ภาษี", "กองทุนฯ", "เงินกู้", "ขาด/สาย", "อื่นๆ(หัก)", "รวมหัก", "สุทธิ"
+            ]
+            history_sheet.headers(headers)
+            history_sheet.set_sheet_data(sheet_data)
+            
+            # ใส่สีสวยๆ เหมือนหน้าหลัก
+            history_sheet.highlight_columns(columns=list(range(2, 10)), bg="#e6f7ff", fg="black") # ฟ้า (รายได้)
+            history_sheet.highlight_columns(columns=list(range(10, 17)), bg="#fff7e6", fg="black") # ส้ม (รายหัก)
+            history_sheet.highlight_columns(columns=[17], bg="#ffffcc", fg="black") # เหลือง (สุทธิ)
+
+        ttk.Button(top_frame, text="🔍 ค้นหา", command=load_history).pack(side="left", padx=10)
+
     def _open_input_popup(self, event):
         selection = self.input_tree.selection()
         if not selection: return
@@ -569,6 +658,8 @@ class PayrollModule(ttk.Frame):
         # เปิดปุ่ม
         self.export_btn.config(state="normal")
         self.print_btn.config(state="normal")
+        if hasattr(self, 'save_db_btn'): 
+            self.save_db_btn.config(state="normal")
         self.pnd1_btn.config(state="normal")
         self.pnd3_btn.config(state="normal")
         self.email_req_btn.config(state="normal")
@@ -621,6 +712,34 @@ class PayrollModule(ttk.Frame):
                                  f"ไม่สามารถบันทึกไฟล์ได้!\n\nสาเหตุ: ไฟล์ '{os.path.basename(file_path)}' กำลังถูกเปิดใช้งานอยู่\n\nวิธีแก้: กรุณาปิดโปรแกรม Excel แล้วลองใหม่อีกครั้ง")
         except Exception as e:
             messagebox.showerror("เกิดข้อผิดพลาด", f"ไม่สามารถบันทึกไฟล์ได้:\n{e}")
+        
+    def _save_payroll_to_database(self):
+        """บันทึกผลคำนวณปัจจุบันลงฐานข้อมูล (payroll_records)"""
+        if not self.last_payroll_results:
+            messagebox.showwarning("เตือน", "ไม่มีข้อมูลให้บันทึก กรุณาคำนวณก่อน")
+            return
+            
+        # ดึงเดือน/ปี ที่คำนวณ
+        y_ce, m_int = self._get_selected_dates()
+        if not y_ce: return
+        
+        month_name = list(self.THAI_MONTHS.values())[m_int - 1]
+        
+        if not messagebox.askyesno("ยืนยันการบันทึก", 
+                                   f"คุณต้องการบันทึกงวดเงินเดือน {month_name} {y_ce+543}\n"
+                                   f"จำนวน {len(self.last_payroll_results)} รายการ ลงฐานข้อมูลใช่หรือไม่?\n\n"
+                                   f"(หากมีข้อมูลเก่าของเดือนนี้ ระบบจะบันทึกทับ)"):
+            return
+            
+        success_count = 0
+        pay_date = datetime.now().date() # ใช้วันที่ปัจจุบันเป็นวันที่จ่าย
+        
+        for item in self.last_payroll_results:
+            # บันทึกทีละคน
+            ok = hr_database.save_monthly_payroll(item['emp_id'], m_int, y_ce, pay_date, item)
+            if ok: success_count += 1
+            
+        messagebox.showinfo("สำเร็จ", f"บันทึกข้อมูลเรียบร้อย {success_count} รายการ")
 
     # --- (!!! ส่วนใหม่: พิมพ์สลิปเงินเดือน PDF !!!) ---
     
@@ -660,19 +779,17 @@ class PayrollModule(ttk.Frame):
         pdf = FPDF(orientation='P', unit='mm', format='A4')
         pdf.set_auto_page_break(auto=False)
         
-        # --- 1. โหลดฟอนต์ (ใช้ไฟล์ Regular ไฟล์เดียวเพื่อกันเหนียว) ---
+        # --- 1. โหลดฟอนต์ ---
         base_path = os.path.dirname(__file__)
         resource_path = os.path.join(base_path, "resources")
         font_path_reg = os.path.join(resource_path, "THSarabunNew.ttf")
         
-        # กันเหนียว: ถ้าหาไม่เจอให้ลองหาที่ root
         if not os.path.exists(font_path_reg): 
             font_path_reg = os.path.join(base_path, "THSarabunNew.ttf")
             
         if not os.path.exists(font_path_reg):
             raise Exception("ไม่พบไฟล์ฟอนต์ THSarabunNew.ttf")
 
-        # เพิ่มฟอนต์ (ใช้ Regular สำหรับทุก Style)
         pdf.add_font("THSarabun", "", font_path_reg, uni=True)
         pdf.add_font("THSarabun", "B", font_path_reg, uni=True) 
 
@@ -692,8 +809,10 @@ class PayrollModule(ttk.Frame):
         def fmt_money(val):
             return f"{val:,.2f}" if isinstance(val, (int, float)) and val > 0 else "-"
 
-        # --- ฟังก์ชันวาดสลิป ---
-        def draw_slip_form(start_y, copy_label):
+        # --- ฟังก์ชันวาดสลิป (Nested Function) ---
+        def draw_slip_form(current_data, start_y, copy_label):
+            # (รับ current_data เข้ามาเป็น argument เพื่อความชัวร์)
+            
             # 1. Header Info
             if os.path.exists(logo_path):
                 pdf.image(logo_path, x=15, y=start_y + 5, w=20)
@@ -718,114 +837,100 @@ class PayrollModule(ttk.Frame):
 
             pdf.set_font("THSarabun", "", 14)
             pdf.set_xy(10, box_top + 1); pdf.cell(30, 6, "  รหัสพนักงาน :", border=0)
-            pdf.set_xy(40, box_top + 1); pdf.cell(65, 6, f"  {data['emp_id']}", border=0)
+            pdf.set_xy(40, box_top + 1); pdf.cell(65, 6, f"  {current_data.get('emp_id', '-')}", border=0)
             pdf.set_xy(105, box_top + 1); pdf.cell(30, 6, "  ตำแหน่ง :", border=0)
-            pdf.set_xy(135, box_top + 1); pdf.cell(65, 6, f"  {data.get('position','-')}", border=0)
+            pdf.set_xy(135, box_top + 1); pdf.cell(65, 6, f"  {current_data.get('position','-')}", border=0)
             
             pdf.set_xy(10, box_top + 9); pdf.cell(30, 6, "  ชื่อ - นามสกุล :", border=0)
-            pdf.set_xy(40, box_top + 9); pdf.cell(65, 6, f"  {data['name']}", border=0)
+            
+            # --- (จุดที่เคย Error: เรียกใช้ชื่ออย่างปลอดภัย) ---
+            display_name = current_data.get('name', '')
+            if not display_name:
+                display_name = f"{current_data.get('fname', '')} {current_data.get('lname', '')}".strip()
+            if not display_name: 
+                display_name = "ไม่ระบุชื่อ"
+            # --------------------------------------------------
+            
+            pdf.set_xy(40, box_top + 9); pdf.cell(65, 6, f"  {display_name}", border=0)
+            
             pdf.set_xy(105, box_top + 9); pdf.cell(30, 6, "  แผนก :", border=0)
-            pdf.set_xy(135, box_top + 9); pdf.cell(65, 6, f"  {data.get('department','-')}", border=0)
+            pdf.set_xy(135, box_top + 9); pdf.cell(65, 6, f"  {current_data.get('department','-')}", border=0)
 
             pdf.set_xy(10, box_top + 18)
             pdf.cell(95, 6, f"วันที่จ่าย : {pay_date}")
             pdf.set_xy(105, box_top + 18)
             pdf.cell(95, 6, f"ค่าจ้างเดือน : {period_str}")
 
-            # 3. Table Data Setup
+            # --- 3. Table Header ---
             tbl_top = box_top + 28
-            body_top = tbl_top
             row_h = 7
             
+            pdf.rect(10, tbl_top, 95, 8)   # กรอบซ้าย
+            pdf.rect(105, tbl_top, 95, 8)  # กรอบขวา
+            
+            pdf.set_font("THSarabun", "B", 16)
+            pdf.set_xy(10, tbl_top)
+            pdf.cell(95, 8, "เงินได้ (Earnings)", border=0, align='C')
+            
+            pdf.set_xy(105, tbl_top)
+            pdf.cell(95, 8, "เงินหัก (Deductions)", border=0, align='C')
+
+            # --- 4. Data Rows ---
+            body_top = tbl_top + 8 
+            max_rows = 8
+            
             incomes = [ 
-                ("เงินเดือน", data.get('base_salary', 0)), 
-                ("ค่าตำแหน่ง", data.get('position_allowance', 0)), 
-                ("ค่าล่วงเวลา", data.get('ot', 0)), 
-                ("คอมมิชชั่น", data.get('commission', 0)), 
-                ("โบนัส", data.get('bonus', 0)), 
-                ("เงินได้อื่นๆ", data.get('other_income', 0))
+                ("เงินเดือน", current_data.get('base_salary', 0)), 
+                ("ค่าตำแหน่ง", current_data.get('position_allowance', 0)), 
+                ("ค่าล่วงเวลา", current_data.get('ot', 0)), 
+                ("คอมมิชชั่น", current_data.get('commission', 0)), 
+                ("โบนัส", current_data.get('bonus', 0)), 
+                ("เงินได้อื่นๆ", current_data.get('other_income', 0))
             ]
             deductions = [
-                ("ประกันสังคม", data.get('sso', 0)),
-                ("ภาษีเงินได้", "-"), 
-                ("  - ภ.ง.ด. 1", data.get('pnd1', 0)),
-                ("  - ภ.ง.ด. 3", data.get('pnd3', 0)),
-                ("สำรองเลี้ยงชีพ", data.get('provident_fund', 0)), 
-                ("หักเงินกู้ยืม", data.get('loan', 0)), 
-                ("ขาด/ลา/สาย", data.get('late_deduct', 0)), 
-                ("หักอื่นๆ", data.get('other_deduct', 0))
+                ("ประกันสังคม", current_data.get('sso', 0)),
+                ("ภาษีเงินได้", 0),
+                ("  - ภ.ง.ด. 1", current_data.get('pnd1', 0)),
+                ("  - ภ.ง.ด. 3", current_data.get('pnd3', 0)),
+                ("สำรองเลี้ยงชีพ", current_data.get('provident_fund', 0)), 
+                ("หักเงินกู้ยืม", current_data.get('loan', 0)), 
+                ("ขาด/ลา/สาย", current_data.get('late_deduct', 0)), 
+                ("หักอื่นๆ", current_data.get('other_deduct', 0))
             ]
 
-            # Max rows dictates the table height
-            data_rows = max(len(incomes), len(deductions))
-            total_rows = data_rows + 1 # +1 for the Header
+            pdf.set_font("THSarabun", "", 14)
             
-            # --- DRAW TABLE LOOP ---
-            curr_y = body_top
-            
-            for i in range(total_rows):
-                current_row_h = 8 if i == 0 else row_h
+            for i in range(max_rows):
+                curr_y = body_top + (i * row_h)
                 
-                # A. Header Row (ท่าง่าย: เขียนทับเลย)
-                if i == 0:
-                    # วาดกรอบ
-                    pdf.set_draw_color(0)
-                    pdf.rect(10, curr_y, 95, current_row_h)   
-                    pdf.rect(105, curr_y, 95, current_row_h)
-                    
-                    # ใช้ฟอนต์ธรรมดา (Normal) ชัวร์ที่สุด (เพราะบรรทัดล่างมันออก บรรทัดนี้ก็ต้องออก!)
-                    pdf.set_font("THSarabun", "", 16) 
-                    pdf.set_text_color(0, 0, 0)
-                    
-                    # ใช้ pdf.text() พิมพ์ลงไปที่พิกัด (X, Y) ตรงๆ ไม่ต้องสนกล่อง
-                    # X=54 คือกึ่งกลางกล่องซ้ายโดยประมาณ
-                    # Y+6 คือระยะบรรทัดที่เหมาะสม
-                    pdf.text(54, curr_y + 6, "เงินได้") 
-                    
-                    # X=149 คือกึ่งกลางกล่องขวาโดยประมาณ
-                    pdf.text(149, curr_y + 6, "เงินหัก")
+                pdf.rect(10, curr_y, 190, row_h)
+                pdf.line(105, curr_y, 105, curr_y + row_h)
+                pdf.line(90, curr_y, 90, curr_y + row_h)
+                pdf.line(185, curr_y, 185, curr_y + row_h)
                 
-                # B. Data Rows
-                else:
-                    pdf.rect(10, curr_y, 190, current_row_h)
-                    pdf.line(105, curr_y, 105, curr_y + current_row_h)
-                    pdf.line(90, curr_y, 90, curr_y + current_row_h)
-                    pdf.line(185, curr_y, 185, curr_y + current_row_h)
+                if i < len(incomes):
+                    label, val = incomes[i]
+                    pdf.set_xy(10, curr_y)
+                    pdf.cell(55, row_h, f"  {label}", border=0, align='L')
+                    pdf.set_xy(65, curr_y)
+                    pdf.cell(25, row_h, fmt_money(val), border=0, align='R')
+                    pdf.set_xy(90, curr_y)
+                    pdf.cell(15, row_h, "บาท", border=0, align='C')
+
+                if i < len(deductions):
+                    l2, v2 = deductions[i]
+                    pdf.set_xy(105, curr_y)
+                    pdf.cell(55, row_h, f"  {l2}", border=0, align='L')
                     
-                    data_idx = i - 1
-                    pdf.set_font("THSarabun", "", 14)
+                    show_val = fmt_money(v2)
+                    if show_val != "-":
+                        pdf.set_xy(160, curr_y)
+                        pdf.cell(25, row_h, show_val, border=0, align='R')
+                        pdf.set_xy(185, curr_y)
+                        pdf.cell(15, row_h, "บาท", border=0, align='C')
 
-                    # Draw Income Item
-                    if data_idx < len(incomes):
-                        label, val = incomes[data_idx]
-                        pdf.set_xy(10, curr_y)
-                        pdf.cell(55, current_row_h, f"  {label}", border=0, align='L')
-                        pdf.set_xy(65, curr_y)
-                        pdf.cell(25, current_row_h, fmt_money(val), border=0, align='R')
-                        pdf.set_xy(90, curr_y)
-                        pdf.cell(15, current_row_h, "บาท", border=0, align='C')
-
-                    # Draw Deduction Item
-                    if data_idx < len(deductions):
-                        l2, v2 = deductions[data_idx]
-                        
-                        # วาดชื่อรายการเสมอ
-                        pdf.set_font("THSarabun", "", 14)
-                        pdf.set_xy(105, curr_y)
-                        pdf.cell(55, current_row_h, f"  {l2}", border=0, align='L')
-                        
-                        # >>> แก้ไขตรงนี้: เช็คว่าถ้าค่าเป็น "-" ไม่ต้องวาดตัวเลขและหน่วย <<<
-                        if v2 != "-":
-                            pdf.set_xy(160, curr_y)
-                            pdf.cell(25, current_row_h, fmt_money(v2), border=0, align='R')
-                            pdf.set_xy(185, curr_y)
-                            pdf.cell(15, current_row_h, "บาท", border=0, align='C')
-
-                # Move Y down
-                curr_y += current_row_h
-
-            # 4. Totals Section
-            totals_y = curr_y 
+            # 5. Totals
+            totals_y = body_top + (max_rows * row_h)
             
             pdf.set_fill_color(240, 240, 240) 
             pdf.rect(10, totals_y, 190, 7, 'F')
@@ -834,23 +939,21 @@ class PayrollModule(ttk.Frame):
 
             pdf.set_font("THSarabun", "B", 14)
             
-            # Total Income
             pdf.set_xy(10, totals_y)
             pdf.cell(55, 7, "  รวมเงินได้", 0, 0, 'L')
             pdf.set_xy(65, totals_y)
-            pdf.cell(25, 7, fmt_money(data['total_income']), 0, 0, 'R')
+            pdf.cell(25, 7, fmt_money(current_data.get('total_income', 0)), 0, 0, 'R')
             pdf.set_xy(90, totals_y)
             pdf.cell(15, 7, "บาท", 0, 0, 'C')
-
-            # Total Deduct
+            
             pdf.set_xy(105, totals_y)
             pdf.cell(55, 7, "  รวมเงินหัก", 0, 0, 'L')
             pdf.set_xy(160, totals_y)
-            pdf.cell(25, 7, fmt_money(data['total_deduct']), 0, 0, 'R')
+            pdf.cell(25, 7, fmt_money(current_data.get('total_deduct', 0)), 0, 0, 'R')
             pdf.set_xy(185, totals_y)
             pdf.cell(15, 7, "บาท", 0, 0, 'C')
 
-            # 5. Net Salary
+            # 6. Net Salary
             net_y = totals_y + 7
             pdf.set_fill_color(220, 220, 220) 
             pdf.rect(105, net_y, 95, 8, 'F')
@@ -859,11 +962,11 @@ class PayrollModule(ttk.Frame):
             pdf.set_xy(105, net_y)
             pdf.cell(55, 8, "  รวมเงินได้สุทธิ", 0, 0, 'L')
             pdf.set_xy(160, net_y)
-            pdf.cell(25, 8, fmt_money(data['net_salary']), 0, 0, 'R')
+            pdf.cell(25, 8, fmt_money(current_data.get('net_salary', 0)), 0, 0, 'R')
             pdf.set_xy(185, net_y)
             pdf.cell(15, 8, "บาท", 0, 0, 'C')
 
-            # 6. Signature
+            # 7. Signature
             sig_y = net_y + 15
             pdf.set_font("THSarabun", "", 12)
             pdf.set_xy(10, sig_y)
@@ -873,19 +976,36 @@ class PayrollModule(ttk.Frame):
 
         # --- Loop Generate Page ---
         for data in data_list:
+            # (!!! เพิ่ม Logic กู้คืนชื่อ !!!)
+            if 'name' not in data or not data['name']:
+                # พยายามสร้างชื่อจาก fname/lname ถ้ามี
+                if 'fname' in data and 'lname' in data:
+                    data['name'] = f"{data['fname']} {data['lname']}".strip()
+                else:
+                    # ถ้าไม่มีจริงๆ ให้วิ่งไปดึงจาก DB
+                    emp_id = data.get('emp_id')
+                    if emp_id:
+                        info = hr_database.load_single_employee(emp_id)
+                        if info:
+                            data['name'] = f"{info.get('fname','')} {info.get('lname','')}".strip()
+                            data['position'] = info.get('position', '-')
+                            data['department'] = info.get('department', '-')
+
             pdf.add_page()
-            draw_slip_form(5, "(ต้นฉบับ)")
+            
+            # ส่ง data เข้าไปวาด (แทนที่จะใช้ตัวแปร global loop)
+            draw_slip_form(data, 5, "(ต้นฉบับ)")
             
             pdf.set_draw_color(100)
             pdf.dashed_line(5, 148, 205, 148, dash_length=2, space_length=2)
             pdf.set_font("THSarabun", "", 10)
             pdf.text(185, 147, "ตัดตามรอยประ")
             
-            draw_slip_form(153, "(สำเนา)")
+            draw_slip_form(data, 153, "(สำเนา)")
             
             pdf.set_xy(10, 290)
             pdf.set_font("THSarabun", "", 10)
-            pdf.cell(0, 5, f"เอกสารนี้สร้างเมื่อ {datetime.now().strftime('%d/%m/%Y %H:%M')}", align='C')
+            pdf.cell(0, 5, f"พิมพ์เมื่อ: {datetime.now().strftime('%d/%m/%Y %H:%M')}", align='R')
 
         pdf.output(filepath)
             
@@ -993,7 +1113,8 @@ class PayrollModule(ttk.Frame):
         return tax_accumulated / 12
     
     def _print_pnd1_summary(self):
-        print("--- DEBUG: MODE HARDCODE (ระบุพิกัดตายตัว 100%) ---")
+        """(ฉบับแก้ไข 100%) ออกรายงาน ภ.ง.ด. 1 (PDF) พร้อมรายชื่อพนักงาน + ยอดรวม"""
+        print("--- DEBUG: START PND1 PDF GENERATION ---")
         
         if not self.last_payroll_results:
             messagebox.showwarning("เตือน", "กรุณากดคำนวณเงินเดือนก่อน")
@@ -1007,14 +1128,29 @@ class PayrollModule(ttk.Frame):
 
         processed_list = []
         for emp in pnd1_list:
-            income_for_tax = emp['total_income'] - emp.get('commission', 0)
-            tax_amount = emp.get('pnd1', 0)
+            # คำนวณรายได้สุทธิสำหรับภาษี (ถ้ามี Commission แยกก็ลบออก หรือตามกฎบริษัท)
+            # ในที่นี้สมมติว่า total_income คือยอดรวมทั้งหมดที่จ่าย
+            income_for_tax = float(emp.get('total_income', 0)) 
+            tax_amount = float(emp.get('pnd1', 0))
+            
             grand_total_income += income_for_tax
             grand_total_tax += tax_amount
             
+            # ดึงชื่อ-นามสกุล (แก้ปัญหา KeyError: 'name')
+            emp_id = emp.get('emp_id', '')
+            # พยายามหาชื่อจากผลลัพธ์ก่อน ถ้าไม่มีไปดึงจาก DB
+            emp_name = emp.get('name', '') 
+            if not emp_name:
+                # ดึงสดจาก DB
+                emp_info = hr_database.load_single_employee(emp_id)
+                if emp_info:
+                    emp_name = f"{emp_info.get('fname', '')} {emp_info.get('lname', '')}"
+                else:
+                    emp_name = "ไม่ระบุชื่อ"
+
             processed_list.append({
-                "id": emp['emp_id'],
-                "name": emp['name'],
+                "id": emp_id,
+                "name": emp_name,
                 "income": income_for_tax,
                 "tax": tax_amount
             })
@@ -1030,14 +1166,13 @@ class PayrollModule(ttk.Frame):
 
         try:
             pdf = FPDF(orientation='P', unit='mm', format='A4')
-            pdf.set_auto_page_break(auto=False)
+            pdf.set_auto_page_break(auto=False) # เราจะคุมเอง
             
-            # --- โหลดฟอนต์ (Regular ตัวเดียวพอ) ---
+            # --- โหลดฟอนต์ ---
             base_path = os.path.dirname(__file__)
             resource_path = os.path.join(base_path, "resources")
             font_path = os.path.join(resource_path, "THSarabunNew.ttf")
             
-            # Fallback path
             if not os.path.exists(font_path): 
                 font_path = os.path.join(base_path, "THSarabunNew.ttf")
             
@@ -1045,11 +1180,10 @@ class PayrollModule(ttk.Frame):
                 messagebox.showerror("Font Error", f"ไม่พบไฟล์ฟอนต์ที่: {font_path}")
                 return
 
-            # Add Font
             pdf.add_font("THSarabun", "", font_path, uni=True)
             
             # Config Columns
-            COLS = [15, 30, 75, 35, 35] 
+            COLS = [15, 30, 75, 35, 35]
             
             def fmt_money(val): return f"{val:,.2f}"
 
@@ -1058,15 +1192,12 @@ class PayrollModule(ttk.Frame):
                 pdf.set_xy(0, 15)
                 pdf.set_text_color(0, 0, 0)
                 
-                # ชื่อบริษัท (กะระยะ X เอาเองให้อยู่กลาง A4=210mm)
                 pdf.set_font("THSarabun", "", 20)
                 pdf.text(80, 20, "บริษัท เอไพร์ม พลัส จํากัด")
                 
-                # ชื่อรายงาน
                 pdf.set_font("THSarabun", "", 16)
                 pdf.text(65, 28, "ใบแนบ ภ.ง.ด. 1 (รายละเอียดการหักภาษี ณ ที่จ่าย)")
                 
-                # งวด
                 try:
                     s_date = self.start_date_entry.get_date()
                     month_th = list(self.THAI_MONTHS.values())[s_date.month - 1]
@@ -1076,35 +1207,22 @@ class PayrollModule(ttk.Frame):
                 pdf.set_font("THSarabun", "", 14)
                 pdf.text(85, 35, f"งวด: {period_str} (หน้าที่ {page_num})")
 
-            # --- ฟังก์ชันวาดหัวตาราง (Manual Position) ---
+            # --- ฟังก์ชันวาดหัวตาราง ---
             def draw_table_header_fixed(y_pos):
-                pdf.set_draw_color(0, 0, 0) # สีเส้นดำ
-                pdf.set_text_color(0, 0, 0) # สีตัวหนังสือดำ
+                pdf.set_draw_color(0, 0, 0)
+                pdf.set_text_color(0, 0, 0)
                 pdf.set_font("THSarabun", "", 14) 
 
-                # 1. วาดกรอบสี่เหลี่ยม (Rect) ทีละช่อง
                 cur_x = 10
                 for width in COLS:
                     pdf.rect(cur_x, y_pos, width, 8)
                     cur_x += width
                 
-                # 2. พิมพ์ตัวหนังสือ (Text) ตามพิกัดที่กะไว้เป๊ะๆ (X = จุดเริ่ม + ระยะขยับ)
-                # y_text = y_pos + 6 (บรรทัดฐานตัวหนังสือ)
                 text_y = y_pos + 6
-                
-                # ลำดับ (X เริ่ม 10, กว้าง 15 -> กลางประมาณ 13)
                 pdf.text(13, text_y, "ลำดับ")
-                
-                # รหัสพนักงาน (X เริ่ม 25, กว้าง 30 -> กลางประมาณ 32)
                 pdf.text(32, text_y, "รหัสพนักงาน")
-                
-                # ชื่อ-สกุล (X เริ่ม 55, กว้าง 75 -> กลางประมาณ 80)
                 pdf.text(80, text_y, "ชื่อ - นามสกุล ผู้มีเงินได้")
-                
-                # เงินได้ (X เริ่ม 130, กว้าง 35 -> กลางประมาณ 138)
                 pdf.text(138, text_y, "จำนวนเงินได้")
-                
-                # ภาษี (X เริ่ม 165, กว้าง 35 -> กลางประมาณ 175)
                 pdf.text(175, text_y, "ภาษีที่หัก")
 
             # --- เริ่มวาด ---
@@ -1116,10 +1234,11 @@ class PayrollModule(ttk.Frame):
             current_y += 8
             
             row_height = 7
-            bottom_margin = 260 
+            bottom_margin = 250 # เหลือที่ไว้สรุปยอดหน้าสุดท้าย
 
             # --- Loop Data ---
             for i, item in enumerate(processed_list):
+                # เช็คหน้ากระดาษ
                 if current_y + row_height > bottom_margin:
                     pdf.add_page()
                     draw_page_header(pdf.page_no())
@@ -1127,7 +1246,6 @@ class PayrollModule(ttk.Frame):
                     draw_table_header_fixed(current_y)
                     current_y += 8
 
-                # ใช้ cell วาดข้อมูล (เพราะส่วนนี้ทำงานปกติ)
                 pdf.set_font("THSarabun", "", 14)
                 pdf.set_xy(10, current_y)
                 
@@ -1144,60 +1262,47 @@ class PayrollModule(ttk.Frame):
                 current_y += row_height
 
             # --- ส่วนสรุปยอด (Summary) ---
-            if current_y + 30 > bottom_margin:
+            if current_y + 35 > 270: # ถ้าที่ไม่พอสรุป ให้ขึ้นหน้าใหม่
                 pdf.add_page()
                 draw_page_header(pdf.page_no())
                 current_y = 45
             else:
                 current_y += 5 
 
-            # หัวข้อ "สรุปรายการ..."
             pdf.set_font("THSarabun", "", 14)
             pdf.text(10, current_y + 6, "สรุปรายการนำส่งรวม:")
             current_y += 8
             
-            # กำหนดขนาดกล่อง
-            w_box1 = 120 # รวม 3 ช่องแรก
-            w_box2 = 35  # เงินได้
-            w_box3 = 35  # ภาษี
+            w_box1 = 120 
+            w_box2 = 35 
+            w_box3 = 35 
             h_box = 18
             
-            # 1. วาดกรอบ
             pdf.set_draw_color(0)
-            pdf.rect(10, current_y, w_box1, h_box)               # กล่องซ้าย
-            pdf.rect(10 + w_box1, current_y, w_box2, h_box)      # กล่องกลาง
-            pdf.rect(10 + w_box1 + w_box2, current_y, w_box3, h_box) # กล่องขวา
+            pdf.rect(10, current_y, w_box1, h_box)               
+            pdf.rect(10 + w_box1, current_y, w_box2, h_box)      
+            pdf.rect(10 + w_box1 + w_box2, current_y, w_box3, h_box) 
             
-            # 2. ใส่ข้อความ (Manual Coordinates)
-            # แถวบน (Labels) - Y ประมาณ current_y + 6
             label_y = current_y + 6
-            pdf.text(50, label_y, "รวมจำนวนราย (ราย)")      # ซ้าย (X ประมาณกลาง 120)
-            pdf.text(10 + w_box1 + 8, label_y, "รวมเงินได้") # กลาง
-            pdf.text(10 + w_box1 + w_box2 + 10, label_y, "รวมภาษี") # ขวา
+            pdf.text(50, label_y, "รวมจำนวนราย (ราย)")      
+            pdf.text(10 + w_box1 + 8, label_y, "รวมเงินได้") 
+            pdf.text(10 + w_box1 + w_box2 + 10, label_y, "รวมภาษี") 
             
-            # แถวล่าง (Values) - Y ประมาณ current_y + 14
             val_y = current_y + 14
-            pdf.set_font("THSarabun", "", 16) # ตัวใหญ่หน่อย
+            pdf.set_font("THSarabun", "", 16)
             
-            # ค่าจำนวนราย (กึ่งกลางกล่องซ้าย)
             pdf.text(65, val_y, str(total_emp))
             
-            # ค่าเงินได้ (จัดชิดขวากล่องกลางหน่อย)
-            # กล่องเริ่มที่ 130, กว้าง 35 -> จบที่ 165
-            # ให้ Text จบที่ประมาณ 163
             income_txt = fmt_money(grand_total_income)
             income_w = pdf.get_string_width(income_txt)
             pdf.text(163 - income_w, val_y, income_txt)
             
-            # ค่าภาษี (จัดชิดขวากล่องขวา)
-            # กล่องเริ่มที่ 165, กว้าง 35 -> จบที่ 200
-            # ให้ Text จบที่ประมาณ 198
             tax_txt = fmt_money(grand_total_tax)
             tax_w = pdf.get_string_width(tax_txt)
             pdf.text(198 - tax_w, val_y, tax_txt)
 
             # --- ลายเซ็น ---
-            sig_y = current_y + 35
+            sig_y = current_y + 30
             pdf.set_font("THSarabun", "", 14)
             pdf.text(120, sig_y, "ลงชื่อ ....................................................... ผู้มีอำนาจลงนาม")
             pdf.text(125, sig_y + 7, f"( วันที่พิมพ์เอกสาร: {datetime.now().strftime('%d/%m/%Y')} )")
@@ -1208,7 +1313,7 @@ class PayrollModule(ttk.Frame):
         except Exception as e:
             import traceback
             traceback.print_exc()
-            messagebox.showerror("Error", f"เกิดข้อผิดพลาดในการสร้าง PDF:\n{e}")
+            messagebox.showerror("Error", f"สร้างใบปะหน้าไม่สำเร็จ: {e}")
         
     def _print_pnd3_summary(self):
         if not self.last_payroll_results: return
