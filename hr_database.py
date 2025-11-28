@@ -2721,3 +2721,33 @@ def get_monthly_payroll_records(month, year):
         return []
     finally:
         conn.close()
+
+def get_annual_pnd1k_data(year_ce):
+    """
+    ดึงข้อมูลทำ ภ.ง.ด. 1ก (สรุปรายได้/ภาษี ทั้งปี ของพนักงานแต่ละคน)
+    year_ce: ปี ค.ศ. (เช่น 2025)
+    """
+    conn = get_db_connection()
+    if not conn: return []
+    try:
+        with conn.cursor(cursor_factory=extras.DictCursor) as cursor:
+            cursor.execute("""
+                SELECT 
+                    e.emp_id, e.fname, e.lname, e.id_card, e.address, e.position,
+                    SUM(pr.total_income) as annual_income,
+                    SUM(pr.tax_deduct) as annual_tax,
+                    SUM(pr.sso_deduct) as annual_sso,
+                    SUM(pr.provident_fund) as annual_fund
+                FROM payroll_records pr
+                JOIN employees e ON pr.emp_id = e.emp_id
+                WHERE pr.period_year = %s
+                GROUP BY e.emp_id, e.fname, e.lname, e.id_card, e.address, e.position
+                ORDER BY e.emp_id
+            """, (year_ce,))
+            
+            return [dict(row) for row in cursor.fetchall()]
+    except Exception as e:
+        print(f"Error fetching PND1K data: {e}")
+        return []
+    finally:
+        conn.close()

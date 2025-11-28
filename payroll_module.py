@@ -364,6 +364,12 @@ class PayrollModule(ttk.Frame):
 
         ttk.Button(btn_frame, text="📜 ดูประวัติย้อนหลัง", command=self._open_history_window).pack(side="left", padx=10)
 
+        self.pnd1k_btn = ttk.Button(btn_frame, text="📄 ภ.ง.ด.1ก (รายปี)", command=self._export_pnd1k_excel)
+        self.pnd1k_btn.pack(side="left", padx=10)
+
+        self.pnd1k_pdf_btn = ttk.Button(btn_frame, text="📄 ภ.ง.ด.1ก (PDF)", command=self._print_pnd1k_pdf)
+        self.pnd1k_pdf_btn.pack(side="left", padx=5)
+
         self.email_req_btn = ttk.Button(btn_frame, text="📧 ขอส่งสลิป (Email)", command=self._request_email_approval, state="disabled")
         self.email_req_btn.pack(side="left", padx=10)
 
@@ -383,7 +389,92 @@ class PayrollModule(ttk.Frame):
                                   )
         self.results_sheet.pack(fill="both", expand=True)
         self.results_sheet.enable_bindings("single", "row_select", "column_width_resize", "arrowkeys", "copy")
+    
+    def _export_pnd1k_excel(self):
+        """ออกรายงาน ภ.ง.ด. 1ก (รายปี) เป็น Excel"""
+        
+        # 1. ถามปี พ.ศ.
+        current_year_be = datetime.now().year + 543
+        year_str = simpledialog.askstring("เลือกปีภาษี", f"กรุณากรอกปี พ.ศ. ที่ต้องการออกรายงาน (เช่น {current_year_be}):", initialvalue=str(current_year_be))
+        
+        if not year_str or not year_str.isdigit(): return
+        year_be = int(year_str)
+        year_ce = year_be - 543 # แปลงกลับเป็น ค.ศ. เพื่อ query DB
 
+        # 2. ดึงข้อมูล
+        data_list = hr_database.get_annual_pnd1k_data(year_ce)
+        
+        if not data_list:
+            messagebox.showinfo("ไม่พบข้อมูล", f"ไม่พบประวัติการจ่ายเงินเดือนในปี {year_be}")
+            return
+
+        # 3. เลือกที่เซฟ
+        save_path = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Excel Files", "*.xlsx")],
+            initialfile=f"PND1K_Year_{year_be}.xlsx",
+            title=f"บันทึก ภ.ง.ด. 1ก ปี {year_be}"
+        )
+        if not save_path: return
+
+        try:
+            # 4. เตรียมข้อมูลลง Excel
+            rows = []
+            seq = 1
+            total_inc = 0
+            total_tax = 0
+            total_sso = 0
+            total_fund = 0
+            
+            for item in data_list:
+                inc = float(item['annual_income'] or 0)
+                tax = float(item['annual_tax'] or 0)
+                sso = float(item['annual_sso'] or 0)
+                fund = float(item['annual_fund'] or 0)
+                
+                total_inc += inc
+                total_tax += tax
+                total_sso += sso
+                total_fund += fund
+                
+                rows.append({
+                    "ลำดับ": seq,
+                    "เลขประจำตัวประชาชน": item.get('id_card', ''),
+                    "ชื่อ": item.get('fname', ''),
+                    "นามสกุล": item.get('lname', ''),
+                    "ที่อยู่": item.get('address', ''),
+                    "วันเดือนปีที่จ่าย": "ตลอดปีภาษี",
+                    "จำนวนเงินได้ที่จ่าย (ทั้งปี)": inc,
+                    "ภาษีที่หักนำส่ง (ทั้งปี)": tax,
+                    "ประกันสังคม (ทั้งปี)": sso,
+                    "กองทุนสำรองฯ (ทั้งปี)": fund,
+                    "เงื่อนไข": "1"
+                })
+                seq += 1
+                
+            df = pd.DataFrame(rows)
+            
+            # เพิ่มแถว Total
+            total_row = {
+                "ลำดับ": "", "เลขประจำตัวประชาชน": "", "ชื่อ": ">>> รวมทั้งสิ้น <<<", "นามสกุล": "", "ที่อยู่": "",
+                "วันเดือนปีที่จ่าย": "",
+                "จำนวนเงินได้ที่จ่าย (ทั้งปี)": total_inc,
+                "ภาษีที่หักนำส่ง (ทั้งปี)": total_tax,
+                "ประกันสังคม (ทั้งปี)": total_sso,
+                "กองทุนสำรองฯ (ทั้งปี)": total_fund,
+                "เงื่อนไข": ""
+            }
+            df = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
+
+            # บันทึก
+            df.to_excel(save_path, index=False)
+            
+            if messagebox.askyesno("สำเร็จ", f"บันทึกเรียบร้อยแล้วที่:\n{save_path}\n\nต้องการเปิดไฟล์เลยหรือไม่?"):
+                os.startfile(save_path)
+
+        except Exception as e:
+            messagebox.showerror("Error", f"เกิดข้อผิดพลาด: {e}")
+     
     # --- ส่วน Logic ---
     def _open_history_window(self):
         """เปิดหน้าต่างดูประวัติเงินเดือนย้อนหลัง"""
@@ -1457,3 +1548,167 @@ class PayrollModule(ttk.Frame):
 
         # เปิดหน้าต่างใหม่
         DailyTimesheetWindow(self, emp_id, m_int, y_ce)
+    
+    def _print_pnd1k_pdf(self):
+        """ออกรายงาน ภ.ง.ด. 1ก (รายปี) เป็น PDF (รวมใบปะหน้า + ใบแนบ)"""
+        
+        # 1. ถามปี พ.ศ.
+        current_year_be = datetime.now().year + 543
+        year_str = simpledialog.askstring("เลือกปีภาษี", f"กรุณากรอกปี พ.ศ. ที่ต้องการออกรายงาน (เช่น {current_year_be}):", initialvalue=str(current_year_be))
+        
+        if not year_str or not year_str.isdigit(): return
+        year_be = int(year_str)
+        year_ce = year_be - 543 
+
+        # 2. ดึงข้อมูลทั้งปี
+        data_list = hr_database.get_annual_pnd1k_data(year_ce)
+        
+        if not data_list:
+            messagebox.showinfo("ไม่พบข้อมูล", f"ไม่พบประวัติการจ่ายเงินเดือนในปี {year_be}")
+            return
+
+        # 3. คำนวณยอดรวมก่อน
+        total_emp = len(data_list)
+        grand_total_income = sum(float(item['annual_income'] or 0) for item in data_list)
+        grand_total_tax = sum(float(item['annual_tax'] or 0) for item in data_list)
+
+        # 4. เลือกที่เซฟ
+        save_path = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("PDF Files", "*.pdf")],
+            initialfile=f"PND1K_Year_{year_be}.pdf",
+            title=f"บันทึก ภ.ง.ด. 1ก ปี {year_be} (PDF)"
+        )
+        if not save_path: return
+
+        try:
+            pdf = FPDF(orientation='P', unit='mm', format='A4')
+            pdf.set_auto_page_break(auto=False) # คุมหน้าเอง
+
+            # --- โหลดฟอนต์ ---
+            base_path = os.path.dirname(__file__)
+            resource_path = os.path.join(base_path, "resources")
+            font_path_reg = os.path.join(resource_path, "THSarabunNew.ttf")
+            if not os.path.exists(font_path_reg): font_path_reg = os.path.join(base_path, "THSarabunNew.ttf")
+            font_path_bold = os.path.join(resource_path, "THSarabunNew Bold.ttf")
+            if not os.path.exists(font_path_bold): font_path_bold = os.path.join(base_path, "THSarabunNew Bold.ttf")
+            if not os.path.exists(font_path_bold): font_path_bold = font_path_reg
+
+            pdf.add_font("THSarabun", "", font_path_reg, uni=True)
+            pdf.add_font("THSarabun", "B", font_path_bold, uni=True)
+
+            def fmt_money(val): return f"{val:,.2f}"
+
+            # ==========================================
+            #  ส่วนที่ 1: ใบปะหน้า (Cover Sheet)
+            # ==========================================
+            pdf.add_page()
+            
+            # หัวกระดาษ
+            pdf.set_font("THSarabun", "B", 22)
+            pdf.set_xy(0, 20)
+            pdf.cell(0, 10, "ใบสรุป ภ.ง.ด. 1ก (รายปี)", ln=True, align='C')
+            
+            pdf.set_font("THSarabun", "", 16)
+            pdf.cell(0, 10, f"ประจำปีภาษี: {year_be}", ln=True, align='C')
+            pdf.ln(10)
+
+            # กล่องยอดรวม
+            start_y = pdf.get_y()
+            box_w = 160
+            center_x = (210 - box_w) / 2
+
+            def draw_cover_row(label, value, is_bold=False):
+                x = center_x
+                y = pdf.get_y()
+                pdf.rect(x, y, box_w, 12)
+                
+                pdf.set_xy(x + 5, y + 2)
+                pdf.set_font("THSarabun", "B" if is_bold else "", 16)
+                pdf.cell(100, 8, label, border=0)
+                
+                pdf.set_xy(x + 105, y + 2)
+                pdf.set_font("THSarabun", "B", 16)
+                pdf.cell(50, 8, value, border=0, align='R')
+                pdf.ln(12)
+
+            draw_cover_row("1. จำนวนรายผู้มีเงินได้ทั้งหมด", f"{total_emp}  ราย")
+            draw_cover_row("2. รวมเงินได้ทั้งสิ้นที่จ่ายตลอดปี", f"{grand_total_income:,.2f}  บาท")
+            draw_cover_row("3. รวมภาษีที่นำส่งทั้งสิ้น", f"{grand_total_tax:,.2f}  บาท", is_bold=True)
+
+            # ลายเซ็น
+            pdf.ln(20)
+            pdf.set_font("THSarabun", "", 14)
+            pdf.set_x(center_x)
+            pdf.cell(0, 8, "ลงชื่อ ....................................................... ผู้มีหน้าที่หักภาษี ณ ที่จ่าย", ln=True, align='C')
+            pdf.cell(0, 8, f"( วันที่พิมพ์: {datetime.now().strftime('%d/%m/%Y')} )", ln=True, align='C')
+
+            # ==========================================
+            #  ส่วนที่ 2: ใบแนบ (Attachment List)
+            # ==========================================
+            pdf.add_page() # ขึ้นหน้าใหม่สำหรับรายการ
+
+            # กำหนดคอลัมน์: ลำดับ, บัตร ปชช, ชื่อ-สกุล, วันที่จ่าย, เงินได้ทั้งปี, ภาษีทั้งปี
+            col_w = [10, 35, 60, 25, 30, 30]
+            headers = ["ลำดับ", "เลขบัตรประชาชน", "ชื่อ-นามสกุล", "วันเดือนปี", "เงินได้ทั้งปี", "ภาษีทั้งปี"]
+
+            def draw_attach_header():
+                pdf.set_font("THSarabun", "B", 18)
+                pdf.cell(0, 10, f"ใบแนบ ภ.ง.ด. 1ก ประจำปี {year_be}", ln=True, align='C')
+                pdf.ln(2)
+                
+                # หัวตาราง
+                pdf.set_fill_color(230, 230, 230)
+                pdf.set_font("THSarabun", "B", 14)
+                for i, h in enumerate(headers):
+                    pdf.cell(col_w[i], 8, h, border=1, align='C', fill=True)
+                pdf.ln()
+
+            draw_attach_header()
+
+            # วนลูปข้อมูล
+            pdf.set_font("THSarabun", "", 14)
+            seq = 1
+            current_y = pdf.get_y()
+            row_h = 7
+            bottom_margin = 270
+
+            for item in data_list:
+                if current_y + row_h > bottom_margin:
+                    pdf.add_page()
+                    draw_attach_header()
+                    current_y = pdf.get_y()
+
+                inc = float(item['annual_income'] or 0)
+                tax = float(item['annual_tax'] or 0)
+                fullname = f"{item.get('fname','')} {item.get('lname','')}"
+                id_card = item.get('id_card', '-')
+
+                pdf.cell(col_w[0], row_h, str(seq), 1, 0, 'C')
+                
+                if len(id_card) > 13: pdf.set_font("THSarabun", "", 12)
+                pdf.cell(col_w[1], row_h, id_card, 1, 0, 'C')
+                pdf.set_font("THSarabun", "", 14)
+                
+                pdf.cell(col_w[2], row_h, f"  {fullname}", 1, 0, 'L')
+                pdf.cell(col_w[3], row_h, "ตลอดปี", 1, 0, 'C')
+                pdf.cell(col_w[4], row_h, fmt_money(inc), 1, 0, 'R')
+                pdf.cell(col_w[5], row_h, fmt_money(tax), 1, 0, 'R')
+                pdf.ln()
+                
+                current_y += row_h
+                seq += 1
+
+            # บรรทัดยอดรวมท้ายตาราง
+            pdf.set_font("THSarabun", "B", 14)
+            pdf.set_fill_color(204, 255, 204)
+            
+            pdf.cell(sum(col_w[:4]), 8, "รวมยอดทั้งสิ้น", 1, 0, 'R', fill=True)
+            pdf.cell(col_w[4], 8, fmt_money(grand_total_income), 1, 0, 'R', fill=True)
+            pdf.cell(col_w[5], 8, fmt_money(grand_total_tax), 1, 0, 'R', fill=True)
+
+            pdf.output(save_path)
+            os.startfile(save_path)
+
+        except Exception as e:
+            messagebox.showerror("Error", f"สร้าง PDF ภ.ง.ด.1ก ไม่สำเร็จ:\n{e}")
