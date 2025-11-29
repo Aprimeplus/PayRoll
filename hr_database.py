@@ -162,6 +162,20 @@ def init_db():
             """)
 
             cursor.execute("""
+                CREATE TABLE IF NOT EXISTS audit_logs (
+                    log_id SERIAL PRIMARY KEY,
+                    action_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    actor_name TEXT,         -- ใครเป็นคนทำ (Username)
+                    action_type TEXT,        -- 'CREATE', 'UPDATE', 'DELETE'
+                    target_emp_id TEXT,      -- ทำกับพนักงานคนไหน
+                    target_emp_name TEXT,    -- ชื่อพนักงาน (ณ ตอนนั้น)
+                    changed_field TEXT,      -- ฟิลด์ที่แก้ (เช่น salary, position)
+                    old_value TEXT,          -- ค่าเดิม
+                    new_value TEXT           -- ค่าใหม่
+                );
+            """)
+
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS payroll_records (
                     payroll_id SERIAL PRIMARY KEY,
                     emp_id TEXT NOT NULL,
@@ -1178,40 +1192,93 @@ def load_single_employee(emp_id):
             conn.close()
 
 def save_employee(data, current_user):
+    """
+    บันทึกข้อมูลพนักงาน + พร้อมระบบ Audit Trail (จับผิดการแก้ไข)
+    """
     conn = get_db_connection()
-    if not conn: return False
+    if not conn: return False, "DB Connection Failed"
+    
     emp_id = data.get("id")
     role = current_user.get("role")
     username = current_user.get("username")
-    is_new_employee = not bool(load_single_employee(emp_id)) 
+    
+    # 1. ดึงข้อมูลเก่ามาเก็บไว้ก่อน (Old Data)
+    old_data = load_single_employee(emp_id)
+    is_new_employee = not bool(old_data)
+    
     try:
         with conn.cursor() as cursor:
             if is_new_employee:
+                # --- กรณีพนักงานใหม่ (CREATE) ---
                 success = _upsert_employee_data(cursor, data)
-                if not success: raise Exception("Failed to insert new employee data.")
-                message = "บันทึกข้อมูลพนักงานใหม่เรียบร้อยแล้ว"
+                if success:
+                    # บันทึก Log ว่าสร้างพนักงานใหม่
+                    emp_name = f"{data.get('fname')} {data.get('lname')}"
+                    add_audit_log(username, 'CREATE', emp_id, emp_name, 'All Data', '-', 'New Employee Created')
+                    message = "บันทึกข้อมูลพนักงานใหม่เรียบร้อยแล้ว"
+                else:
+                    raise Exception("Insert failed")
+
             elif role == 'hr':
+                # HR แก้ไข -> ส่งเข้า Pending (เหมือนเดิม)
                 change_data_json = json.dumps(data)
-                cursor.execute(
-                    """
-                    INSERT INTO pending_employee_changes
-                    (emp_id, change_data, requested_by, status)
+                cursor.execute("""
+                    INSERT INTO pending_employee_changes (emp_id, change_data, requested_by, status)
                     VALUES (%s, %s, %s, %s)
-                    """,
-                    (emp_id, change_data_json, username, 'pending')
-                )
+                """, (emp_id, change_data_json, username, 'pending'))
                 message = "ส่งคำขอแก้ไขข้อมูลเรียบร้อยแล้ว รอการอนุมัติ"
-            elif role == 'approver':
+
+            elif role == 'approver' or role == 'admin': # (สมมติ admin ทำได้เลย)
+                # --- กรณีแก้ไขข้อมูล (UPDATE) พร้อม Audit Trail ---
+                
+                # รายชื่อฟิลด์ที่อยากจับตามอง (Sensitive Fields)
+                fields_to_track = {
+                    'salary': "เงินเดือน",
+                    'position': "ตำแหน่ง",
+                    'department': "แผนก",
+                    'status': "สถานะ",
+                    'bank_account_no': "เลขบัญชี",
+                    'is_sales': "ฝ่ายขาย",
+                    'commission_plan': "แผนคอมมิชชั่น"
+                }
+                
+                # เปรียบเทียบค่า (Compare)
+                changes_detected = []
+                if old_data:
+                    for key, label in fields_to_track.items():
+                        # ดึงค่าเก่า/ใหม่ (แปลงเป็น string เพื่อเทียบง่ายๆ)
+                        val_old = str(old_data.get(key, '') or '').strip()
+                        
+                        # (Mapping ชื่อ key ให้ตรงกับ data ที่ส่งมา)
+                        data_key = key
+                        if key == 'bank_account_no': data_key = 'account' # ชื่อใน dict ไม่ตรง DB
+                        
+                        val_new = str(data.get(data_key, '') or '').strip()
+                        
+                        # ถ้าไม่เหมือนกัน -> จดไว้
+                        if val_old != val_new:
+                            changes_detected.append((label, val_old, val_new))
+
+                # บันทึกข้อมูลจริง
                 success = _upsert_employee_data(cursor, data)
-                if not success: raise Exception("Failed to update employee data directly.")
+                if not success: raise Exception("Update failed")
+                
+                # ถ้าบันทึกสำเร็จ -> เขียน Audit Log ทีละรายการ
+                emp_name = f"{data.get('fname')} {data.get('lname')}"
+                for label, v_old, v_new in changes_detected:
+                    add_audit_log(username, 'UPDATE', emp_id, emp_name, label, v_old, v_new)
+                
                 message = "อัปเดตข้อมูลพนักงานเรียบร้อยแล้ว"
+                
             else: 
-                 raise Exception("Invalid user role for saving data.")
+                 raise Exception("Invalid user role")
+            
             conn.commit()
-            return True, message 
+            return True, message
+            
     except Exception as e:
         conn.rollback()
-        messagebox.showerror("Save Error", f"ไม่สามารถบันทึกข้อมูลได้:\n{e}")
+        print(f"Save Error: {e}")
         return False, f"เกิดข้อผิดพลาด: {e}"
     finally:
         if conn: conn.close()
@@ -2749,5 +2816,123 @@ def get_annual_pnd1k_data(year_ce):
     except Exception as e:
         print(f"Error fetching PND1K data: {e}")
         return []
+    finally:
+        conn.close()
+    
+def check_leave_quota_status(emp_id, year, leave_type, req_days):
+    """
+    ตรวจสอบสถานะโควตาลา
+    Returns: (is_pass, message, remaining_days)
+    """
+    conn = get_db_connection()
+    if not conn: return False, "Database Error", 0
+    
+    try:
+        with conn.cursor(cursor_factory=extras.DictCursor) as cursor:
+            # 1. ดึงโควตาทั้งปี
+            cursor.execute("""
+                SELECT leave_annual_days, leave_sick_days, leave_personal_days, 
+                       leave_maternity_days, leave_ordination_days 
+                FROM employees WHERE emp_id = %s
+            """, (emp_id,))
+            quota_row = cursor.fetchone()
+            if not quota_row: return False, "ไม่พบข้อมูลพนักงาน", 0
+            
+            # Map ชื่อประเภทลา กับ คอลัมน์ใน DB
+            type_map = {
+                "ลาพักร้อน": "leave_annual_days",
+                "ลาป่วย": "leave_sick_days",
+                "ลากิจ": "leave_personal_days",
+                "ลาคลอด": "leave_maternity_days",
+                "ลาบวช": "leave_ordination_days"
+            }
+            
+            col_name = type_map.get(leave_type)
+            if not col_name: 
+                return True, "ลาประเภทอื่น (ไม่จำกัดโควตา)", 999 # ลาอื่นๆ ไม่เช็ค
+                
+            total_quota = float(quota_row[col_name] or 0)
+            
+            # 2. ดึงยอดที่ใช้ไปแล้วในปีนี้
+            cursor.execute("""
+                SELECT SUM(num_days) 
+                FROM employee_leave_records 
+                WHERE emp_id = %s AND leave_type = %s AND EXTRACT(YEAR FROM leave_date) = %s
+            """, (emp_id, leave_type, year))
+            
+            used_days = float(cursor.fetchone()[0] or 0)
+            
+            # 3. คำนวณ
+            remaining = total_quota - used_days
+            
+            if req_days > remaining:
+                return False, f"สิทธิ์วันลาไม่พอ! (เหลือ {remaining} วัน, ขอ {req_days} วัน)", remaining
+            else:
+                return True, f"อนุมัติ (เหลือ {remaining - req_days} วัน)", remaining
+
+    except Exception as e:
+        print(f"Quota Check Error: {e}")
+        return False, f"Error: {e}", 0
+    finally:
+        conn.close()
+
+def add_audit_log(actor, action, emp_id, emp_name, field, old_val, new_val):
+    """บันทึกเหตุการณ์ลง Audit Log"""
+    conn = get_db_connection()
+    if not conn: return
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO audit_logs 
+                (actor_name, action_type, target_emp_id, target_emp_name, changed_field, old_value, new_value)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (actor, action, emp_id, emp_name, field, str(old_val), str(new_val)))
+            conn.commit()
+    except Exception as e:
+        print(f"Audit Log Error: {e}")
+    finally:
+        conn.close()
+
+def get_employee_annual_summary(emp_id, year_ce):
+    """
+    ดึงข้อมูลสรุปรายได้/ภาษี ทั้งปี ของพนักงาน 1 คน (เพื่อทำ 50 ทวิ)
+    """
+    conn = get_db_connection()
+    if not conn: return None
+    try:
+        with conn.cursor(cursor_factory=extras.DictCursor) as cursor:
+            # 1. ดึงข้อมูลส่วนตัว + ที่อยู่
+            cursor.execute("""
+                SELECT fname, lname, id_card, address, position 
+                FROM employees WHERE emp_id = %s
+            """, (emp_id,))
+            emp = cursor.fetchone()
+            if not emp: return None
+            
+            # 2. ดึงยอดเงินรวมทั้งปีจาก payroll_records
+            cursor.execute("""
+                SELECT 
+                    SUM(total_income) as total_income,
+                    SUM(tax_deduct) as total_tax,
+                    SUM(sso_deduct) as total_sso,
+                    SUM(provident_fund) as total_fund
+                FROM payroll_records 
+                WHERE emp_id = %s AND period_year = %s
+            """, (emp_id, year_ce))
+            payroll = cursor.fetchone()
+            
+            return {
+                "fname": emp['fname'],
+                "lname": emp['lname'],
+                "id_card": emp['id_card'],
+                "address": emp['address'],
+                "total_income": float(payroll['total_income'] or 0),
+                "total_tax": float(payroll['total_tax'] or 0),
+                "total_sso": float(payroll['total_sso'] or 0),
+                "total_fund": float(payroll['total_fund'] or 0)
+            }
+    except Exception as e:
+        print(f"Error getting annual summary: {e}")
+        return None
     finally:
         conn.close()

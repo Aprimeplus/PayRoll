@@ -15,8 +15,15 @@ import smtplib
 import ssl
 from email.message import EmailMessage
 from tksheet import Sheet
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from pypdf import PdfReader, PdfWriter
+import io
 
 class PayrollModule(ttk.Frame):
+
 
     def _open_email_approval_window(self):
         """(Approver) หน้าจอตรวจสอบและอนุมัติการส่งอีเมล"""
@@ -369,6 +376,9 @@ class PayrollModule(ttk.Frame):
 
         self.pnd1k_pdf_btn = ttk.Button(btn_frame, text="📄 ภ.ง.ด.1ก (PDF)", command=self._print_pnd1k_pdf)
         self.pnd1k_pdf_btn.pack(side="left", padx=5)
+
+        self.btn_50tawi = ttk.Button(btn_frame, text="📄 ใบ 50 ทวิ (รายคน)", command=self._print_50tawi_pdf)
+        self.btn_50tawi.pack(side="left", padx=10)
 
         self.email_req_btn = ttk.Button(btn_frame, text="📧 ขอส่งสลิป (Email)", command=self._request_email_approval, state="disabled")
         self.email_req_btn.pack(side="left", padx=10)
@@ -1549,6 +1559,210 @@ class PayrollModule(ttk.Frame):
         # เปิดหน้าต่างใหม่
         DailyTimesheetWindow(self, emp_id, m_int, y_ce)
     
+    def _print_50tawi_pdf(self):
+        """ออกหนังสือรับรอง 50 ทวิ (Overlay) - ฉบับปรับจูนตำแหน่ง V6 (Final + No Date)"""
+        
+        # 1. เช็คการเลือกพนักงาน
+        selected_indexes = self.results_sheet.get_selected_rows(return_tuple=True)
+        if not selected_indexes:
+            messagebox.showwarning("เตือน", "กรุณาเลือกพนักงานในตารางผลลัพธ์ 1 คน")
+            return
+        
+        selected_data = self.last_payroll_results[selected_indexes[0]]
+        emp_id = selected_data['emp_id']
+        
+        # 2. ถามปีภาษี
+        current_year = datetime.now().year
+        year_str = simpledialog.askstring("ปีภาษี", f"กรุณากรอกปี พ.ศ. (เช่น {current_year+543}):", initialvalue=str(current_year+543))
+        if not year_str or not year_str.isdigit(): return
+        year_be = int(year_str)
+        year_ce = year_be - 543
+
+        # 3. ดึงข้อมูล
+        emp_data = hr_database.get_employee_annual_summary(emp_id, year_ce)
+        if not emp_data:
+            messagebox.showerror("Error", "ไม่พบข้อมูลการจ่ายเงินในปีที่ระบุ")
+            return
+
+        # 4. หาไฟล์ Template
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        template_path = os.path.join(base_dir, "approve_wh3_081156.pdf") 
+        if not os.path.exists(template_path):
+             template_path = os.path.join(base_dir, "resources", "approve_wh3_081156.pdf")
+             if not os.path.exists(template_path):
+                messagebox.showerror("Error", "ไม่พบไฟล์ Template: approve_wh3_081156.pdf")
+                return
+
+        try:
+            packet = io.BytesIO()
+            c = canvas.Canvas(packet, pagesize=A4)
+            
+            # โหลดฟอนต์
+            font_path = os.path.join(base_dir, "resources", "THSarabunNew.ttf")
+            if not os.path.exists(font_path): font_path = os.path.join(base_dir, "THSarabunNew.ttf")
+            
+            pdfmetrics.registerFont(TTFont('THSarabun', font_path))
+            
+            # ==================================================================================
+            # 🎯 โซนตั้งค่าพิกัด
+            # ==================================================================================
+            
+            # --- ข้อมูลบริษัท (ผู้จ่ายเงิน) ---
+            PAYER_TAX_ID = "0123456789000"       
+            PAYER_NAME = "บริษัท เอไพร์ม พลัส จำกัด"
+            PAYER_ADDR = "123/45 ถ.สุขุมวิท แขวงคลองเตย เขตคลองเตย กทม. 10110"
+
+            # 1.1 เลขประจำตัวผู้เสียภาษีบริษัท (13 หลัก)
+            PAYER_ID_X = 376          
+            PAYER_ID_Y = 747          
+
+            # 1.2 ชื่อบริษัท
+            PAYER_NAME_X = 60         
+            PAYER_NAME_Y = 730        
+
+            # 1.3 ที่อยู่บริษัท
+            PAYER_ADDR_X = 60         
+            PAYER_ADDR_Y = 708        
+
+            # --- ข้อมูลพนักงาน (ผู้รับเงิน) ---
+            # 2.1 เลขบัตรประชาชน (13 หลัก)
+            ID_X = 377                
+            ID_Y = 678                
+
+            # 2.2 ชื่อ - นามสกุล
+            NAME_X = 60               
+            NAME_Y = 660              
+
+            # 2.3 ที่อยู่
+            ADDR_X = 60               
+            ADDR_Y = 631              
+
+            # --- การตั้งค่าระยะห่างตัวเลข ---
+            ID_SPACING = 10.9         
+            ID_GROUP_GAP = 10.3       
+
+            # --- ข้อมูลเงินได้ (ตารางกลาง) ---
+            Y_INCOME_ROW_1 = 538                 
+            X_DATE = 330                         
+            X_AMOUNT = 480                       
+            X_TAX = 550                          
+
+            # --- ข้อมูลยอดรวม (ด้านล่าง) ---
+            Y_TOTAL = 248                        
+            Y_SSO = 210                          
+            X_SSO = 230                          
+            X_FUND = 430                         
+            
+            # Y_DATE_SIGN = 145  <-- ปิดไว้ ไม่ใช้แล้ว
+            # X_DATE_SIGN = 220  <-- ปิดไว้ ไม่ใช้แล้ว
+
+            # ==================================================================================
+            # 🛠️ ฟังก์ชันช่วยวาด (Helper Functions)
+            # ==================================================================================
+            def draw_id_card_spaced(c, x, y, text, spacing=13, group_gap=8):
+                """ฟังก์ชันสำหรับหยอดตัวเลขลงช่องสี่เหลี่ยม (เว้นระยะห่างแบบมีจังหวะ)"""
+                c.setFont('THSarabun', 16) 
+                text = str(text).replace("-", "").strip()
+                curr_x = x
+                
+                # index ที่ต้องกระโดด: หลังตัวที่ 1, 5, 10, 12 (Index: 0, 4, 9, 11)
+                jump_indices = [0, 4, 9, 11]
+
+                for i, char in enumerate(text):
+                    c.drawString(curr_x, y, char)
+                    step = spacing
+                    if i in jump_indices:
+                        step += group_gap
+                    curr_x += step
+
+            # ==================================================================================
+            # 🖌️ เริ่มวาดข้อมูลจริง
+            # ==================================================================================
+
+            # ---------------------------------------------------------
+            # 🔴 1. วาดข้อมูลบริษัท (ผู้จ่าย)
+            # ---------------------------------------------------------
+            draw_id_card_spaced(c, PAYER_ID_X, PAYER_ID_Y, PAYER_TAX_ID, spacing=ID_SPACING, group_gap=ID_GROUP_GAP)
+            
+            c.setFont('THSarabun', 14)
+            c.drawString(PAYER_NAME_X, PAYER_NAME_Y, PAYER_NAME)
+            c.drawString(PAYER_ADDR_X, PAYER_ADDR_Y, PAYER_ADDR)
+
+            # ---------------------------------------------------------
+            # 🔵 2. วาดข้อมูลพนักงาน (ผู้รับ)
+            # ---------------------------------------------------------
+            emp_card_id = emp_data['id_card'] or ""
+            # วาดเลขบัตร
+            draw_id_card_spaced(c, ID_X, ID_Y, emp_card_id, spacing=ID_SPACING, group_gap=ID_GROUP_GAP)
+            
+            c.setFont('THSarabun', 14)
+            # วาดชื่อ
+            c.drawString(NAME_X, NAME_Y, f"{emp_data['fname']} {emp_data['lname']}")
+            # วาดที่อยู่
+            c.drawString(ADDR_X, ADDR_Y, emp_data['address'] or "-")
+
+            # 3. ใส่เครื่องหมาย X ในช่อง (ภ.ง.ด.91) - ถ้าต้องการติ๊ก
+            # c.drawString(450, Y_PAYEE_START - 40, "/") 
+
+            # 4. ส่วนเงินได้ (40(1) เงินเดือน ค่าจ้าง ฯลฯ)
+            c.setFont('THSarabun', 12)
+            c.drawString(X_DATE, Y_INCOME_ROW_1, f"ตลอดปี {year_be}")
+            
+            c.setFont('THSarabun', 14)
+            income_str = f"{emp_data['total_income']:,.2f}"
+            tax_str = f"{emp_data['total_tax']:,.2f}"
+            
+            # วาดบรรทัดแรก (40(1))
+            c.drawRightString(X_AMOUNT, Y_INCOME_ROW_1, income_str)
+            c.drawRightString(X_TAX, Y_INCOME_ROW_1, tax_str)
+
+            # 5. ยอดรวม (Total) - บรรทัดล่างสุดของตาราง
+            c.drawRightString(X_AMOUNT, Y_TOTAL, income_str)
+            c.drawRightString(X_TAX, Y_TOTAL, tax_str)
+            
+            # แปลงยอดภาษีเป็นตัวอักษรภาษาไทย (BahtText) - ถ้ามีฟังก์ชัน
+            # c.drawString(60, Y_TOTAL - 20, bahttext(emp_data['total_tax'])) 
+
+            # 6. กองทุนประกันสังคม / กองทุนสำรองเลี้ยงชีพ
+            if emp_data['total_sso'] > 0:
+                c.drawRightString(X_SSO, Y_SSO, f"{emp_data['total_sso']:,.2f}")
+                
+            if emp_data['total_fund'] > 0:
+                c.drawRightString(X_FUND, Y_SSO, f"{emp_data['total_fund']:,.2f}")
+
+            # 7. วันที่ลงนาม (ปิดไว้ ให้บัญชีลงเอง)
+            # c.drawString(X_DATE_SIGN, Y_DATE_SIGN, datetime.now().strftime("%d/%m/%Y")) 
+
+            c.save()
+            packet.seek(0)
+
+            # รวมร่าง PDF
+            new_pdf = PdfReader(packet)
+            existing_pdf = PdfReader(open(template_path, "rb"))
+            output = PdfWriter()
+            page = existing_pdf.pages[0]
+            page.merge_page(new_pdf.pages[0])
+            output.add_page(page)
+            
+            # บันทึก
+            save_filename = filedialog.asksaveasfilename(
+                defaultextension=".pdf",
+                filetypes=[("PDF Files", "*.pdf")],
+                initialfile=f"50Tawi_{emp_id}_{year_be}.pdf",
+                title="บันทึกหนังสือรับรอง 50 ทวิ"
+            )
+            
+            if save_filename:
+                with open(save_filename, "wb") as f:
+                    output.write(f)
+                if messagebox.askyesno("สำเร็จ", "สร้างใบ 50 ทวิ เรียบร้อยแล้ว\nต้องการเปิดดูเลยหรือไม่?"):
+                    os.startfile(save_filename)
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            messagebox.showerror("Error", f"เกิดข้อผิดพลาด: {e}")
+
     def _print_pnd1k_pdf(self):
         """ออกรายงาน ภ.ง.ด. 1ก (รายปี) เป็น PDF (รวมใบปะหน้า + ใบแนบ)"""
         
