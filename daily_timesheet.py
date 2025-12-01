@@ -1,5 +1,5 @@
 # (ไฟล์: daily_timesheet.py)
-# (เวอร์ชัน V5.4 - เพิ่มชื่อพนักงานใน Header ของ Popup)
+# (เวอร์ชัน V5.5 - เพิ่มตัวเลือก "บริการรวมลง" + ค่าบริการ)
 
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -12,9 +12,6 @@ class DrivingDetailsPopup(tk.Toplevel):
     """หน้าต่างย่อยสำหรับกรอกรายละเอียดเที่ยวรถใน 1 วัน"""
     def __init__(self, parent, emp_id, date_obj, current_details, on_save_callback):
         super().__init__(parent)
-        self.emp_id = emp_id
-        self.date_obj = date_obj
-        self.on_save = on_save_callback
         
         # --- (1) ดึงชื่อพนักงานมาแสดง ---
         self.emp_info = hr_database.load_single_employee(emp_id)
@@ -24,7 +21,10 @@ class DrivingDetailsPopup(tk.Toplevel):
             self.emp_name = emp_id
             
         self.title(f"📝 รายละเอียดการวิ่งรถ - {self.emp_name} ({date_obj.strftime('%d/%m/%Y')})")
-        self.geometry("900x650") # ขยายสูงขึ้นนิดนึงเผื่อ Header
+        self.geometry("950x650") # ขยายกว้างขึ้นอีกนิด
+        self.emp_id = emp_id
+        self.date_obj = date_obj
+        self.on_save = on_save_callback
         
         self.details_data = current_details if current_details else []
         
@@ -32,7 +32,7 @@ class DrivingDetailsPopup(tk.Toplevel):
         self._refresh_table()
 
     def _build_ui(self):
-        # --- (2) ส่วนหัวแสดงชื่อพนักงาน (เพิ่มใหม่) ---
+        # --- Header ---
         header_frame = ttk.Frame(self, padding=(15, 10))
         header_frame.pack(fill="x")
         ttk.Label(header_frame, text=f"👤 พนักงาน: {self.emp_name}", font=("", 12, "bold"), foreground="#2980b9").pack(side="left")
@@ -75,41 +75,56 @@ class DrivingDetailsPopup(tk.Toplevel):
         
         self.ent_doc_id = ttk.Entry(doc_frame, width=20)
         self.ent_doc_id.pack(side="left", padx=5)
+
+        # -- Row 3 (Options: ฟรี / บริการรวมลง) --
+        opt_frame = ttk.Frame(input_frame)
+        opt_frame.grid(row=3, column=0, columnspan=5, sticky='w', pady=5)
         
-        # -- Row 3 (Checkbox ฟรี/พ่วง) --
+        # 3.1 เที่ยวฟรี
         self.is_free_var = tk.BooleanVar(value=False)
-        self.cb_free = ttk.Checkbutton(input_frame, text="เที่ยวพ่วง / ฟรี (ไม่คิดเงิน)", variable=self.is_free_var)
-        self.cb_free.grid(row=3, column=1, columnspan=2, **grid_opts)
+        ttk.Checkbutton(opt_frame, text="เที่ยวพ่วง / ฟรี (ค่าเที่ยว 0 บาท)", variable=self.is_free_var).pack(side="left", padx=(5, 20))
         
-        # ปุ่มเพิ่ม (วางไว้ Row 3 ขวาสุด)
-        ttk.Button(input_frame, text="➕ เพิ่มรายการ", command=self._add_item, style="Success.TButton").grid(row=3, column=3, padx=10, sticky="e")
+        # 3.2 บริการรวมลง
+        self.is_service_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(opt_frame, text="บริการรวมลง", variable=self.is_service_var, command=self._toggle_service_fee).pack(side="left", padx=5)
+        
+        ttk.Label(opt_frame, text="จำนวนเงิน:").pack(side="left", padx=5)
+        self.ent_service_fee = ttk.Entry(opt_frame, width=10, state="disabled")
+        self.ent_service_fee.pack(side="left")
+        ttk.Label(opt_frame, text="บาท").pack(side="left")
+        
+        # ปุ่มเพิ่ม
+        ttk.Button(input_frame, text="➕ เพิ่มรายการ", command=self._add_item, style="Success.TButton").grid(row=3, column=4, padx=10, sticky="e")
 
         # -- Row 4: หมายเหตุ --
-        note_text = "* หมายเหตุ: หากเป็นเที่ยวปกติที่ต้องการเบิกเงิน ห้ามติ๊กช่องนี้เด็ดขาด"
-        ttk.Label(input_frame, text=note_text, font=("Segoe UI", 9), foreground="#c0392b").grid(row=4, column=1, columnspan=3, sticky='w', padx=5)
+        note_text = "* หมายเหตุ: หากเลือก 'เที่ยวฟรี' ค่าเที่ยวจะเป็น 0 แต่ยังสามารถเบิก 'ค่าบริการรวมลง' ได้ (ถ้ามี)"
+        ttk.Label(input_frame, text=note_text, font=("Segoe UI", 9), foreground="#c0392b").grid(row=4, column=0, columnspan=5, sticky='w', padx=5)
 
         # 2. Table List
         list_frame = ttk.Frame(self)
         list_frame.pack(fill="both", expand=True, padx=10)
         
-        cols = ("car", "plate", "doc_ref", "driver", "send_date", "cost", "status")
+        # เพิ่มคอลัมน์ Service
+        cols = ("car", "plate", "doc_ref", "driver", "send_date", "cost", "service", "total")
         self.tree = ttk.Treeview(list_frame, columns=cols, show="headings", height=10)
         
         self.tree.heading("car", text="ประเภท")
         self.tree.heading("plate", text="ทะเบียน")
-        self.tree.heading("doc_ref", text="เอกสารอ้างอิง") 
+        self.tree.heading("doc_ref", text="เอกสาร") 
         self.tree.heading("driver", text="คนขับ")
         self.tree.heading("send_date", text="วันที่ส่ง")
         self.tree.heading("cost", text="ค่าเที่ยว")
-        self.tree.heading("status", text="สถานะ")
+        self.tree.heading("service", text="ค่าบริการ") # <--- ใหม่
+        self.tree.heading("total", text="รวม")         # <--- ใหม่
         
         self.tree.column("car", width=60, anchor="center")
         self.tree.column("plate", width=80)
-        self.tree.column("doc_ref", width=120) 
+        self.tree.column("doc_ref", width=110) 
         self.tree.column("driver", width=100)
         self.tree.column("send_date", width=80, anchor="center")
         self.tree.column("cost", width=60, anchor="e")
-        self.tree.column("status", width=60, anchor="center")
+        self.tree.column("service", width=60, anchor="e")
+        self.tree.column("total", width=70, anchor="e")
         
         self.tree.pack(side="left", fill="both", expand=True)
         
@@ -118,19 +133,37 @@ class DrivingDetailsPopup(tk.Toplevel):
         btn_frame.pack(fill="x")
         
         ttk.Button(btn_frame, text="❌ ลบรายการที่เลือก", command=self._delete_item).pack(side="left")
-        self.lbl_total = ttk.Label(btn_frame, text="รวมเงิน: 0.00 บาท", font=("", 12, "bold"), foreground="blue")
+        self.lbl_total = ttk.Label(btn_frame, text="รวมเงินสุทธิ: 0.00 บาท", font=("", 12, "bold"), foreground="blue")
         self.lbl_total.pack(side="left", padx=20)
         ttk.Button(btn_frame, text="💾 บันทึกและปิด", command=self._confirm_save, style="Primary.TButton").pack(side="right")
+
+    def _toggle_service_fee(self):
+        if self.is_service_var.get():
+            self.ent_service_fee.config(state="normal")
+            self.ent_service_fee.focus()
+        else:
+            self.ent_service_fee.delete(0, tk.END)
+            self.ent_service_fee.config(state="disabled")
 
     def _add_item(self):
         car = self.cb_car.get()
         is_free = self.is_free_var.get()
+        is_service = self.is_service_var.get()
         
-        if is_free:
-            cost = 0.0
-        else:
+        # 1. ค่าเที่ยว
+        cost = 0.0
+        if not is_free:
             cost = 50.0 if car == "กระบะ" else 100.0
-        
+            
+        # 2. ค่าบริการ
+        service_fee = 0.0
+        if is_service:
+            try:
+                service_fee = float(self.ent_service_fee.get())
+            except ValueError:
+                messagebox.showwarning("ข้อมูลผิดพลาด", "กรุณากรอกจำนวนเงินค่าบริการเป็นตัวเลข")
+                return
+
         prefix = self.cb_doc_type.get()
         number = self.ent_doc_id.get().strip()
         combined_doc_id = f"{prefix}{number}" if number else ""
@@ -143,14 +176,19 @@ class DrivingDetailsPopup(tk.Toplevel):
             "cost": cost,
             "doc_type": prefix,
             "doc_id": combined_doc_id,
-            "is_free": is_free
+            "is_free": is_free,
+            # เพิ่มฟิลด์ใหม่
+            "is_service": is_service,
+            "service_fee": service_fee
         }
         self.details_data.append(item)
         self._refresh_table()
         
         # Reset fields
         self.ent_doc_id.delete(0, tk.END)
-        self.is_free_var.set(False) 
+        self.is_free_var.set(False)
+        self.is_service_var.set(False)
+        self._toggle_service_fee() # ปิดช่องกรอกเงิน
         
     def _delete_item(self):
         sel = self.tree.selection()
@@ -161,20 +199,29 @@ class DrivingDetailsPopup(tk.Toplevel):
 
     def _refresh_table(self):
         for i in self.tree.get_children(): self.tree.delete(i)
-        total = 0
+        grand_total = 0
+        
         for item in self.details_data:
             d_str = item['send_date'].strftime('%d/%m/%Y') if item['send_date'] else "-"
             doc_show = item.get('doc_id', '')
-            status_text = "ฟรี" if item.get('is_free') else "คิดเงิน"
+            
+            cost = item.get('cost', 0)
+            svc = item.get('service_fee', 0)
+            total = cost + svc
+            grand_total += total
             
             self.tree.insert("", "end", values=(
-                item.get('car_type'), item.get('license'), 
-                doc_show, item.get('driver'), d_str, 
-                f"{item.get('cost'):.2f}",
-                status_text
+                item.get('car_type'), 
+                item.get('license'), 
+                doc_show, 
+                item.get('driver'), 
+                d_str, 
+                f"{cost:.2f}",
+                f"{svc:.2f}",   # แสดงค่าบริการ
+                f"{total:.2f}"  # แสดงรวม
             ))
-            total += item.get('cost', 0)
-        self.lbl_total.config(text=f"รวมเงิน: {total:,.2f} บาท")
+            
+        self.lbl_total.config(text=f"รวมเงินสุทธิ: {grand_total:,.2f} บาท")
 
     def _confirm_save(self):
         self.on_save(self.date_obj, self.details_data)
@@ -229,8 +276,8 @@ class DailyTimesheetWindow(tk.Toplevel):
         # ดึงข้อมูลจาก DB
         details = hr_database.get_driving_details(self.emp_id, current_date)
         
-        # คำนวณยอดรวม (trip_cost)
-        total_amt = sum(d.get('trip_cost', 0) or 0 for d in details)
+        # คำนวณยอดรวม (ค่าเที่ยว + ค่าบริการ)
+        total_amt = sum(d.get('trip_cost', 0) + d.get('service_fee', 0) for d in details)
         
         row = ttk.Frame(self.scroll_frame)
         row.pack(fill="x", pady=2)
@@ -261,11 +308,14 @@ class DailyTimesheetWindow(tk.Toplevel):
                 'car_type': item.get('car_type'),
                 'license': item.get('license_plate', ''),
                 'driver': item.get('driver_name', ''),
-                'send_date': item.get('delivery_date'), # แปลง delivery_date -> send_date
+                'send_date': item.get('delivery_date'),
                 'cost': float(item.get('trip_cost', 0) or 0),
                 'doc_type': item.get('ref_doc_type', ''),
                 'doc_id': item.get('ref_doc_id', ''),
-                'is_free': bool(item.get('is_free', False))
+                'is_free': bool(item.get('is_free', False)),
+                # เพิ่ม 2 ฟิลด์ใหม่
+                'is_service': bool(item.get('is_service', False)),
+                'service_fee': float(item.get('service_fee', 0) or 0)
             })
         
         # 3. ฟังก์ชัน Callback เมื่อบันทึกเสร็จ
@@ -273,11 +323,11 @@ class DailyTimesheetWindow(tk.Toplevel):
             # บันทึกลง DB
             hr_database.save_driving_details_list(self.emp_id, target_date, new_details)
             
-            # คำนวณยอดรวมใหม่เพื่อโชว์
-            new_total = sum(x['cost'] for x in new_details)
+            # คำนวณยอดรวมใหม่ (ค่าเที่ยว + บริการ)
+            new_total = sum(x['cost'] + x.get('service_fee', 0) for x in new_details)
             self.row_widgets[target_date]["label"].config(text=f"{new_total:,.2f}")
             
-            # โหลดข้อมูลจริงจาก DB มาเก็บใส่ Cache อีกรอบ (เพื่อให้ได้ Key ที่ถูกต้องเสมอ)
+            # โหลดข้อมูลจริงจาก DB มาเก็บใส่ Cache
             updated_db_data = hr_database.get_driving_details(self.emp_id, target_date)
             self.row_widgets[target_date]["data"] = updated_db_data
             

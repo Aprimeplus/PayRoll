@@ -2666,34 +2666,36 @@ def get_driving_details(emp_id, work_date):
 
 def save_driving_details_list(emp_id, work_date, details_list):
     """
-    บันทึกรายการเที่ยวรถ (อัปเดต V3: รองรับ is_free)
+    บันทึกรายการเที่ยวรถ (อัปเดต V4: เพิ่มค่าบริการรวมลง)
     """
     conn = get_db_connection()
     if not conn: return False
     try:
         with conn.cursor() as cursor:
-            # 1. ลบข้อมูลเก่าของวันนั้นทิ้งก่อน
+            # 1. ลบข้อมูลเก่า
             cursor.execute("DELETE FROM employee_driving_details WHERE emp_id = %s AND work_date = %s", (emp_id, work_date))
             
-            # 2. ใส่ข้อมูลใหม่เข้าไปทีละแถว
+            # 2. ใส่ข้อมูลใหม่
             for item in details_list:
-                # แปลง is_free เป็น Boolean (True/False)
                 is_free_val = bool(item.get('is_free', False))
+                is_service_val = bool(item.get('is_service', False)) # <--- ใหม่
+                service_fee_val = float(item.get('service_fee', 0))  # <--- ใหม่
                 
                 cursor.execute("""
                     INSERT INTO employee_driving_details 
-                    (emp_id, work_date, car_type, license_plate, driver_name, delivery_date, trip_cost, ref_doc_type, ref_doc_id, is_free)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    (emp_id, work_date, car_type, license_plate, driver_name, delivery_date, trip_cost, ref_doc_type, ref_doc_id, is_free, is_service, service_fee)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     emp_id, work_date, 
                     item.get('car_type'), item.get('license'), item.get('driver'), 
                     item.get('send_date'), item.get('cost'),
                     item.get('doc_type', ''), item.get('doc_id', ''),
-                    is_free_val # <--- บันทึกสถานะฟรี
+                    is_free_val, is_service_val, service_fee_val
                 ))
             
-            # 3. อัปเดตยอดรวมลงตารางหลัก
-            total_money = sum(x['cost'] for x in details_list)
+            # 3. อัปเดตยอดรวมลงตารางหลัก (ค่าเที่ยว + ค่าบริการ)
+            total_money = sum(x['cost'] + x.get('service_fee', 0) for x in details_list)
+            
             cursor.execute("""
                 INSERT INTO employee_daily_records (emp_id, work_date, total_amount, status)
                 VALUES (%s, %s, %s, 'ทำงาน')

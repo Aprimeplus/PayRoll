@@ -380,6 +380,9 @@ class PayrollModule(ttk.Frame):
         self.btn_50tawi = ttk.Button(btn_frame, text="📄 ใบ 50 ทวิ (รายคน)", command=self._print_50tawi_pdf)
         self.btn_50tawi.pack(side="left", padx=10)
 
+        self.sso_btn = ttk.Button(btn_frame, text="🏥 สปส. 1-10 (Excel)", command=self._export_sso_excel, state="disabled")
+        self.sso_btn.pack(side="left", padx=10)
+
         self.email_req_btn = ttk.Button(btn_frame, text="📧 ขอส่งสลิป (Email)", command=self._request_email_approval, state="disabled")
         self.email_req_btn.pack(side="left", padx=10)
 
@@ -759,6 +762,8 @@ class PayrollModule(ttk.Frame):
         # เปิดปุ่ม
         self.export_btn.config(state="normal")
         self.print_btn.config(state="normal")
+        if hasattr(self, 'sso_btn'): 
+            self.sso_btn.config(state="normal")
         if hasattr(self, 'save_db_btn'): 
             self.save_db_btn.config(state="normal")
         self.pnd1_btn.config(state="normal")
@@ -1761,6 +1766,82 @@ class PayrollModule(ttk.Frame):
         except Exception as e:
             import traceback
             traceback.print_exc()
+            messagebox.showerror("Error", f"เกิดข้อผิดพลาด: {e}")
+
+    def _export_sso_excel(self):
+        """ออกรายงานนำส่งเงินสมทบประกันสังคม (สปส. 1-10) เป็น Excel"""
+        if not self.last_payroll_results:
+            messagebox.showwarning("เตือน", "กรุณากดคำนวณเงินเดือนก่อนครับ")
+            return
+
+        save_path = filedialog.asksaveasfilename(
+            defaultextension=".xlsx",
+            filetypes=[("Excel Files", "*.xlsx")],
+            initialfile=f"SSO_Report_{datetime.now().strftime('%Y%m')}.xlsx",
+            title="บันทึกรายงาน สปส. 1-10"
+        )
+        if not save_path: return
+
+        try:
+            data_rows = []
+            seq = 1
+            
+            for item in self.last_payroll_results:
+                emp_id = item['emp_id']
+                
+                # ดึงข้อมูลส่วนตัว
+                emp_info = hr_database.load_single_employee(emp_id)
+                id_card = emp_info.get('id_card', '') if emp_info else ''
+                fname = emp_info.get('fname', '') if emp_info else ''
+                lname = emp_info.get('lname', '') if emp_info else ''
+                
+                # ดึงยอดที่หักจริง
+                sso_amount = float(item.get('sso', 0))
+                if sso_amount <= 0: continue # ถ้าไม่หักประกันสังคม ไม่ต้องส่งชื่อ
+                
+                # คำนวณฐานค่าจ้าง (Base Wage) ย้อนกลับจากยอดหัก (5%)
+                # หรือจะใช้ item['base_salary'] ก็ได้ แต่ต้อง Cap ที่ 15,000
+                wage_base = sso_amount / 0.05 
+                if wage_base > 15000: wage_base = 15000
+                
+                row = {
+                    "ลำดับ": seq,
+                    "เลขบัตรประชาชน": id_card,
+                    "คำนำหน้า": "", 
+                    "ชื่อผู้ประกันตน": fname,
+                    "นามสกุลผู้ประกันตน": lname,
+                    "ค่าจ้างที่นำส่งเงินสมทบ": wage_base,
+                    "เงินสมทบผู้ประกันตน": sso_amount,
+                    "เงินสมทบนายจ้าง": sso_amount, # นายจ้างจ่ายเท่าลูกจ้าง
+                    "รวมเงินสมทบ": sso_amount * 2,
+                    "สถานะ": "ปกติ"
+                }
+                data_rows.append(row)
+                seq += 1
+            
+            if not data_rows:
+                messagebox.showwarning("ไม่มีข้อมูล", "ไม่พบรายการหักประกันสังคมในงวดนี้")
+                return
+
+            df = pd.DataFrame(data_rows)
+            
+            # เพิ่มแถวรวม (Total) ท้ายตาราง
+            total_row = {
+                "ลำดับ": "", "เลขประจำตัวประชาชน": "", "คำนำหน้า": "", "ชื่อผู้ประกันตน": ">>> รวมทั้งสิ้น <<<", "นามสกุลผู้ประกันตน": "",
+                "ค่าจ้างที่นำส่งเงินสมทบ": df["ค่าจ้างที่นำส่งเงินสมทบ"].sum(),
+                "เงินสมทบผู้ประกันตน": df["เงินสมทบผู้ประกันตน"].sum(),
+                "เงินสมทบนายจ้าง": df["เงินสมทบนายจ้าง"].sum(),
+                "รวมเงินสมทบ": df["รวมเงินสมทบ"].sum(),
+            }
+            df = pd.concat([df, pd.DataFrame([total_row])], ignore_index=True)
+
+            # บันทึก
+            df.to_excel(save_path, index=False)
+            
+            if messagebox.askyesno("สำเร็จ", f"บันทึกรายงานเรียบร้อยที่:\n{save_path}\n\nเปิดดูเลยหรือไม่?"):
+                os.startfile(save_path)
+
+        except Exception as e:
             messagebox.showerror("Error", f"เกิดข้อผิดพลาด: {e}")
 
     def _print_pnd1k_pdf(self):
