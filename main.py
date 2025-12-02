@@ -5,7 +5,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox 
 import sys
 from transport_module import TransportModule
-# --- 1. Import โมดูล ---
 from employee_module import EmployeeModule
 import hr_database
 from login_screen import LoginScreen 

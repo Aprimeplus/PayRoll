@@ -11,6 +11,105 @@ import os
 import calendar 
 from tksheet import Sheet 
 
+class DailyDetailsWindow(tk.Toplevel):
+    """หน้าต่าง Popup แสดงรายละเอียดการลงเวลาทั้งเดือน ของพนักงาน 1 คน"""
+    def __init__(self, parent, emp_data):
+        super().__init__(parent)
+        self.title(f"📅 รายละเอียดการทำงาน - {emp_data['name']} ({emp_data['emp_id']})")
+        self.geometry("1100x600") # ขยายความกว้าง
+        
+        self.details = emp_data.get('details', [])
+        self._build_ui()
+        
+    def _build_ui(self):
+        # Header
+        header = ttk.Frame(self, padding=10)
+        header.pack(fill="x")
+        ttk.Label(header, text="ตารางลงเวลาและคำนวณยอด (Time Log)", font=("", 12, "bold")).pack(side="left")
+        
+        # Table
+        tree_frame = ttk.Frame(self, padding=10)
+        tree_frame.pack(fill="both", expand=True)
+        
+        # (!!! เพิ่มคอลัมน์ OT ที่นี่ !!!)
+        cols = ("date", "status", "in", "out", "late", "ot_in", "ot_out", "ot_hrs", "absent")
+        tree = ttk.Treeview(tree_frame, columns=cols, show="headings", height=20)
+        
+        tree.heading("date", text="วันที่")
+        tree.heading("status", text="สถานะ")
+        tree.heading("in", text="เวลาเข้า (ปกติ)")
+        tree.heading("out", text="เวลาออก (ปกติ)")
+        tree.heading("late", text="สาย (นาที)")
+        
+        # หัวตารางใหม่
+        tree.heading("ot_in", text="เริ่ม OT")
+        tree.heading("ot_out", text="จบ OT")
+        tree.heading("ot_hrs", text="รวม OT (ชม.)")
+        
+        tree.heading("absent", text="ขาดงาน")
+        
+        # กำหนดความกว้าง
+        tree.column("date", width=90, anchor="center")
+        tree.column("status", width=140, anchor="center")
+        tree.column("in", width=80, anchor="center")
+        tree.column("out", width=80, anchor="center")
+        tree.column("late", width=70, anchor="center")
+        
+        tree.column("ot_in", width=70, anchor="center")
+        tree.column("ot_out", width=70, anchor="center")
+        tree.column("ot_hrs", width=80, anchor="center")
+        
+        tree.column("absent", width=60, anchor="center")
+        
+        # Scrollbar
+        sb = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=sb.set)
+        tree.pack(side="left", fill="both", expand=True)
+        sb.pack(side="right", fill="y")
+        
+        # Fill Data
+        for row in self.details:
+            tag = "normal"
+            if "สาย" in row['status']: tag = "late"
+            elif "ขาด" in row['status']: tag = "absent"
+            elif "วันหยุด" in row['status']: tag = "holiday"
+            elif "ลา" in row['status']: tag = "leave"
+            elif row.get('ot_hrs', 0) > 0: tag = "ot"
+            
+            # (Logic ดึงเวลา OT)
+            ot_start = "-"
+            ot_end = "-"
+            ot_h = row.get('ot_hrs', 0)
+            
+            if ot_h > 0:
+                # ถ้ามี OT ให้เอาเวลาสแกนจริงมาโชว์ในช่อง OT ด้วย
+                ot_start = row.get('scan_in', '-')
+                ot_end = row.get('scan_out', '-')
+
+            tree.insert("", "end", values=(
+                row['date'],
+                row['status'],
+                row['scan_in'],
+                row['scan_out'],
+                row['penalty_mins'] if row['penalty_mins'] > 0 else "-",
+                ot_start, # OT In
+                ot_end,   # OT Out
+                f"{ot_h:.2f}" if ot_h > 0 else "-",
+                "1.0" if row.get('status') == "ขาดงาน" else "-"
+            ), tags=(tag,))
+            
+        # Config Colors
+        tree.tag_configure("late", foreground="orange")
+        tree.tag_configure("absent", foreground="red")
+        tree.tag_configure("holiday", foreground="gray")
+        tree.tag_configure("leave", foreground="blue")
+        tree.tag_configure("ot", foreground="green")
+
+        # Footer Button
+        btn_frame = ttk.Frame(self, padding=10)
+        btn_frame.pack(fill="x")
+        ttk.Button(btn_frame, text="ปิดหน้าต่าง", command=self.destroy).pack(side="right")
+
 class TimeProcessorModule(ttk.Frame):
     
     def __init__(self, parent, controller, current_user):

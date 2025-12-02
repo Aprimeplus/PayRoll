@@ -1,5 +1,5 @@
 # (ไฟล์: daily_timesheet.py)
-# (เวอร์ชัน V5.5 - เพิ่มตัวเลือก "บริการรวมลง" + ค่าบริการ)
+# (เวอร์ชัน V7.1 - แก้ไขฟังก์ชันซ้ำซ้อน และรวม UI ให้สมบูรณ์)
 
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -8,20 +8,26 @@ import calendar
 import hr_database
 from custom_widgets import DateDropdown
 
+# พยายาม Import Popup ของ OT
+try:
+    from ot_manager import OTDetailsPopup
+except ImportError:
+    OTDetailsPopup = None
+
+# ==========================================
+#  ส่วนที่ 1: Popup บันทึกเที่ยวรถ (Driving)
+# ==========================================
 class DrivingDetailsPopup(tk.Toplevel):
-    """หน้าต่างย่อยสำหรับกรอกรายละเอียดเที่ยวรถใน 1 วัน"""
+    """หน้าต่างย่อยสำหรับกรอกรายละเอียดเที่ยวรถ"""
     def __init__(self, parent, emp_id, date_obj, current_details, on_save_callback):
         super().__init__(parent)
         
-        # --- (1) ดึงชื่อพนักงานมาแสดง ---
+        # ดึงชื่อพนักงาน
         self.emp_info = hr_database.load_single_employee(emp_id)
-        if self.emp_info:
-            self.emp_name = f"{self.emp_info['fname']} {self.emp_info['lname']}"
-        else:
-            self.emp_name = emp_id
+        self.emp_name = f"{self.emp_info['fname']} {self.emp_info['lname']}" if self.emp_info else emp_id
             
-        self.title(f"📝 รายละเอียดการวิ่งรถ - {self.emp_name} ({date_obj.strftime('%d/%m/%Y')})")
-        self.geometry("950x650") # ขยายกว้างขึ้นอีกนิด
+        self.title(f"🚚 รายละเอียดการวิ่งรถ - {self.emp_name} ({date_obj.strftime('%d/%m/%Y')})")
+        self.geometry("950x650")
         self.emp_id = emp_id
         self.date_obj = date_obj
         self.on_save = on_save_callback
@@ -32,11 +38,10 @@ class DrivingDetailsPopup(tk.Toplevel):
         self._refresh_table()
 
     def _build_ui(self):
-        # --- Header ---
+        # Header
         header_frame = ttk.Frame(self, padding=(15, 10))
         header_frame.pack(fill="x")
-        ttk.Label(header_frame, text=f"👤 พนักงาน: {self.emp_name}", font=("", 12, "bold"), foreground="#2980b9").pack(side="left")
-        ttk.Label(header_frame, text=f"📅 วันที่: {self.date_obj.strftime('%d/%m/%Y')}", font=("", 11)).pack(side="right")
+        ttk.Label(header_frame, text=f"วันที่: {self.date_obj.strftime('%d/%m/%Y')}", font=("", 12, "bold"), foreground="#2980b9").pack(side="left")
         
         # 1. Form Input
         input_frame = ttk.LabelFrame(self, text="เพิ่มเที่ยวรถ", padding=10)
@@ -44,7 +49,7 @@ class DrivingDetailsPopup(tk.Toplevel):
         
         grid_opts = {'padx': 5, 'pady': 5, 'sticky': 'w'}
         
-        # -- Row 0 --
+        # Row 0
         ttk.Label(input_frame, text="ประเภทรถ:").grid(row=0, column=0, **grid_opts)
         self.cb_car = ttk.Combobox(input_frame, values=["กระบะ", "เฮี๊ยบ"], state="readonly", width=10)
         self.cb_car.grid(row=0, column=1, **grid_opts)
@@ -54,7 +59,7 @@ class DrivingDetailsPopup(tk.Toplevel):
         self.ent_plate = ttk.Entry(input_frame, width=15)
         self.ent_plate.grid(row=0, column=3, **grid_opts)
 
-        # -- Row 1 --
+        # Row 1
         ttk.Label(input_frame, text="ชื่อคนขับ:").grid(row=1, column=0, **grid_opts)
         self.ent_driver = ttk.Entry(input_frame, width=20)
         self.ent_driver.grid(row=1, column=1, **grid_opts)
@@ -64,7 +69,7 @@ class DrivingDetailsPopup(tk.Toplevel):
         self.ent_send_date.set_date(self.date_obj)
         self.ent_send_date.grid(row=1, column=3, **grid_opts)
 
-        # -- Row 2 (เอกสาร) --
+        # Row 2
         ttk.Label(input_frame, text="เอกสารอ้างอิง:").grid(row=2, column=0, **grid_opts)
         doc_frame = ttk.Frame(input_frame)
         doc_frame.grid(row=2, column=1, columnspan=3, **grid_opts)
@@ -76,15 +81,13 @@ class DrivingDetailsPopup(tk.Toplevel):
         self.ent_doc_id = ttk.Entry(doc_frame, width=20)
         self.ent_doc_id.pack(side="left", padx=5)
 
-        # -- Row 3 (Options: ฟรี / บริการรวมลง) --
+        # Row 3 (Options)
         opt_frame = ttk.Frame(input_frame)
         opt_frame.grid(row=3, column=0, columnspan=5, sticky='w', pady=5)
         
-        # 3.1 เที่ยวฟรี
         self.is_free_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(opt_frame, text="เที่ยวพ่วง / ฟรี (ค่าเที่ยว 0 บาท)", variable=self.is_free_var).pack(side="left", padx=(5, 20))
+        ttk.Checkbutton(opt_frame, text="เที่ยวพ่วง / ฟรี (0 บาท)", variable=self.is_free_var).pack(side="left", padx=(5, 20))
         
-        # 3.2 บริการรวมลง
         self.is_service_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(opt_frame, text="บริการรวมลง", variable=self.is_service_var, command=self._toggle_service_fee).pack(side="left", padx=5)
         
@@ -93,18 +96,12 @@ class DrivingDetailsPopup(tk.Toplevel):
         self.ent_service_fee.pack(side="left")
         ttk.Label(opt_frame, text="บาท").pack(side="left")
         
-        # ปุ่มเพิ่ม
         ttk.Button(input_frame, text="➕ เพิ่มรายการ", command=self._add_item, style="Success.TButton").grid(row=3, column=4, padx=10, sticky="e")
 
-        # -- Row 4: หมายเหตุ --
-        note_text = "* หมายเหตุ: หากเลือก 'เที่ยวฟรี' ค่าเที่ยวจะเป็น 0 แต่ยังสามารถเบิก 'ค่าบริการรวมลง' ได้ (ถ้ามี)"
-        ttk.Label(input_frame, text=note_text, font=("Segoe UI", 9), foreground="#c0392b").grid(row=4, column=0, columnspan=5, sticky='w', padx=5)
-
-        # 2. Table List
+        # 2. Table
         list_frame = ttk.Frame(self)
         list_frame.pack(fill="both", expand=True, padx=10)
         
-        # เพิ่มคอลัมน์ Service
         cols = ("car", "plate", "doc_ref", "driver", "send_date", "cost", "service", "total")
         self.tree = ttk.Treeview(list_frame, columns=cols, show="headings", height=10)
         
@@ -114,8 +111,8 @@ class DrivingDetailsPopup(tk.Toplevel):
         self.tree.heading("driver", text="คนขับ")
         self.tree.heading("send_date", text="วันที่ส่ง")
         self.tree.heading("cost", text="ค่าเที่ยว")
-        self.tree.heading("service", text="ค่าบริการ") # <--- ใหม่
-        self.tree.heading("total", text="รวม")         # <--- ใหม่
+        self.tree.heading("service", text="ค่าบริการ")
+        self.tree.heading("total", text="รวม")
         
         self.tree.column("car", width=60, anchor="center")
         self.tree.column("plate", width=80)
@@ -132,7 +129,7 @@ class DrivingDetailsPopup(tk.Toplevel):
         btn_frame = ttk.Frame(self, padding=10)
         btn_frame.pack(fill="x")
         
-        ttk.Button(btn_frame, text="❌ ลบรายการที่เลือก", command=self._delete_item).pack(side="left")
+        ttk.Button(btn_frame, text="❌ ลบรายการ", command=self._delete_item).pack(side="left")
         self.lbl_total = ttk.Label(btn_frame, text="รวมเงินสุทธิ: 0.00 บาท", font=("", 12, "bold"), foreground="blue")
         self.lbl_total.pack(side="left", padx=20)
         ttk.Button(btn_frame, text="💾 บันทึกและปิด", command=self._confirm_save, style="Primary.TButton").pack(side="right")
@@ -150,77 +147,49 @@ class DrivingDetailsPopup(tk.Toplevel):
         is_free = self.is_free_var.get()
         is_service = self.is_service_var.get()
         
-        # 1. ค่าเที่ยว
         cost = 0.0
         if not is_free:
             cost = 50.0 if car == "กระบะ" else 100.0
             
-        # 2. ค่าบริการ
         service_fee = 0.0
         if is_service:
-            try:
-                service_fee = float(self.ent_service_fee.get())
-            except ValueError:
-                messagebox.showwarning("ข้อมูลผิดพลาด", "กรุณากรอกจำนวนเงินค่าบริการเป็นตัวเลข")
-                return
+            try: service_fee = float(self.ent_service_fee.get())
+            except: return
 
         prefix = self.cb_doc_type.get()
         number = self.ent_doc_id.get().strip()
         combined_doc_id = f"{prefix}{number}" if number else ""
 
         item = {
-            "car_type": car,
-            "license": self.ent_plate.get().strip(),
-            "driver": self.ent_driver.get().strip(),
-            "send_date": self.ent_send_date.get_date(),
-            "cost": cost,
-            "doc_type": prefix,
-            "doc_id": combined_doc_id,
-            "is_free": is_free,
-            # เพิ่มฟิลด์ใหม่
-            "is_service": is_service,
-            "service_fee": service_fee
+            "car_type": car, "license": self.ent_plate.get().strip(),
+            "driver": self.ent_driver.get().strip(), "send_date": self.ent_send_date.get_date(),
+            "cost": cost, "doc_type": prefix, "doc_id": combined_doc_id,
+            "is_free": is_free, "is_service": is_service, "service_fee": service_fee
         }
         self.details_data.append(item)
         self._refresh_table()
-        
-        # Reset fields
         self.ent_doc_id.delete(0, tk.END)
-        self.is_free_var.set(False)
-        self.is_service_var.set(False)
-        self._toggle_service_fee() # ปิดช่องกรอกเงิน
         
     def _delete_item(self):
         sel = self.tree.selection()
         if not sel: return
-        idx = self.tree.index(sel[0])
-        del self.details_data[idx]
+        del self.details_data[self.tree.index(sel[0])]
         self._refresh_table()
 
     def _refresh_table(self):
         for i in self.tree.get_children(): self.tree.delete(i)
         grand_total = 0
-        
         for item in self.details_data:
             d_str = item['send_date'].strftime('%d/%m/%Y') if item['send_date'] else "-"
             doc_show = item.get('doc_id', '')
-            
             cost = item.get('cost', 0)
             svc = item.get('service_fee', 0)
             total = cost + svc
             grand_total += total
-            
             self.tree.insert("", "end", values=(
-                item.get('car_type'), 
-                item.get('license'), 
-                doc_show, 
-                item.get('driver'), 
-                d_str, 
-                f"{cost:.2f}",
-                f"{svc:.2f}",   # แสดงค่าบริการ
-                f"{total:.2f}"  # แสดงรวม
+                item.get('car_type'), item.get('license'), doc_show, item.get('driver'), 
+                d_str, f"{cost:.2f}", f"{svc:.2f}", f"{total:.2f}"
             ))
-            
         self.lbl_total.config(text=f"รวมเงินสุทธิ: {grand_total:,.2f} บาท")
 
     def _confirm_save(self):
@@ -228,8 +197,11 @@ class DrivingDetailsPopup(tk.Toplevel):
         self.destroy()
 
 
+# ==========================================
+#  ส่วนที่ 2: หน้าจอหลัก (All-in-One)
+# ==========================================
 class DailyTimesheetWindow(tk.Toplevel):
-    """หน้าต่างหลัก: ปฏิทินรายวัน (แสดงยอดรวม)"""
+    """หน้าต่างหลัก: รวมการจัดการเที่ยวรถและ OT ในหน้าเดียว"""
     def __init__(self, parent, emp_id, month, year):
         super().__init__(parent)
         self.emp_id = emp_id
@@ -240,8 +212,8 @@ class DailyTimesheetWindow(tk.Toplevel):
         if not self.emp_info: self.destroy(); return
 
         self.emp_name = f"{self.emp_info['fname']} {self.emp_info['lname']}"
-        self.title(f"🚚 ตารางค่าเที่ยวรถ - {self.emp_name} ({month}/{year})")
-        self.geometry("600x750")
+        self.title(f"📅 บันทึกงานรายวัน - {self.emp_name} ({month}/{year})")
+        self.geometry("800x750")
         
         self.row_widgets = {}
         self._build_ui()
@@ -249,87 +221,129 @@ class DailyTimesheetWindow(tk.Toplevel):
     def _build_ui(self):
         header = ttk.Frame(self, padding=15)
         header.pack(fill="x")
-        ttk.Label(header, text=f"พนักงาน: {self.emp_name}", font=("", 12, "bold")).pack(side="left")
         
+        # Header Info
+        ttk.Label(header, text=f"พนักงาน: {self.emp_name}", font=("", 14, "bold"), foreground="#2c3e50").pack(side="left")
+        ttk.Label(header, text=f"ประจำเดือน: {self.month}/{self.year}", font=("", 12)).pack(side="right")
+        
+        # Legend
+        legend_frame = ttk.Frame(self)
+        legend_frame.pack(fill="x", padx=20, pady=(0, 5))
+        lbl_normal = tk.Label(legend_frame, text="⬜ วันทำงาน", bg="white", relief="solid", borderwidth=1, padx=5)
+        lbl_normal.pack(side="left", padx=5)
+        lbl_hol = tk.Label(legend_frame, text="⬛ วันอาทิตย์ (หยุด)", bg="#f0f0f0", relief="solid", borderwidth=1, padx=5)
+        lbl_hol.pack(side="left", padx=5)
+
+        # Table Header
+        h_frame = ttk.Frame(self)
+        h_frame.pack(fill="x", padx=20, pady=(10, 0))
+        
+        lbl_style = {"font": ("", 10, "bold"), "anchor": "center"}
+        ttk.Label(h_frame, text="วันที่", width=15, **lbl_style).pack(side="left")
+        ttk.Label(h_frame, text="💰 ค่าเที่ยว (บาท)", width=20, **lbl_style).pack(side="left", padx=10)
+        ttk.Label(h_frame, text="", width=15).pack(side="left") 
+        ttk.Label(h_frame, text="⏱️ OT (ชม.)", width=15, **lbl_style).pack(side="left", padx=10)
+        ttk.Label(h_frame, text="", width=15).pack(side="left") 
+
+        # Scrollable Area
         canvas = tk.Canvas(self)
         scrollbar = ttk.Scrollbar(self, orient="vertical", command=canvas.yview)
         self.scroll_frame = ttk.Frame(canvas)
+        
         self.scroll_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.create_window((0, 0), window=self.scroll_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
         
-        headers = ["วันที่", "ยอดเงิน (บาท)", "จัดการ"]
-        h_frame = ttk.Frame(self.scroll_frame)
-        h_frame.pack(fill="x", pady=5)
-        widths = [15, 20, 15]
-        for i, h in enumerate(headers):
-            ttk.Label(h_frame, text=h, width=widths[i], anchor="center", font=("", 10, "bold")).pack(side="left", padx=10)
-            
+        canvas.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        scrollbar.pack(side="right", fill="y", pady=10)
+        
+        # Generate Rows
         num_days = calendar.monthrange(self.year, self.month)[1]
         for day in range(1, num_days + 1):
             current_date = date(self.year, self.month, day)
             self._create_row(day, current_date)
             
     def _create_row(self, day, current_date):
-        # ดึงข้อมูลจาก DB
-        details = hr_database.get_driving_details(self.emp_id, current_date)
+        row_frame = ttk.Frame(self.scroll_frame)
+        row_frame.pack(fill="x", pady=2)
         
-        # คำนวณยอดรวม (ค่าเที่ยว + ค่าบริการ)
-        total_amt = sum(d.get('trip_cost', 0) + d.get('service_fee', 0) for d in details)
+        date_str = f"{day:02d}/{self.month:02d}"
+        bg_color = "#f0f0f0" if current_date.weekday() == 6 else "white"
         
-        row = ttk.Frame(self.scroll_frame)
-        row.pack(fill="x", pady=2)
+        lbl_date = tk.Label(row_frame, text=date_str, width=15, anchor="center", bg=bg_color, relief="flat")
+        lbl_date.pack(side="left")
+
+        # --- ส่วนเที่ยวรถ (Driving) ---
+        driving_details = hr_database.get_driving_details(self.emp_id, current_date)
+        drive_amt = sum(d.get('trip_cost', 0) + d.get('service_fee', 0) for d in driving_details)
         
-        date_str = f"{day}/{self.month}/{self.year+543}"
-        ttk.Label(row, text=date_str, width=15, anchor="center").pack(side="left", padx=10)
+        lbl_drive = ttk.Label(row_frame, text=f"{drive_amt:,.2f}", width=20, anchor="e", foreground="blue" if drive_amt > 0 else "black")
+        lbl_drive.pack(side="left", padx=10)
         
-        lbl_amt = ttk.Label(row, text=f"{total_amt:,.2f}", width=20, anchor="e", font=("", 10, "bold"), foreground="blue")
-        lbl_amt.pack(side="left", padx=10)
+        btn_drive = ttk.Button(row_frame, text="🚚 เที่ยวรถ", width=12,
+                               command=lambda d=current_date: self._open_driving_popup(d))
+        btn_drive.pack(side="left", padx=2)
+
+        # --- ส่วน OT ---
+        ot_details = hr_database.get_ot_details_list(self.emp_id, current_date)
+        ot_hrs = sum(d['period_hours'] for d in ot_details)
         
-        btn = ttk.Button(row, text="📝 รายละเอียด", command=lambda d=current_date: self._open_details(d))
-        btn.pack(side="left", padx=10)
+        lbl_ot = ttk.Label(row_frame, text=f"{ot_hrs:.2f}", width=15, anchor="center", foreground="red" if ot_hrs > 0 else "black")
+        lbl_ot.pack(side="left", padx=10)
         
-        # เก็บข้อมูลดิบจาก DB ไว้ใน cache
+        btn_ot = ttk.Button(row_frame, text="⏱️ OT", width=12,
+                            command=lambda d=current_date: self._open_ot_popup(d))
+        btn_ot.pack(side="left", padx=2)
+        
         self.row_widgets[current_date] = {
-            "label": lbl_amt,
-            "data": details 
+            "lbl_drive": lbl_drive,
+            "lbl_ot": lbl_ot,
+            "drive_data": driving_details,
+            "ot_data": ot_details
         }
 
-    def _open_details(self, date_obj):
-        # 1. ดึงข้อมูลดิบจาก Cache (ซึ่งมาจาก DB)
-        raw_data = self.row_widgets[date_obj]["data"]
-        
-        # 2. แปลงข้อมูลให้เป็น Format ที่หน้าจอ Popup เข้าใจ (Mapping)
-        formatted_data = []
+    # --- Actions ---
+    
+    def _open_driving_popup(self, date_obj):
+        raw_data = self.row_widgets[date_obj]["drive_data"]
+        formatted = []
         for item in raw_data:
-            formatted_data.append({
-                'car_type': item.get('car_type'),
-                'license': item.get('license_plate', ''),
-                'driver': item.get('driver_name', ''),
-                'send_date': item.get('delivery_date'),
+            formatted.append({
+                'car_type': item.get('car_type'), 'license': item.get('license_plate', ''),
+                'driver': item.get('driver_name', ''), 'send_date': item.get('delivery_date'),
                 'cost': float(item.get('trip_cost', 0) or 0),
-                'doc_type': item.get('ref_doc_type', ''),
-                'doc_id': item.get('ref_doc_id', ''),
+                'doc_type': item.get('ref_doc_type', ''), 'doc_id': item.get('ref_doc_id', ''),
                 'is_free': bool(item.get('is_free', False)),
-                # เพิ่ม 2 ฟิลด์ใหม่
                 'is_service': bool(item.get('is_service', False)),
                 'service_fee': float(item.get('service_fee', 0) or 0)
             })
-        
-        # 3. ฟังก์ชัน Callback เมื่อบันทึกเสร็จ
-        def on_popup_save(target_date, new_details):
-            # บันทึกลง DB
+            
+        def on_save(target_date, new_details):
             hr_database.save_driving_details_list(self.emp_id, target_date, new_details)
-            
-            # คำนวณยอดรวมใหม่ (ค่าเที่ยว + บริการ)
             new_total = sum(x['cost'] + x.get('service_fee', 0) for x in new_details)
-            self.row_widgets[target_date]["label"].config(text=f"{new_total:,.2f}")
+            self.row_widgets[target_date]["lbl_drive"].config(text=f"{new_total:,.2f}", foreground="blue" if new_total > 0 else "black")
+            self.row_widgets[target_date]["drive_data"] = hr_database.get_driving_details(self.emp_id, target_date)
+
+        DrivingDetailsPopup(self, self.emp_id, date_obj, formatted, on_save)
+
+    def _open_ot_popup(self, date_obj):
+        if not OTDetailsPopup:
+            messagebox.showerror("Error", "ไม่พบไฟล์ ot_manager.py")
+            return
+
+        raw_data = self.row_widgets[date_obj]["ot_data"]
+        formatted = []
+        for d in raw_data:
+            formatted.append({
+                'start': d['start_time'], 'end': d['end_time'], 
+                'hours': d['period_hours'], 'desc': d['description']
+            })
             
-            # โหลดข้อมูลจริงจาก DB มาเก็บใส่ Cache
-            updated_db_data = hr_database.get_driving_details(self.emp_id, target_date)
-            self.row_widgets[target_date]["data"] = updated_db_data
-            
-        # 4. เปิดหน้าต่าง
-        DrivingDetailsPopup(self, self.emp_id, date_obj, formatted_data, on_popup_save)
+        def on_save(target_date, new_details):
+            hr_database.save_ot_details_list(self.emp_id, target_date, new_details)
+            new_total = sum(x['hours'] for x in new_details)
+            self.row_widgets[target_date]["lbl_ot"].config(text=f"{new_total:.2f}", foreground="red" if new_total > 0 else "black")
+            updated = hr_database.get_ot_details_list(self.emp_id, target_date)
+            self.row_widgets[target_date]["ot_data"] = updated
+
+        OTDetailsPopup(self, self.emp_id, date_obj, formatted, on_save)

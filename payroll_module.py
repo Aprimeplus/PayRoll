@@ -592,8 +592,14 @@ class PayrollModule(ttk.Frame):
         
         entries = {}
         ttk.Label(frame, text="รายได้ (Addition)", font=("", 10, "bold"), foreground="green").grid(row=0, column=0, sticky="w", pady=(0,10))
-        fields_inc = [("ค่าล่วงเวลา (OT)", "ot"), ("คอมมิชชั่น", "commission"), 
-                      ("โบนัส", "bonus"), ("เงินได้อื่นๆ", "other_income")]
+        fields_inc = [
+            ("ค่าล่วงเวลา (OT)", "ot"), 
+            ("คอมมิชชั่น", "commission"), 
+            ("Incentive", "incentive"), 
+            ("เบี้ยขยัน", "diligence"), 
+            ("โบนัส", "bonus"), 
+            ("เงินได้อื่นๆ", "other_income")
+        ]
         row = 1
         for label, key in fields_inc:
             ttk.Label(frame, text=label).grid(row=row, column=0, sticky="e", padx=5, pady=5)
@@ -653,28 +659,39 @@ class PayrollModule(ttk.Frame):
         self.last_payroll_results = []
         sheet_data = []
         
-        # --- ตัวแปรสำหรับเก็บยอดรวม (Grand Total) ---
+        # --- ตัวแปรสำหรับเก็บยอดรวม ---
         total_sum = {
             "base_salary": 0.0, "position_allowance": 0.0,
             "ot": 0.0, "commission": 0.0, "bonus": 0.0, 
-            "other_income": 0.0, "driving_allowance": 0.0, "total_income": 0.0,
-            "sso": 0.0, "pnd1": 0.0, "pnd3": 0.0, "provident_fund": 0.0,
-            "loan": 0.0, "late_deduct": 0.0, "other_deduct": 0.0, "total_deduct": 0.0,
-            "net_salary": 0.0
+            "incentive": 0.0, "diligence": 0.0,
+            "other_income": 0.0, "driving_allowance": 0.0,
+            "total_income": 0.0,
+            "sso": 0.0, "pnd1": 0.0, "pnd3": 0.0,
+            "provident_fund": 0.0, "loan": 0.0, 
+            "late_deduct": 0.0, "other_deduct": 0.0,
+            "total_deduct": 0.0, "net_salary": 0.0
         }
 
-        for emp_id in employee_ids:
-            user_inputs = self.payroll_inputs.get(emp_id, {})
-            res = hr_database.calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs)
+        for i, emp_id in enumerate(employee_ids):
+            user_in = self.payroll_inputs.get(emp_id, {})
+            res = hr_database.calculate_payroll_for_employee(emp_id, start_date, end_date, user_in)
             
             if res:
+                name = self.input_tree.item(emp_id, "values")[1]
+                res['name'] = name
                 emp_info = hr_database.load_single_employee(emp_id)
-                name = f"{emp_info.get('fname', '')} {emp_info.get('lname', '')}"
                 
-                income_for_pnd1 = res['total_income']
-                pnd3_calc = 0.0
-                
-                # คำนวณภาษีแบบก้าวหน้า
+                if emp_info:
+                    res['position'] = emp_info.get('position', '')
+                    res['department'] = emp_info.get('department', '')
+                    res['id_card'] = emp_info.get('id_card', '-')  
+                    res['fname'] = emp_info.get('fname', '')       
+                    res['lname'] = emp_info.get('lname', '')
+
+                # คำนวณภาษี
+                commission_amt = res['commission']
+                pnd3_calc = commission_amt * 0.03
+                income_for_pnd1 = res['total_income'] - commission_amt
                 pnd1_calc = self._calculate_smart_tax(income_for_pnd1, res['sso'])
                 
                 res['pnd1'] = pnd1_calc
@@ -688,12 +705,14 @@ class PayrollModule(ttk.Frame):
                 res['net_salary'] = res['total_income'] - res['total_deduct']
                 self.last_payroll_results.append(res)
 
-                # --- บวกยอดรวมเข้ากองกลาง ---
+                # บวกยอดรวม
                 total_sum["base_salary"] += res.get('base_salary', 0)
                 total_sum["position_allowance"] += res.get('position_allowance', 0)
                 total_sum["ot"] += res.get('ot', 0)
                 total_sum["commission"] += res.get('commission', 0)
                 total_sum["bonus"] += res.get('bonus', 0)
+                total_sum["incentive"] += res.get('incentive', 0)
+                total_sum["diligence"] += res.get('diligence', 0)
                 total_sum["other_income"] += res.get('other_income', 0)
                 total_sum["driving_allowance"] += res.get('driving_allowance', 0)
                 total_sum["total_income"] += res.get('total_income', 0)
@@ -706,14 +725,15 @@ class PayrollModule(ttk.Frame):
                 total_sum["late_deduct"] += res.get('late_deduct', 0)
                 total_sum["other_deduct"] += res.get('other_deduct', 0)
                 total_sum["total_deduct"] += res.get('total_deduct', 0)
-                
                 total_sum["net_salary"] += res.get('net_salary', 0)
 
-                # สร้างแถวข้อมูล (รายคน)
+                # สร้างแถวข้อมูล (เอาคอลัมน์ Sales ออกแล้ว)
                 row = [
                     emp_id, name,
                     f"{res['base_salary']:,.2f}", f"{res['position_allowance']:,.2f}",
-                    f"{res['ot']:,.2f}", f"{res['commission']:,.2f}", f"{res['bonus']:,.2f}", 
+                    f"{res['ot']:,.2f}", f"{res['commission']:,.2f}", 
+                    f"{res.get('incentive', 0):,.2f}", f"{res.get('diligence', 0):,.2f}", # ยังเก็บ Incentive/เบี้ยขยัน ไว้
+                    f"{res['bonus']:,.2f}", 
                     f"{res['other_income']:,.2f}", f"{res.get('driving_allowance', 0):,.2f}",
                     f"{res['total_income']:,.2f}", 
                     f"{res['sso']:,.2f}", f"{res['pnd1']:,.2f}", f"{res['pnd3']:,.2f}",
@@ -724,11 +744,13 @@ class PayrollModule(ttk.Frame):
                 ]
                 sheet_data.append(row)
 
-        # --- (!!! เพิ่มแถวสรุปยอดรวม - บรรทัดสุดท้าย !!!) ---
+        # --- แถวสรุปยอดรวม ---
         summary_row = [
             "TOTAL", "รวมทั้งสิ้น",
             f"{total_sum['base_salary']:,.2f}", f"{total_sum['position_allowance']:,.2f}",
-            f"{total_sum['ot']:,.2f}", f"{total_sum['commission']:,.2f}", f"{total_sum['bonus']:,.2f}",
+            f"{total_sum['ot']:,.2f}", f"{total_sum['commission']:,.2f}", 
+            f"{total_sum['incentive']:,.2f}", f"{total_sum['diligence']:,.2f}",
+            f"{total_sum['bonus']:,.2f}",
             f"{total_sum['other_income']:,.2f}", f"{total_sum['driving_allowance']:,.2f}",
             f"{total_sum['total_income']:,.2f}",
             f"{total_sum['sso']:,.2f}", f"{total_sum['pnd1']:,.2f}", f"{total_sum['pnd3']:,.2f}",
@@ -739,36 +761,41 @@ class PayrollModule(ttk.Frame):
         ]
         sheet_data.append(summary_row)
 
-        # ตั้งค่า Sheet
+        # ตั้งค่า Headers (ลบ ฝ่ายขาย/ประเภท/Plan ออก)
         headers = [
             "รหัส", "ชื่อ-สกุล", 
-            "เงินเดือน", "ค่าตำแหน่ง", "OT", "คอมฯ", "โบนัส", "อื่นๆ(รับ)", "ค่าเที่ยว", "รวมรับ",
+            "เงินเดือน", "ค่าตำแหน่ง", "OT", "คอมฯ", 
+            "Incentive", "เบี้ยขยัน", 
+            "โบนัส", "อื่นๆ(รับ)", "ค่าเที่ยว", "รวมรับ",
             "ประกันสังคม", "ภ.ง.ด.1", "ภ.ง.ด.3", "กองทุนฯ", "เงินกู้", "ขาด/สาย", "อื่นๆ(หัก)", "รวมหัก",
             "สุทธิ"
         ]
         self.results_sheet.headers(headers)
         self.results_sheet.set_sheet_data(sheet_data)
         
-        # --- ใส่สีคอลัมน์ ---
-        self.results_sheet.highlight_columns(columns=list(range(2, 10)), bg="#e6f7ff", fg="black") # ฟ้าอ่อน
-        self.results_sheet.highlight_columns(columns=list(range(10, 18)), bg="#fff7e6", fg="black") # ส้มอ่อน
-        self.results_sheet.highlight_columns(columns=[18], bg="#ffffcc", fg="black") # เหลืองอ่อน
+        # --- ใส่สีคอลัมน์ (ปรับ Index ใหม่ เพราะคอลัมน์ลดลง) ---
+        # Income (2-11) สีฟ้าอ่อน
+        self.results_sheet.highlight_columns(columns=list(range(2, 12)), bg="#e6f7ff", fg="black") 
+        # Deduct (12-19) สีส้มอ่อน
+        self.results_sheet.highlight_columns(columns=list(range(12, 20)), bg="#fff7e6", fg="black") 
+        # Net (20) สีเหลืองอ่อน
+        self.results_sheet.highlight_columns(columns=[20], bg="#ffffcc", fg="black") 
         
-        # --- (!!! ใส่สีเขียวให้แถวสุดท้าย !!!) ---
+        # แถว Total สีเขียว
         last_row_idx = len(sheet_data) - 1
-        self.results_sheet.highlight_rows(rows=[last_row_idx], bg="#ccffcc", fg="black") # สีเขียวอ่อน
-        # -------------------------------------
+        self.results_sheet.highlight_rows(rows=[last_row_idx], bg="#ccffcc", fg="black") 
 
         # เปิดปุ่ม
         self.export_btn.config(state="normal")
         self.print_btn.config(state="normal")
-        if hasattr(self, 'sso_btn'): 
-            self.sso_btn.config(state="normal")
-        if hasattr(self, 'save_db_btn'): 
-            self.save_db_btn.config(state="normal")
         self.pnd1_btn.config(state="normal")
         self.pnd3_btn.config(state="normal")
         self.email_req_btn.config(state="normal")
+        if hasattr(self, 'pnd1_attach_btn'): self.pnd1_attach_btn.config(state="normal")
+        if hasattr(self, 'pnd1_cover_btn'): self.pnd1_cover_btn.config(state="normal")
+        if hasattr(self, 'pnd1_list_btn'): self.pnd1_list_btn.config(state="normal")
+        if hasattr(self, 'sso_btn'): self.sso_btn.config(state="normal")
+        if hasattr(self, 'save_db_btn'): self.save_db_btn.config(state="normal")
         
         self.notebook.select(self.tab2)
         messagebox.showinfo("สำเร็จ", "คำนวณเงินเดือนเรียบร้อยแล้ว")
@@ -793,7 +820,7 @@ class PayrollModule(ttk.Frame):
             cols = {
                 "emp_id": "รหัส", "name": "ชื่อ-สกุล",
                 "base_salary": "เงินเดือน", "position_allowance": "ค่าตำแหน่ง",
-                "ot": "OT", "commission": "คอมมิชชั่น", "bonus": "โบนัส", "other_income": "อื่นๆ(รับ)",
+                "ot": "OT", "commission": "คอมมิชชั่น","incentive": "Incentive", "diligence": "เบี้ยขยัน", "bonus": "โบนัส", "other_income": "อื่นๆ(รับ)",
                 "driving_allowance": "ค่าเที่ยวรถ",
                 "total_income": "รวมรับ",
                 "sso": "ประกันสังคม", "provident_fund": "กองทุนสำรองฯ",
