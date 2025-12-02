@@ -11,105 +11,6 @@ import os
 import calendar 
 from tksheet import Sheet 
 
-class DailyDetailsWindow(tk.Toplevel):
-    """หน้าต่าง Popup แสดงรายละเอียดการลงเวลาทั้งเดือน ของพนักงาน 1 คน"""
-    def __init__(self, parent, emp_data):
-        super().__init__(parent)
-        self.title(f"📅 รายละเอียดการทำงาน - {emp_data['name']} ({emp_data['emp_id']})")
-        self.geometry("1100x600") # ขยายความกว้าง
-        
-        self.details = emp_data.get('details', [])
-        self._build_ui()
-        
-    def _build_ui(self):
-        # Header
-        header = ttk.Frame(self, padding=10)
-        header.pack(fill="x")
-        ttk.Label(header, text="ตารางลงเวลาและคำนวณยอด (Time Log)", font=("", 12, "bold")).pack(side="left")
-        
-        # Table
-        tree_frame = ttk.Frame(self, padding=10)
-        tree_frame.pack(fill="both", expand=True)
-        
-        # (!!! เพิ่มคอลัมน์ OT ที่นี่ !!!)
-        cols = ("date", "status", "in", "out", "late", "ot_in", "ot_out", "ot_hrs", "absent")
-        tree = ttk.Treeview(tree_frame, columns=cols, show="headings", height=20)
-        
-        tree.heading("date", text="วันที่")
-        tree.heading("status", text="สถานะ")
-        tree.heading("in", text="เวลาเข้า (ปกติ)")
-        tree.heading("out", text="เวลาออก (ปกติ)")
-        tree.heading("late", text="สาย (นาที)")
-        
-        # หัวตารางใหม่
-        tree.heading("ot_in", text="เริ่ม OT")
-        tree.heading("ot_out", text="จบ OT")
-        tree.heading("ot_hrs", text="รวม OT (ชม.)")
-        
-        tree.heading("absent", text="ขาดงาน")
-        
-        # กำหนดความกว้าง
-        tree.column("date", width=90, anchor="center")
-        tree.column("status", width=140, anchor="center")
-        tree.column("in", width=80, anchor="center")
-        tree.column("out", width=80, anchor="center")
-        tree.column("late", width=70, anchor="center")
-        
-        tree.column("ot_in", width=70, anchor="center")
-        tree.column("ot_out", width=70, anchor="center")
-        tree.column("ot_hrs", width=80, anchor="center")
-        
-        tree.column("absent", width=60, anchor="center")
-        
-        # Scrollbar
-        sb = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
-        tree.configure(yscrollcommand=sb.set)
-        tree.pack(side="left", fill="both", expand=True)
-        sb.pack(side="right", fill="y")
-        
-        # Fill Data
-        for row in self.details:
-            tag = "normal"
-            if "สาย" in row['status']: tag = "late"
-            elif "ขาด" in row['status']: tag = "absent"
-            elif "วันหยุด" in row['status']: tag = "holiday"
-            elif "ลา" in row['status']: tag = "leave"
-            elif row.get('ot_hrs', 0) > 0: tag = "ot"
-            
-            # (Logic ดึงเวลา OT)
-            ot_start = "-"
-            ot_end = "-"
-            ot_h = row.get('ot_hrs', 0)
-            
-            if ot_h > 0:
-                # ถ้ามี OT ให้เอาเวลาสแกนจริงมาโชว์ในช่อง OT ด้วย
-                ot_start = row.get('scan_in', '-')
-                ot_end = row.get('scan_out', '-')
-
-            tree.insert("", "end", values=(
-                row['date'],
-                row['status'],
-                row['scan_in'],
-                row['scan_out'],
-                row['penalty_mins'] if row['penalty_mins'] > 0 else "-",
-                ot_start, # OT In
-                ot_end,   # OT Out
-                f"{ot_h:.2f}" if ot_h > 0 else "-",
-                "1.0" if row.get('status') == "ขาดงาน" else "-"
-            ), tags=(tag,))
-            
-        # Config Colors
-        tree.tag_configure("late", foreground="orange")
-        tree.tag_configure("absent", foreground="red")
-        tree.tag_configure("holiday", foreground="gray")
-        tree.tag_configure("leave", foreground="blue")
-        tree.tag_configure("ot", foreground="green")
-
-        # Footer Button
-        btn_frame = ttk.Frame(self, padding=10)
-        btn_frame.pack(fill="x")
-        ttk.Button(btn_frame, text="ปิดหน้าต่าง", command=self.destroy).pack(side="right")
-
 class TimeProcessorModule(ttk.Frame):
     
     def __init__(self, parent, controller, current_user):
@@ -580,7 +481,7 @@ class TimeProcessorModule(ttk.Frame):
 
     
     def _show_attendance_details(self, event):
-        """(ใหม่) เมื่อดับเบิลคลิกที่ตาราง ให้เปิดหน้าต่าง Pop-up (แบบตาราง tksheet)"""
+        """(ฉบับสมบูรณ์ V7) แสดงหน้าต่างรายละเอียด + กรอง OT + ระบบอนุมัติ + เบี้ยขยัน"""
         
         selection = self.result_tree.selection()
         if not selection: return
@@ -598,11 +499,15 @@ class TimeProcessorModule(ttk.Frame):
             return
 
         emp_name = emp_data.get('name', emp_id)
+        emp_type = emp_data.get('emp_type', '')
         details_list_original = emp_data.get('details', [])
         
+        # --- ตรวจสอบว่าเป็นพนักงานรายวันหรือไม่ ---
+        is_daily_emp = "รายวัน" in str(emp_type) or "Daily" in str(emp_type)
+        
         win = tk.Toplevel(self)
-        win.title(f"รายละเอียดปฏิทินทำงาน - {emp_name}")
-        win.geometry("1350x550") # <--- ขยายหน้าต่างให้กว้างขึ้นอีกนิด
+        win.title(f"รายละเอียดปฏิทินทำงาน - {emp_name} ({emp_type})")
+        win.geometry("1550x750") # ขยายความสูงเผื่อส่วนเบี้ยขยัน
         win.transient(self) 
         win.grab_set()      
         
@@ -610,138 +515,224 @@ class TimeProcessorModule(ttk.Frame):
         sheet_frame.pack(fill="both", expand=True)
 
         sheet = Sheet(sheet_frame, 
-                      show_toolbar=False,
-                      show_top_left=False,
-                      show_row_index=False,
-                      show_header=True,
-                      expand="both" 
-                     )
+                      show_toolbar=False, show_top_left=False, show_row_index=False,
+                      show_header=True, expand="both")
         sheet.pack(fill="both", expand=True) 
 
-        # --- 4. เตรียมข้อมูลสำหรับ tksheet (เพิ่มคอลัมน์ใหม่!) ---
-        
-        headers = ["วันที่", "สถานะการทำงาน", "เวลาเข้า", "เวลาออก", 
-                   "ชม.ทำงาน", "ชม.ลา", "สาย(นาที)", "หัก(ชม.)"]
+        # --- 1. กำหนด Headers และความกว้าง ---
+        if is_daily_emp:
+            # รายวัน: โชว์ครบ (รวม OT และ อนุมัติ)
+            headers = ["วันที่", "สถานะการทำงาน", "เวลาเข้า", "เวลาออก", 
+                       "ชม.ทำงาน", "ชม.ลา", "สาย(นาที)", "หัก(ชม.)",
+                       "เริ่ม OT", "ออก OT", "ชม.OT", "อนุมัติ OT"]
+        else:
+            # รายเดือน: ตัดส่วน OT ออก
+            headers = ["วันที่", "สถานะการทำงาน", "เวลาเข้า", "เวลาออก", 
+                       "ชม.ทำงาน", "ชม.ลา", "สาย(นาที)", "หัก(ชม.)"]
+            
         sheet.headers(headers)
         
-        # กำหนดความกว้าง (ปรับให้พอดีกับหน้าจอ)
-        sheet.column_width(column=0, width=100) # วันที่
-        sheet.column_width(column=1, width=450) # สถานะ (กว้างสุด)
-        sheet.column_width(column=2, width=80)  # เข้า
-        sheet.column_width(column=3, width=80)  # ออก
-        sheet.column_width(column=4, width=100) # ชม.ทำงาน (ใหม่)
-        sheet.column_width(column=5, width=80)  # ชม.ลา (ใหม่)
-        sheet.column_width(column=6, width=80)  # สาย
-        sheet.column_width(column=7, width=80)  # หัก
+        # Config Widths
+        sheet.column_width(column=0, width=90)
+        sheet.column_width(column=1, width=280)
+        sheet.column_width(column=2, width=70); sheet.column_width(column=3, width=70)
+        sheet.column_width(column=4, width=80); sheet.column_width(column=5, width=60)
+        sheet.column_width(column=6, width=70); sheet.column_width(column=7, width=60)
         
+        if is_daily_emp:
+            sheet.column_width(column=8, width=70); sheet.column_width(column=9, width=70)
+            sheet.column_width(column=10, width=70); sheet.column_width(column=11, width=100)
+        
+        # --- 2. เตรียมข้อมูล ---
         sheet_data = []
+        
+        # ตัวแปรเช็คเบี้ยขยัน (สำหรับคำนวณท้ายตาราง)
+        found_late = False
+        found_absent = False
+        found_leave = False
+
         if not details_list_original:
-            sheet_data.append(("", "(ไม่พบข้อมูล)", "", "", "", "", "", ""))
+            empty_row = [""] * len(headers)
+            empty_row[1] = "(ไม่พบข้อมูล)"
+            sheet_data.append(empty_row)
         else:
             for row_data in details_list_original:
                 scan_in = row_data.get('scan_in', '')
                 scan_out = row_data.get('scan_out', '')
+                status_text = row_data.get('status', '')
+
+                # เช็คเงื่อนไขเบี้ยขยัน
+                if row_data.get('actual_late_mins', 0) > 0: found_late = True
+                if "ขาด" in status_text: found_absent = True
+                if "ลา" in status_text: found_leave = True
                 
-                # --- (1) คำนวณชั่วโมงทำงาน (Work Hours) ---
-                work_hrs_str = ""
-                if scan_in and scan_out:
+                # คำนวณ Work Hours (คร่าวๆ เพื่อแสดงผล)
+                work_hrs_str = "-"
+                if scan_in and scan_out and scan_in != '-' and scan_out != '-':
                     try:
                         t_in = datetime.strptime(scan_in, "%H:%M")
                         t_out = datetime.strptime(scan_out, "%H:%M")
-                        # คำนวณผลต่าง (timedelta)
                         diff = t_out - t_in
                         total_seconds = diff.total_seconds()
-                        
-                        # หักเวลาพัก 1 ชม. (ถ้าทำงานข้ามเที่ยง)
-                        # (Logic ง่ายๆ: ถ้าเข้าก่อน 12:00 และออกหลัง 13:00)
+                        # หักพักเที่ยงอัตโนมัติถ้าคาบเกี่ยว
                         noon_start = t_in.replace(hour=12, minute=0)
                         noon_end = t_in.replace(hour=13, minute=0)
-                        
                         if t_in < noon_end and t_out > noon_start:
-                             # หักเวลาพักออก (สูงสุด 60 นาที)
                              overlap_start = max(t_in, noon_start)
                              overlap_end = min(t_out, noon_end)
-                             break_seconds = (overlap_end - overlap_start).total_seconds()
-                             if break_seconds > 0:
-                                 total_seconds -= break_seconds
-                        
+                             if (overlap_end - overlap_start).total_seconds() > 0:
+                                 total_seconds -= (overlap_end - overlap_start).total_seconds()
                         hours = int(total_seconds // 3600)
                         minutes = int((total_seconds % 3600) // 60)
                         work_hrs_str = f"{hours}ชม. {minutes}น."
-                    except:
-                        work_hrs_str = "-"
+                    except: pass
 
-                # --- (2) ดึงชั่วโมงลา (Leave Hours) ---
-                # (สมมติว่าเราดึงจากสถานะ เช่น "ลา (ลากิจ) (08:00-11:00)")
+                # Leave Hours String
                 leave_hrs_str = ""
-                status_text = row_data.get('status', '')
                 if "ลา" in status_text and "(" in status_text:
-                     # พยายามดึงตัวเลขชั่วโมงจากข้อความ (ถ้ามี)
-                     # (นี่เป็นวิธีคร่าวๆ ในอนาคตอาจต้องส่งค่ามาจาก hr_database โดยตรงจะแม่นกว่า)
                      if "0.5" in status_text: leave_hrs_str = "4 ชม."
                      elif "1.0" in status_text: leave_hrs_str = "8 ชม."
-                     # (กรณีลาชั่วโมง: คำนวณจากเวลาในวงเล็บยากหน่อยใน client-side)
                 
+                # Late / Penalty Strings
                 actual_late_val = row_data.get('actual_late_mins', 0)
-                actual_late_str = f"{actual_late_val:.0f}" if actual_late_val > 0 else ""
+                actual_late_str = f"{actual_late_val}" if actual_late_val > 0 else ""
+                penalty_val = row_data.get('penalty_hrs', 0)
+                penalty_str = f"{penalty_val:.2f}" if penalty_val > 0 else ""
                 
-                hours_val = row_data.get('penalty_hrs', 0.0)
-                hours_str = f"{hours_val:.2f}" if hours_val > 0 else ""
-                
-                sheet_data.append([
+                # สร้างลิสต์ข้อมูลพื้นฐาน (8 คอลัมน์แรก)
+                row_vals = [
                     row_data.get('date', ''), 
                     status_text, 
-                    scan_in,
-                    scan_out,
-                    work_hrs_str,   # (ใหม่)
-                    leave_hrs_str,  # (ใหม่)
-                    actual_late_str, 
-                    hours_str        
-                ])
+                    scan_in, scan_out,
+                    work_hrs_str, leave_hrs_str,
+                    actual_late_str, penalty_str
+                ]
+                
+                # ถ้าเป็นรายวัน เพิ่มข้อมูล OT (3 คอลัมน์ + อนุมัติ 1)
+                if is_daily_emp:
+                    ot_hrs = row_data.get('ot_hrs', 0.0)
+                    ot_hrs_str = f"{ot_hrs:.2f}" if ot_hrs > 0 else ""
+                    
+                    display_ot_in = row_data.get('ot_in', '')
+                    display_ot_out = row_data.get('ot_out', '')
+                    
+                    # Fallback: ถ้ามี OT แต่ไม่มีเวลา ให้โชว์เวลาสแกน
+                    if ot_hrs > 0 and not display_ot_in: display_ot_in = scan_in
+                    if ot_hrs > 0 and not display_ot_out: display_ot_out = scan_out
+                    
+                    # สถานะอนุมัติ
+                    is_approved = row_data.get('is_ot_approved', False)
+                    approval_text = ""
+                    if ot_hrs > 0:
+                        approval_text = "✅ อนุมัติ" if is_approved else "❌ ไม่อนุมัติ"
+                    
+                    row_vals.extend([display_ot_in, display_ot_out, ot_hrs_str, approval_text])
+
+                sheet_data.append(row_vals)
         
         sheet.set_sheet_data(sheet_data)
         
-        # (โค้ด Highlight สี - เหมือนเดิม)
+        # --- Highlight & Readonly ---
         for i, row_data in enumerate(details_list_original):
             row_status = row_data.get('status', '')
-            bg_color = "#ffffff"
-            fg_color = "#000000"
-            if 'ขาดงาน' in row_status:
-                bg_color = '#fddfe2'; fg_color = '#9f1f2e'
-            elif 'มาสาย' in row_status:
-                bg_color = '#fff4de'; fg_color = '#a05f00'
-            elif 'ลา' in row_status: 
-                bg_color = '#e0f0ff'; fg_color = '#00529e'
-            elif 'วันหยุด' in row_status:
-                bg_color = '#ffffff'; fg_color = 'gray'
-            elif i % 2 == 1: bg_color = '#f0f0f0'
-            sheet.highlight_rows(rows=[i], bg=bg_color, fg=fg_color)
+            bg, fg = "#ffffff", "#000000"
+            if 'ขาดงาน' in row_status: bg, fg = '#fddfe2', '#9f1f2e'
+            elif 'มาสาย' in row_status: bg, fg = '#fff4de', '#a05f00'
+            elif 'ลา' in row_status: bg, fg = '#e0f0ff', '#00529e'
+            elif 'วันหยุด' in row_status: bg, fg = '#ffffff', 'gray'
+            elif is_daily_emp and row_data.get('ot_hrs', 0) > 0: bg = '#f0fff0'
+            elif i % 2 == 1: bg = '#f0f0f0'
+            sheet.highlight_rows(rows=[i], bg=bg, fg=fg)
             
-        # ล็อคคอลัมน์ (ยกเว้นสถานะและเวลา)
-        sheet.readonly_columns(columns=[0, 4, 5, 6, 7]) 
+        # Config Read-only
+        if is_daily_emp:
+            # รายวัน: ล็อค 0,4,5,6,7,10 (Date, Work, Leave, Late, Penalty, OT Hrs)
+            # ยอมให้แก้: Status, In, Out, OT In, OT Out, Approval
+            sheet.readonly_columns(columns=[0, 4, 5, 6, 7, 10]) 
+        else:
+            # รายเดือน: ล็อค 0,4,5,6,7
+            sheet.readonly_columns(columns=[0, 4, 5, 6, 7]) 
         
+        # --- Dropdowns ---
         leave_types = ["ลาป่วย", "ลากิจ", "ลาพักร้อน", "ลาอื่นๆ"]
         status_options_base = ["วันทำงาน", "ขาดงาน", "มาสาย"] + [f"ลา ({t})" for t in leave_types]
-        
-        total_data_rows = sheet.get_total_rows() 
-        
-        for i in range(total_data_rows):
-            original_status = str(sheet_data[i][1]).strip()
-            # Logic Skip Dropdown (V17.0)
-            is_complex_status = "(" in original_status and len(original_status) > 15
-            if is_complex_status: continue 
+        approval_options = ["✅ อนุมัติ", "❌ ไม่อนุมัติ"]
+
+        total_rows = sheet.get_total_rows()
+        for i in range(total_rows):
+            if i >= len(sheet_data): continue
             
-            sheet.create_dropdown(
-                r=i, c=1, values=status_options_base, set_value=original_status, state="readonly"
-            )
+            # 1. Dropdown Status
+            curr_stat = str(sheet_data[i][1])
+            if "(" not in curr_stat: 
+                sheet.create_dropdown(r=i, c=1, values=status_options_base, set_value=curr_stat, state="readonly")
+            
+            # 2. Dropdown Approval (เฉพาะรายวัน และมี OT)
+            if is_daily_emp:
+                ot_val = details_list_original[i].get('ot_hrs', 0.0)
+                if ot_val > 0:
+                    curr_appr = sheet_data[i][11]
+                    if not curr_appr: curr_appr = "❌ ไม่อนุมัติ"
+                    sheet.create_dropdown(r=i, c=11, values=approval_options, set_value=curr_appr, state="readonly")
 
-        sheet.enable_bindings("single", "drag_select", "row_select", "column_width_resize", "arrowkeys", "right_click_popup_menu", "edit_cell")
+        sheet.enable_bindings("single", "drag_select", "row_select", "column_width_resize", "arrowkeys", "edit_cell")
 
-        # (ส่วนปุ่มล่างสุด - เหมือนเดิม)
-        btn_frame = ttk.Frame(win, padding=(15, 10, 15, 15))
+        # ========================================================
+        #  ส่วนแสดงเบี้ยขยัน (Diligence Allowance)
+        # ========================================================
+        diligence_frame = ttk.LabelFrame(win, text="  🏆 สรุปเบี้ยขยัน (Diligence Allowance)  ", padding=10)
+        diligence_frame.pack(fill="x", padx=15, pady=5)
+        
+        if not is_daily_emp:
+            ttk.Label(diligence_frame, text="* พนักงานรายเดือน ไม่ได้รับสิทธิ์เบี้ยขยัน", foreground="gray").pack(anchor="w")
+        else:
+            # ดึงสถิติเดิม
+            current_streak = hr_database.get_employee_diligence_streak(emp_id)
+            is_perfect_month = not (found_late or found_absent or found_leave)
+            
+            diligence_amount = 0
+            step_msg = ""
+            status_text = ""
+            status_color = ""
+            
+            if is_perfect_month:
+                if current_streak == 0:
+                    diligence_amount = 300; step_msg = "เริ่มต้น (เดือนที่ 1)"
+                elif current_streak == 1:
+                    diligence_amount = 400; step_msg = "ต่อเนื่อง (เดือนที่ 2)"
+                else:
+                    diligence_amount = 500; step_msg = f"สูงสุด (ต่อเนื่องเดือนที่ {current_streak + 1})"
+                status_text = "✅ ผ่านเกณฑ์ (ไม่ขาด/ลา/สาย)"; status_color = "green"
+            else:
+                fail_reasons = []
+                if found_late: fail_reasons.append("มาสาย")
+                if found_absent: fail_reasons.append("ขาดงาน")
+                if found_leave: fail_reasons.append("ลางาน")
+                status_text = f"❌ ไม่ผ่านเกณฑ์ ({', '.join(fail_reasons)})"; status_color = "red"
+                step_msg = "เดือนหน้าเริ่มนับใหม่ที่ 300"
+
+            row1 = ttk.Frame(diligence_frame); row1.pack(fill="x")
+            ttk.Label(row1, text="สถานะเดือนนี้:", width=15, font=("", 10, "bold")).pack(side="left")
+            ttk.Label(row1, text=status_text, foreground=status_color, font=("", 10, "bold")).pack(side="left")
+            
+            row2 = ttk.Frame(diligence_frame); row2.pack(fill="x")
+            ttk.Label(row2, text="ยอดเงินที่ได้:", width=15).pack(side="left")
+            ttk.Label(row2, text=f"{diligence_amount:,.2f} บาท", font=("", 11, "bold"), foreground="blue").pack(side="left")
+            ttk.Label(row2, text=f"  ({step_msg})").pack(side="left")
+            
+            row3 = ttk.Frame(diligence_frame); row3.pack(fill="x")
+            ttk.Label(row3, text="สถิติเดิม:", width=15).pack(side="left")
+            ttk.Label(row3, text=f"ทำต่อเนื่องมาแล้ว {current_streak} เดือน").pack(side="left")
+
+        # Footer Buttons
+        btn_frame = ttk.Frame(win, padding=10)
         btn_frame.pack(fill="x")
         ttk.Button(btn_frame, text="📄 Export Excel", command=lambda: self._export_details_to_excel(details_list_original, emp_name)).pack(side="left")
-        ttk.Button(btn_frame, text="💾 บันทึกการแก้ไข", command=lambda d=details_list_original, s=sheet, e=emp_id, w=win: self._save_details_from_popup(s, d, e, w), style="Success.TButton").pack(side="left", padx=10)
+        
+        # ส่ง is_daily_emp ไปด้วย เพื่อให้รู้ว่าต้อง map columns ยังไง
+        ttk.Button(btn_frame, text="💾 บันทึกการแก้ไข", 
+                   command=lambda: self._save_details_from_popup(sheet, details_list_original, emp_id, win, is_daily_emp), 
+                   style="Success.TButton").pack(side="left", padx=10)
         ttk.Button(btn_frame, text="ปิด", command=win.destroy).pack(side="right")
     
     def _parse_date_be(self, date_str_be):
@@ -775,135 +766,145 @@ class TimeProcessorModule(ttk.Frame):
         leave_type = temp_str[:end_paren_index] 
         return leave_type
 
-    def _save_details_from_popup(self, sheet, original_details_list, emp_id, popup_window):
-        """(ฉบับ Debug V4) เพิ่มการ Print เพื่อตรวจสอบว่าทำไมไม่บันทึก"""
-        
+    def _save_details_from_popup(self, sheet, original_details_list, emp_id, popup_window, is_daily_emp=False):
+        """(ฉบับแก้ไข V7) บันทึกข้อมูลกลับลง DB (รองรับการ map columns แบบ Dynamic)"""
         try:
-            if not messagebox.askyesno("ยืนยันการบันทึก",
-                                     "คุณต้องการบันทึกการเปลี่ยนแปลงทั้งหมดนี้ใช่หรือไม่?",
-                                      parent=popup_window):
+            if not messagebox.askyesno("ยืนยันการบันทึก", "คุณต้องการบันทึกการเปลี่ยนแปลงทั้งหมดนี้ใช่หรือไม่?", parent=popup_window):
                 return 
             
-            # 1. ดึงข้อมูลจากตาราง
+            # 1. ดึงข้อมูล
             new_data_list_of_lists = sheet.get_sheet_data()
-            print(f"DEBUG: จำนวนแถวในตาราง = {len(new_data_list_of_lists)}") # <--- เช็กจำนวนแถว
             
-            # 2. สร้าง Dictionary
+            # 2. กำหนด Headers ให้ตรงกับที่โชว์ (สำคัญมาก)
+            if is_daily_emp:
+                headers = [
+                    "date", "status", "scan_in", "scan_out", 
+                    "work_hrs", "leave_hours", "actual_late_mins", "penalty_hrs",
+                    "ot_in", "ot_out", "ot_hrs", "ot_approved" # 12 Cols
+                ]
+            else:
+                headers = [
+                    "date", "status", "scan_in", "scan_out", 
+                    "work_hrs", "leave_hours", "actual_late_mins", "penalty_hrs" # 8 Cols
+                ]
+            
             new_data_map = {}
-            headers = [
-                "date", "status", "scan_in", "scan_out", 
-                "work_hours", "leave_hours", 
-                "actual_late_mins", "penalty_hrs"
-            ]
-            
             for row_list in new_data_list_of_lists:
-                while len(row_list) < 8: row_list.append("") # เติมให้ครบ
-                row_dict = {headers[i]: str(val).strip() for i, val in enumerate(row_list)} # แปลงเป็น string และตัดช่องว่าง
-                
-                date_key = row_dict['date']
-                if date_key: new_data_map[date_key] = row_dict
+                while len(row_list) < len(headers): row_list.append("") 
+                row_dict = {headers[i]: str(row_vals).strip() for i, row_vals in enumerate(row_list)}
+                if row_dict.get('date'): new_data_map[row_dict['date']] = row_dict
 
             changes_detected = 0
             
-            # 3. วนลูปเปรียบเทียบ
+            # 3. วนลูปบันทึก
             for original_row in original_details_list:
                 date_str = str(original_row['date']).strip()
-                
-                if date_str not in new_data_map:
-                    print(f"DEBUG: หาวันที่ {date_str} ไม่เจอในตารางใหม่ (ข้าม)")
-                    continue
+                if date_str not in new_data_map: continue
                 
                 new_row = new_data_map[date_str]
                 date_obj = self._parse_date_be(date_str)
                 if not date_obj: continue 
 
-                # --- เปรียบเทียบ (แบบละเอียด) ---
-                # 1. สถานะ
+                # A. สถานะ
                 val_status_old = str(original_row['status']).strip()
                 val_status_new = new_row['status']
-                if val_status_new == "เลือกสถานะ": val_status_new = val_status_old # คืนค่าเดิมถ้าไม่ได้เลือก
-                
+                if val_status_new == "เลือกสถานะ": val_status_new = val_status_old
                 status_changed = (val_status_old != val_status_new)
 
-                # 2. เวลาเข้า
+                # B. เวลาเข้า/ออก
                 val_in_old = str(original_row.get('scan_in') or "").strip()
                 val_in_new = new_row['scan_in']
-                if val_in_new == "None": val_in_new = "" # แก้บั๊กบางทีตารางส่ง "None" มาเป็น text
+                if val_in_new == "None": val_in_new = ""
                 scan_in_changed = (val_in_old != val_in_new)
 
-                # 3. เวลาออก
                 val_out_old = str(original_row.get('scan_out') or "").strip()
                 val_out_new = new_row['scan_out']
                 if val_out_new == "None": val_out_new = ""
                 scan_out_changed = (val_out_old != val_out_new)
 
-                # ถ้าไม่มีอะไรเปลี่ยนเลย -> ข้าม
-                if not (status_changed or scan_in_changed or scan_out_changed):
-                    continue 
+                # C. OT (เฉพาะรายวัน)
+                ot_in_changed = False
+                ot_out_changed = False
+                ot_approved_changed = False
                 
-                # ถ้ามาถึงตรงนี้ แปลว่าเจอการเปลี่ยนแปลง!
-                print(f"DEBUG: พบการแก้ไขที่วันที่ {date_str}")
-                print(f"   - Status: '{val_status_old}' -> '{val_status_new}' (Changed: {status_changed})")
-                print(f"   - In:     '{val_in_old}' -> '{val_in_new}' (Changed: {scan_in_changed})")
-                print(f"   - Out:    '{val_out_old}' -> '{val_out_new}' (Changed: {scan_out_changed})")
+                val_ot_in_new = ""
+                val_ot_out_new = ""
+                val_approved_new = False
+
+                if is_daily_emp:
+                    val_ot_in_old = str(original_row.get('ot_in') or "").strip()
+                    val_ot_in_new = new_row.get('ot_in', '')
+                    if val_ot_in_new == "None": val_ot_in_new = ""
+                    ot_in_changed = (val_ot_in_old != val_ot_in_new)
+
+                    val_ot_out_old = str(original_row.get('ot_out') or "").strip()
+                    val_ot_out_new = new_row.get('ot_out', '')
+                    if val_ot_out_new == "None": val_ot_out_new = ""
+                    ot_out_changed = (val_ot_out_old != val_ot_out_new)
+                    
+                    # เช็คสถานะอนุมัติ
+                    val_appr_str = new_row.get('ot_approved', '')
+                    val_approved_new = (val_appr_str == "✅ อนุมัติ")
+                    val_approved_old = original_row.get('is_ot_approved', False)
+                    if val_approved_new != val_approved_old:
+                        ot_approved_changed = True
+
+                if not (status_changed or scan_in_changed or scan_out_changed or ot_in_changed or ot_out_changed or ot_approved_changed):
+                    continue 
                 
                 changes_detected += 1
                 
-                # --- บันทึกลงฐานข้อมูล ---
+                # --- เริ่มบันทึก ---
+                
+                # 1. Status & Leave
                 new_status_is_leave = "ลา" in val_status_new and "(" in val_status_new
                 original_status_is_leave = "ลา" in val_status_old and "(" in val_status_old
 
-                # 1. จัดการสถานะลา
                 if status_changed:
                     if (not new_status_is_leave) and original_status_is_leave:
-                        # ยกเลิกการลา (ลบออกจาก DB)
                         hr_database.delete_leave_record_on_date(emp_id, date_obj)
                     elif new_status_is_leave:
-                        # เปลี่ยนเป็นลา หรือ เปลี่ยนประเภทลา (บันทึกทับ)
                         leave_type = self._parse_leave_type(val_status_new)
                         if leave_type:
-                            # ลบสแกนเก่าออกก่อน (ถ้าลาเต็มวันมักไม่มีสแกน)
-                            if not scan_in_changed and not scan_out_changed: # ลบเฉพาะถ้าไม่ได้ตั้งใจแก้เวลาด้วย
+                            if not scan_in_changed and not scan_out_changed:
                                 hr_database.delete_scan_logs_on_date(emp_id, date_obj)
                             hr_database.add_employee_leave(emp_id, date_obj, leave_type, 1.0, "แก้ไขผ่าน Pop-up")
 
-                # 2. จัดการเวลาสแกน (ถ้ามีการแก้ไขเวลา)
+                # 2. Scan Time
                 if scan_in_changed or scan_out_changed:
-                    # ลบอันเก่าทิ้งก่อนเสมอ เพื่อกันซ้ำ
                     hr_database.delete_scan_logs_on_date(emp_id, date_obj)
-                    
-                    # บันทึกเวลาเข้า
                     if val_in_new:
                         try:
                             t = datetime.strptime(val_in_new, '%H:%M').time()
                             dt = datetime.combine(date_obj, t)
                             hr_database.add_manual_scan_log(emp_id, dt)
-                        except ValueError: 
-                            print(f"   ❌ รูปแบบเวลาเข้าไม่ถูกต้อง: {val_in_new}")
-
-                    # บันทึกเวลาออก
+                        except ValueError: pass
                     if val_out_new:
                         try:
                             t = datetime.strptime(val_out_new, '%H:%M').time()
                             dt = datetime.combine(date_obj, t)
                             hr_database.add_manual_scan_log(emp_id, dt)
-                        except ValueError: 
-                            print(f"   ❌ รูปแบบเวลาออกไม่ถูกต้อง: {val_out_new}")
-                        
+                        except ValueError: pass
+
+                # 3. OT (เฉพาะรายวัน)
+                if is_daily_emp:
+                    if (ot_in_changed or ot_out_changed) and hasattr(hr_database, 'update_employee_ot_times'):
+                         hr_database.update_employee_ot_times(emp_id, date_obj, val_ot_in_new, val_ot_out_new)
+                    
+                    if ot_approved_changed and hasattr(hr_database, 'update_ot_approval_status'):
+                         hr_database.update_ot_approval_status(emp_id, date_obj, val_approved_new)
+
             if changes_detected > 0:
-                print(f"DEBUG: บันทึกเสร็จสิ้น {changes_detected} รายการ")
                 messagebox.showinfo("สำเร็จ", f"บันทึกการแก้ไข {changes_detected} รายการเรียบร้อย", parent=popup_window)
                 popup_window.destroy()
                 self._run_processing() 
             else:
-                print("DEBUG: ไม่พบความเปลี่ยนแปลงใดๆ")
-                messagebox.showinfo("ไม่เปลี่ยนแปลง", "ไม่พบการเปลี่ยนแปลงข้อมูล (หรือข้อมูลเหมือนเดิม)", parent=popup_window)
+                messagebox.showinfo("ไม่เปลี่ยนแปลง", "ไม่พบการเปลี่ยนแปลงข้อมูล", parent=popup_window)
 
         except Exception as e:
-            print(f"Save Error Details: {e}")
-            import traceback
-            traceback.print_exc()
-            messagebox.showerror("เกิดข้อผิดพลาด", f"ไม่สามารถบันทึกข้อมูลได้:\n{e}", parent=popup_window)
+            print(f"Save Error: {e}")
+            import traceback; traceback.print_exc()
+            messagebox.showerror("เกิดข้อผิดพลาด", f"บันทึกข้อมูลไม่ได้:\n{e}", parent=popup_window)
 
     def _export_details_to_excel(self, details_list, emp_name):
         """(ใหม่) ส่งออกข้อมูล "ปฏิทินสถานะ" (จาก Pop-up) เป็น Excel"""

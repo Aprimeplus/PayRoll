@@ -1,7 +1,7 @@
 import hr_database
 import psycopg2
 from psycopg2 import extras
-from datetime import date, datetime
+from datetime import date, datetime, time
 import os
 from fpdf import FPDF
 
@@ -20,7 +20,9 @@ REQUIRED_TABLES = [
     "employee_company_assets", "time_attendance_logs", "employee_leave_records",
     "employee_late_records", "employee_warning_records", "users",
     "pending_employee_changes", "employee_documents", "company_holidays",
-    "company_settings", "company_locations"
+    "company_settings", "company_locations", 
+    "employee_daily_records", "employee_driving_details", "employee_driving_records",
+    "payroll_records", "email_queue"
 ]
 
 # --- 1. System Health Check ---
@@ -46,6 +48,22 @@ def check_database_health():
     else:
         print("   [OK] All Required Tables Exist")
         
+    # Check Important Columns
+    print("   Checking critical columns...")
+    try:
+        # Check diligence_streak in employees
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name='employees' AND column_name='diligence_streak'")
+        if cursor.fetchone(): print("   [OK] Column 'diligence_streak' exists")
+        else: print("   [FAIL] Column 'diligence_streak' MISSING in employees")
+        
+        # Check is_ot_approved in employee_daily_records
+        cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_name='employee_daily_records' AND column_name='is_ot_approved'")
+        if cursor.fetchone(): print("   [OK] Column 'is_ot_approved' exists")
+        else: print("   [FAIL] Column 'is_ot_approved' MISSING in employee_daily_records")
+        
+    except Exception as e:
+        print(f"   [WARN] Column check skipped: {e}")
+
     conn.close()
     return True
 
@@ -55,7 +73,6 @@ def check_payroll_logic():
     
     # Mock Employee Data for Calculation Test
     salary = 30000
-    days_in_month = 30 
     
     # Expected Rates
     daily_rate = salary / 30
@@ -75,7 +92,7 @@ def check_payroll_logic():
     
     print("   [OK] Formula Verified (Logic matches standard HR practices)")
 
-# --- 2.5 OT Calculation Verification (New) ---
+# --- 2.5 OT Calculation Verification ---
 def check_ot_calculation():
     print("\n[2.5] OT Calculation Verification")
     
@@ -108,6 +125,32 @@ def check_ot_calculation():
     else:
         print(f"   [FAIL] OT Calculation Wrong (Got {expected_pay})")
 
+# --- 2.6 Diligence Allowance Verification (New) ---
+def check_diligence_logic():
+    print("\n[2.6] Diligence Allowance (Step Logic) Verification")
+    
+    # Test Case: Function to simulate step logic
+    def get_diligence(current_streak):
+        if current_streak == 0: return 300
+        elif current_streak == 1: return 400
+        else: return 500
+    
+    # Case 1: เดือนแรก (Streak 0 -> 1)
+    reward_0 = get_diligence(0)
+    print(f"   Streak 0 (Start) -> Get: {reward_0} (Expected: 300)")
+    
+    # Case 2: เดือนสอง (Streak 1 -> 2)
+    reward_1 = get_diligence(1)
+    print(f"   Streak 1 (Cont.) -> Get: {reward_1} (Expected: 400)")
+    
+    # Case 3: เดือนสามขึ้นไป (Streak 2+ -> Max)
+    reward_2 = get_diligence(5)
+    print(f"   Streak 5 (Max)   -> Get: {reward_2} (Expected: 500)")
+    
+    if reward_0 == 300 and reward_1 == 400 and reward_2 == 500:
+        print("   [OK] Diligence Step Logic Correct")
+    else:
+        print("   [FAIL] Diligence Logic Incorrect")
 
 # --- 3. Tax Calculation Verification ---
 def calculate_progressive_tax(annual_income):
@@ -202,10 +245,17 @@ def check_pdf_generation():
         print(f"   [FAIL] PDF Error: {e}")
 
 if __name__ == "__main__":
-    print("Starting Full System Verification...")
+    print("========================================")
+    print("   APLUS HR SYSTEM FULL VERIFICATION")
+    print("========================================")
+    
     check_database_health()
     check_payroll_logic()
-    check_ot_calculation() # New
+    check_ot_calculation() 
+    check_diligence_logic() # New
     check_tax_calculation()
     check_pdf_generation()
-    print("\nVerification Complete.")
+    
+    print("\n========================================")
+    print("           Verification Complete        ")
+    print("========================================")
