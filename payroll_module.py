@@ -401,8 +401,262 @@ class PayrollModule(ttk.Frame):
                                    theme="light blue"
                                   )
         self.results_sheet.pack(fill="both", expand=True)
-        self.results_sheet.enable_bindings("single", "row_select", "column_width_resize", "arrowkeys", "copy")
+        
+        # ตั้งค่า Binding
+        self.results_sheet.enable_bindings(
+            "single_select",
+            "row_select",
+            "column_width_resize",
+            "arrowkeys",
+            "right_click_popup_menu",
+            "rc_select",
+            "copy"
+        )
+        
+        # --- (จุดแก้ไข 1: สำคัญมาก) ---
+        # Bind Event โดยตรงกับ Widget เพื่อจับ Mouse X,Y (แก้ปัญหา row_select บัง column)
+        self.results_sheet.bind("<Double-1>", self._on_result_double_click)
+        
+        # เก็บ extra_bindings ไว้เป็น Backup (เผื่อ tksheet อัปเดตในอนาคต)
+        self.results_sheet.extra_bindings("cell_double_click", func=self._on_result_double_click)
+
+    def _on_result_double_click(self, event=None):
+        """ทำงานเมื่อดับเบิลคลิก (เวอร์ชั่นรองรับ ค่าเที่ยว, OT, เบี้ยขยัน)"""
+        # print(f"\n--- 🖱️ DEBUG: Checking Click ---") 
+        row = None
+        col = None
+
+        if not hasattr(event, 'x') or not hasattr(event, 'y'):
+            return
+
+        # --- 1. พยายามหา Row/Col ---
+        try:
+            # ลองแบบส่ง Event (มาตรฐานใหม่)
+            row = self.results_sheet.identify_row(event)
+        except:
+            try:
+                # ลองแบบส่งพิกัด y (มาตรฐานเก่า/ภายใน)
+                if hasattr(self.results_sheet, 'MT'):
+                    row = self.results_sheet.MT.identify_row(y=event.y)
+                else:
+                    row = self.results_sheet.identify_row(event.y)
+            except: pass
+
+        try:
+            # ลองหา Column
+            if hasattr(self.results_sheet, 'identify_column'):
+                col = self.results_sheet.identify_column(event)
+            elif hasattr(self.results_sheet, 'identify_col'):
+                col = self.results_sheet.identify_col(event)
+            elif hasattr(self.results_sheet, 'MT'):
+                if hasattr(self.results_sheet.MT, 'identify_col'):
+                    col = self.results_sheet.MT.identify_col(x=event.x)
+                elif hasattr(self.results_sheet.MT, 'identify_column'):
+                    col = self.results_sheet.MT.identify_column(x=event.x)
+        except: pass
+
+        if row is None or col is None: return
+        if not self.last_payroll_results or row >= len(self.last_payroll_results): return
+
+        # --- 2. ตรวจสอบชื่อหัวตารางและเปิด Popup ---
+        try:
+            headers = self.results_sheet.headers()
+            if col < len(headers):
+                clicked_header_name = headers[col]
+                # print(f"   > Clicked Header: {clicked_header_name}")
+                
+                # กรณี 1: ค่าเที่ยวรถ
+                if "ค่าเที่ยว" in clicked_header_name:
+                    self._show_driving_details_popup(row)
+                
+                # กรณี 2: OT หรือ เบี้ยขยัน (เปิด Popup เวลาทำงาน)
+                elif "OT" in clicked_header_name or "เบี้ยขยัน" in clicked_header_name:
+                    self._show_attendance_details_popup(row, clicked_header_name)
+                    
+        except Exception as e:
+            print(f"Error handling double click: {e}")
+
+    def _show_driving_details_popup(self, row_index):
+        """(คงเดิม) แสดง Popup รายละเอียดเที่ยวรถ"""
+        payroll_data = self.last_payroll_results[row_index]
+        emp_id = payroll_data['emp_id']
+        emp_name = payroll_data.get('name', '-')
+        
+        try:
+            start_date = self.start_date_entry.get_date()
+            end_date = self.end_date_entry.get_date()
+        except: return
+
+        details = hr_database.get_driving_details_range(emp_id, start_date, end_date)
+        if not details:
+            messagebox.showinfo("ไม่มีข้อมูล", f"ไม่พบรายการเที่ยวรถของ\n{emp_name}")
+            return
+
+        win = tk.Toplevel(self)
+        win.title(f"🚚 รายละเอียดเที่ยวรถ - {emp_name}")
+        win.geometry("700x400")
+        
+        ttk.Label(win, text=f"ประวัติเที่ยวรถ: {emp_name}", font=("", 12, "bold")).pack(pady=10)
+        ttk.Label(win, text=f"ช่วงวันที่: {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}", foreground="gray").pack(pady=(0,10))
+
+        cols = ("date", "license", "type", "driver", "cost", "service", "total")
+        tree = ttk.Treeview(win, columns=cols, show="headings", height=15)
+        
+        tree.heading("date", text="วันที่")
+        tree.heading("license", text="ทะเบียน")
+        tree.heading("type", text="ประเภท")
+        tree.heading("driver", text="คนขับ")
+        tree.heading("cost", text="ค่าเที่ยว")
+        tree.heading("service", text="ค่าบริการ")
+        tree.heading("total", text="รวม")
+        
+        tree.column("date", width=80, anchor="center")
+        tree.column("license", width=100)
+        tree.column("type", width=80)
+        tree.column("driver", width=120)
+        tree.column("cost", width=70, anchor="e")
+        tree.column("service", width=70, anchor="e")
+        tree.column("total", width=70, anchor="e")
+        
+        tree.pack(fill="both", expand=True, padx=10, pady=5)
+        
+        total_sum = 0.0
+        for item in details:
+            d_str = item['work_date'].strftime("%d/%m/%Y")
+            cost = float(item.get('trip_cost', 0))
+            serv = float(item.get('service_fee', 0))
+            total = cost + serv
+            total_sum += total
+            
+            tree.insert("", "end", values=(
+                d_str, item.get('license_plate', '-'), item.get('car_type', '-'),
+                item.get('driver_name', '-'), f"{cost:,.2f}", f"{serv:,.2f}", f"{total:,.2f}"
+            ))
+            
+        ttk.Label(win, text=f"รวมยอดสุทธิ: {total_sum:,.2f} บาท", font=("", 11, "bold"), foreground="green").pack(pady=10, anchor="e", padx=20)
     
+    def _show_attendance_details_popup(self, row_index, title_prefix="Attendance"):
+        """(ใหม่) แสดง Popup รายละเอียดการเข้างาน/OT/เบี้ยขยัน"""
+        # 1. เตรียมข้อมูล
+        payroll_data = self.last_payroll_results[row_index]
+        emp_id = payroll_data['emp_id']
+        emp_name = payroll_data.get('name', '-')
+        
+        try:
+            start_date = self.start_date_entry.get_date()
+            end_date = self.end_date_entry.get_date()
+        except: return
+
+        # 2. ดึงข้อมูลจาก DB (ต้องสร้างฟังก์ชันนี้ใน hr_database.py ด้วย)
+        # เราจะดึงรายการรายวันในช่วงวันที่เลือกมาแสดง
+        daily_records = hr_database.get_daily_records_range(emp_id, start_date, end_date)
+        
+        if not daily_records:
+            messagebox.showinfo("ไม่มีข้อมูล", f"ไม่พบประวัติเวลาทำงานของ\n{emp_name}")
+            return
+
+        # 3. สร้างหน้าต่าง
+        win = tk.Toplevel(self)
+        win.title(f"📅 รายละเอียดเวลาทำงาน - {emp_name}")
+        win.geometry("800x500")
+        
+        header_text = f"ประวัติการเข้างานและ OT: {emp_name}"
+        if "เบี้ยขยัน" in title_prefix:
+            header_text += " (ตรวจสอบเงื่อนไขเบี้ยขยัน)"
+            
+        ttk.Label(win, text=header_text, font=("", 12, "bold")).pack(pady=10)
+        ttk.Label(win, text=f"ช่วงวันที่: {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}", foreground="gray").pack(pady=(0,10))
+
+        # ตาราง
+        cols = ("date", "status", "in", "out", "ot_hours", "late_mins", "is_approved")
+        tree = ttk.Treeview(win, columns=cols, show="headings", height=15)
+        
+        tree.heading("date", text="วันที่")
+        tree.heading("status", text="สถานะ")
+        tree.heading("in", text="เข้างาน")
+        tree.heading("out", text="ออกงาน")
+        tree.heading("ot_hours", text="ชม. OT")
+        tree.heading("late_mins", text="สาย (นาที)")
+        tree.heading("is_approved", text="อนุมัติ OT")
+        
+        tree.column("date", width=90, anchor="center")
+        tree.column("status", width=120)
+        tree.column("in", width=70, anchor="center")
+        tree.column("out", width=70, anchor="center")
+        tree.column("ot_hours", width=70, anchor="center")
+        tree.column("late_mins", width=70, anchor="center")
+        tree.column("is_approved", width=80, anchor="center")
+        
+        tree.pack(fill="both", expand=True, padx=10, pady=5)
+        
+        # ใส่ข้อมูล
+        total_ot = 0.0
+        total_late = 0
+        diligence_fail_count = 0
+        
+        for item in daily_records:
+            d_str = item['work_date'].strftime("%d/%m/%Y")
+            status = item.get('status', 'ปกติ')
+            t_in = item.get('work_in_time') or "-"
+            t_out = item.get('work_out_time') or "-"
+            
+            # ถ้าไม่มี เวลาเข้าออกปกติ ลองดูจาก OT time หรือ Log (ถ้า DB เก็บแยก)
+            # ในที่นี้สมมติว่า function get_daily_records_range เตรียมมาให้แล้ว
+            
+            ot = float(item.get('ot_hours', 0))
+            # late = int(item.get('late_minutes', 0)) # ถ้ามีฟิลด์นี้
+            late = 0 # สมมติ 0 ไปก่อนถ้ายังไม่มีฟิลด์จริง
+            
+            is_appr = "✅" if item.get('is_ot_approved') else "-"
+            if ot > 0 and not item.get('is_ot_approved'): is_appr = "รออนุมัติ"
+            
+            # Highlight แถวที่มีปัญหา (สำหรับเบี้ยขยัน)
+            tags = ()
+            if "สาย" in status or "ขาด" in status or "ลา" in status:
+                tags = ('bad',)
+                diligence_fail_count += 1
+            
+            tree.insert("", "end", values=(
+                d_str, status, t_in, t_out, f"{ot:.2f}", late, is_appr
+            ), tags=tags)
+            
+            total_ot += ot
+            total_late += late
+
+        tree.tag_configure('bad', foreground='red')
+
+        # สรุปท้ายตาราง
+        summary_frame = ttk.Frame(win)
+        summary_frame.pack(fill="x", padx=20, pady=15) # เพิ่ม pady ให้สวยงาม
+        
+        # ซ้าย: รวม OT
+        ttk.Label(summary_frame, text=f"รวม OT: {total_ot:.2f} ชม.", font=("Segoe UI", 11, "bold")).pack(side="left")
+        
+        # ขวา: สถานะเบี้ยขยัน + Streak
+        if "เบี้ยขยัน" in title_prefix:
+            # 1. แสดงสถานะผ่าน/ไม่ผ่าน
+            result_text = "✅ ผ่านเกณฑ์เดือนนี้" if diligence_fail_count == 0 else f"❌ ไม่ผ่าน ({diligence_fail_count} วัน)"
+            color = "green" if diligence_fail_count == 0 else "red"
+            
+            ttk.Label(summary_frame, text=result_text, font=("Segoe UI", 11, "bold"), foreground=color).pack(side="right", padx=(10, 0))
+            
+            # 2. (เพิ่มใหม่) แสดงค่า Streak และจำนวนเงิน
+            # ถ้าผ่านเดือนนี้ ให้ไปคำนวณ Streak มาโชว์
+            if diligence_fail_count == 0:
+                try:
+                    # ดึงเดือน/ปี จาก start_date ที่เลือกอยู่
+                    m = start_date.month
+                    y = start_date.year
+                    
+                    # เรียกฟังก์ชันใหม่จาก Database
+                    streak, money = hr_database.get_diligence_streak_info(emp_id, m, y)
+                    
+                    streak_text = f"🔥 ทำดีต่อเนื่อง: {streak} เดือน (รับ {money:,.0f} บ.)"
+                    ttk.Label(summary_frame, text=streak_text, font=("Segoe UI", 11, "bold"), foreground="#FF8C00").pack(side="right", padx=10)
+                    
+                except Exception as e:
+                    print(f"Cannot get streak: {e}")
+
     def _export_pnd1k_excel(self):
         """ออกรายงาน ภ.ง.ด. 1ก (รายปี) เป็น Excel"""
         
@@ -1872,165 +2126,161 @@ class PayrollModule(ttk.Frame):
             messagebox.showerror("Error", f"เกิดข้อผิดพลาด: {e}")
 
     def _print_pnd1k_pdf(self):
-        """ออกรายงาน ภ.ง.ด. 1ก (รายปี) เป็น PDF (รวมใบปะหน้า + ใบแนบ)"""
+        """ออกรายงาน ภ.ง.ด. 1ก (Overlay Template) - เขียนทับไฟล์ PDF ต้นฉบับ"""
         
-        # 1. ถามปี พ.ศ.
+        # 1. ถามปีภาษี
         current_year_be = datetime.now().year + 543
-        year_str = simpledialog.askstring("เลือกปีภาษี", f"กรุณากรอกปี พ.ศ. ที่ต้องการออกรายงาน (เช่น {current_year_be}):", initialvalue=str(current_year_be))
-        
+        year_str = simpledialog.askstring("เลือกปีภาษี", f"กรุณากรอกปี พ.ศ. (เช่น {current_year_be}):", initialvalue=str(current_year_be))
         if not year_str or not year_str.isdigit(): return
         year_be = int(year_str)
         year_ce = year_be - 543 
 
-        # 2. ดึงข้อมูลทั้งปี
+        # 2. ดึงข้อมูล
         data_list = hr_database.get_annual_pnd1k_data(year_ce)
-        
         if not data_list:
             messagebox.showinfo("ไม่พบข้อมูล", f"ไม่พบประวัติการจ่ายเงินเดือนในปี {year_be}")
             return
 
-        # 3. คำนวณยอดรวมก่อน
-        total_emp = len(data_list)
-        grand_total_income = sum(float(item['annual_income'] or 0) for item in data_list)
-        grand_total_tax = sum(float(item['annual_tax'] or 0) for item in data_list)
+        # 3. เตรียมไฟล์ Template (กระดาษเปล่า)
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # ชื่อไฟล์ต้นฉบับที่คุณเอาไปวางไว้
+        template_filename = "pnd1k.pdf" 
+        template_path = os.path.join(base_dir, template_filename)
+        
+        # (เผื่อหาไม่เจอ ลองดูในโฟลเดอร์ resources)
+        if not os.path.exists(template_path):
+             template_path = os.path.join(base_dir, "resources", template_filename)
+        
+        if not os.path.exists(template_path):
+            messagebox.showerror("Error", f"ไม่พบไฟล์แบบฟอร์มต้นฉบับ '{template_filename}' ในโฟลเดอร์โปรแกรม")
+            return
 
-        # 4. เลือกที่เซฟ
+        # 4. เลือกที่เซฟไฟล์ปลายทาง
         save_path = filedialog.asksaveasfilename(
             defaultextension=".pdf",
             filetypes=[("PDF Files", "*.pdf")],
-            initialfile=f"PND1K_Year_{year_be}.pdf",
-            title=f"บันทึก ภ.ง.ด. 1ก ปี {year_be} (PDF)"
+            initialfile=f"PND1K_{year_be}_Completed.pdf",
+            title="บันทึก ภ.ง.ด. 1ก"
         )
         if not save_path: return
 
         try:
-            pdf = FPDF(orientation='P', unit='mm', format='A4')
-            pdf.set_auto_page_break(auto=False) # คุมหน้าเอง
-
-            # --- โหลดฟอนต์ ---
-            base_path = os.path.dirname(__file__)
-            resource_path = os.path.join(base_path, "resources")
-            font_path_reg = os.path.join(resource_path, "THSarabunNew.ttf")
-            if not os.path.exists(font_path_reg): font_path_reg = os.path.join(base_path, "THSarabunNew.ttf")
-            font_path_bold = os.path.join(resource_path, "THSarabunNew Bold.ttf")
-            if not os.path.exists(font_path_bold): font_path_bold = os.path.join(base_path, "THSarabunNew Bold.ttf")
-            if not os.path.exists(font_path_bold): font_path_bold = font_path_reg
-
-            pdf.add_font("THSarabun", "", font_path_reg, uni=True)
-            pdf.add_font("THSarabun", "B", font_path_bold, uni=True)
-
-            def fmt_money(val): return f"{val:,.2f}"
-
-            # ==========================================
-            #  ส่วนที่ 1: ใบปะหน้า (Cover Sheet)
-            # ==========================================
-            pdf.add_page()
+            # เตรียม Font ภาษาไทย
+            font_path = os.path.join(base_dir, "resources", "THSarabunNew.ttf")
+            if not os.path.exists(font_path): font_path = os.path.join(base_dir, "THSarabunNew.ttf")
             
-            # หัวกระดาษ
-            pdf.set_font("THSarabun", "B", 22)
-            pdf.set_xy(0, 20)
-            pdf.cell(0, 10, "ใบสรุป ภ.ง.ด. 1ก (รายปี)", ln=True, align='C')
+            # ลงทะเบียน Font กับ ReportLab
+            pdfmetrics.registerFont(TTFont('THSarabun', font_path))
+
+            # เตรียมตัวแปรสำหรับรวมไฟล์
+            output_writer = PdfWriter()
             
-            pdf.set_font("THSarabun", "", 16)
-            pdf.cell(0, 10, f"ประจำปีภาษี: {year_be}", ln=True, align='C')
-            pdf.ln(10)
-
-            # กล่องยอดรวม
-            start_y = pdf.get_y()
-            box_w = 160
-            center_x = (210 - box_w) / 2
-
-            def draw_cover_row(label, value, is_bold=False):
-                x = center_x
-                y = pdf.get_y()
-                pdf.rect(x, y, box_w, 12)
-                
-                pdf.set_xy(x + 5, y + 2)
-                pdf.set_font("THSarabun", "B" if is_bold else "", 16)
-                pdf.cell(100, 8, label, border=0)
-                
-                pdf.set_xy(x + 105, y + 2)
-                pdf.set_font("THSarabun", "B", 16)
-                pdf.cell(50, 8, value, border=0, align='R')
-                pdf.ln(12)
-
-            draw_cover_row("1. จำนวนรายผู้มีเงินได้ทั้งหมด", f"{total_emp}  ราย")
-            draw_cover_row("2. รวมเงินได้ทั้งสิ้นที่จ่ายตลอดปี", f"{grand_total_income:,.2f}  บาท")
-            draw_cover_row("3. รวมภาษีที่นำส่งทั้งสิ้น", f"{grand_total_tax:,.2f}  บาท", is_bold=True)
-
-            # ลายเซ็น
-            pdf.ln(20)
-            pdf.set_font("THSarabun", "", 14)
-            pdf.set_x(center_x)
-            pdf.cell(0, 8, "ลงชื่อ ....................................................... ผู้มีหน้าที่หักภาษี ณ ที่จ่าย", ln=True, align='C')
-            pdf.cell(0, 8, f"( วันที่พิมพ์: {datetime.now().strftime('%d/%m/%Y')} )", ln=True, align='C')
-
-            # ==========================================
-            #  ส่วนที่ 2: ใบแนบ (Attachment List)
-            # ==========================================
-            pdf.add_page() # ขึ้นหน้าใหม่สำหรับรายการ
-
-            # กำหนดคอลัมน์: ลำดับ, บัตร ปชช, ชื่อ-สกุล, วันที่จ่าย, เงินได้ทั้งปี, ภาษีทั้งปี
-            col_w = [10, 35, 60, 25, 30, 30]
-            headers = ["ลำดับ", "เลขบัตรประชาชน", "ชื่อ-นามสกุล", "วันเดือนปี", "เงินได้ทั้งปี", "ภาษีทั้งปี"]
-
-            def draw_attach_header():
-                pdf.set_font("THSarabun", "B", 18)
-                pdf.cell(0, 10, f"ใบแนบ ภ.ง.ด. 1ก ประจำปี {year_be}", ln=True, align='C')
-                pdf.ln(2)
-                
-                # หัวตาราง
-                pdf.set_fill_color(230, 230, 230)
-                pdf.set_font("THSarabun", "B", 14)
-                for i, h in enumerate(headers):
-                    pdf.cell(col_w[i], 8, h, border=1, align='C', fill=True)
-                pdf.ln()
-
-            draw_attach_header()
-
-            # วนลูปข้อมูล
-            pdf.set_font("THSarabun", "", 14)
-            seq = 1
-            current_y = pdf.get_y()
-            row_h = 7
-            bottom_margin = 270
-
-            for item in data_list:
-                if current_y + row_h > bottom_margin:
-                    pdf.add_page()
-                    draw_attach_header()
-                    current_y = pdf.get_y()
-
-                inc = float(item['annual_income'] or 0)
-                tax = float(item['annual_tax'] or 0)
-                fullname = f"{item.get('fname','')} {item.get('lname','')}"
-                id_card = item.get('id_card', '-')
-
-                pdf.cell(col_w[0], row_h, str(seq), 1, 0, 'C')
-                
-                if len(id_card) > 13: pdf.set_font("THSarabun", "", 12)
-                pdf.cell(col_w[1], row_h, id_card, 1, 0, 'C')
-                pdf.set_font("THSarabun", "", 14)
-                
-                pdf.cell(col_w[2], row_h, f"  {fullname}", 1, 0, 'L')
-                pdf.cell(col_w[3], row_h, "ตลอดปี", 1, 0, 'C')
-                pdf.cell(col_w[4], row_h, fmt_money(inc), 1, 0, 'R')
-                pdf.cell(col_w[5], row_h, fmt_money(tax), 1, 0, 'R')
-                pdf.ln()
-                
-                current_y += row_h
-                seq += 1
-
-            # บรรทัดยอดรวมท้ายตาราง
-            pdf.set_font("THSarabun", "B", 14)
-            pdf.set_fill_color(204, 255, 204)
+            # --- ตั้งค่าพิกัด (X, Y) ---
+            # จุด (0,0) อยู่มุมซ้ายล่างของกระดาษ
+            # คุณอาจต้องปรับตัวเลขพวกนี้เล็กน้อยเพื่อให้ลงช่องเป๊ะๆ
             
-            pdf.cell(sum(col_w[:4]), 8, "รวมยอดทั้งสิ้น", 1, 0, 'R', fill=True)
-            pdf.cell(col_w[4], 8, fmt_money(grand_total_income), 1, 0, 'R', fill=True)
-            pdf.cell(col_w[5], 8, fmt_money(grand_total_tax), 1, 0, 'R', fill=True)
+            Y_START = 528       # บรรทัดแรกของข้อมูลเริ่มที่ความสูงนี้ (ยิ่งมากยิ่งสูง)
+            ROW_HEIGHT = 23.5   # ความห่างระหว่างบรรทัด (ถ้าบรรทัดซ้อนกันให้ลดค่า, ถ้าห่างไปให้เพิ่มค่า)
+            MAX_ROW_PER_PAGE = 8 # จำนวนรายชื่อต่อ 1 หน้า (ปกติตามแบบฟอร์มคือ 7-8 คน)
+            
+            # พิกัดแนวนอน (X)
+            X_SEQ = 40          # ลำดับ
+            X_TAX_ID = 85       # เลขผู้เสียภาษี
+            X_NAME = 190        # ชื่อ-สกุล
+            X_DATE = 360        # วันเดือนปี
+            X_INCOME = 475      # เงินได้ (ชิดขวา)
+            X_TAX = 540         # ภาษี (ชิดขวา)
+            X_COND = 575        # เงื่อนไข
 
-            pdf.output(save_path)
-            os.startfile(save_path)
+            # พิกัด Header (เลขหน้า)
+            X_PAGE_NUM = 530
+            Y_PAGE_NUM = 780
+            
+            # พิกัดยอดรวม (เฉพาะหน้าสุดท้าย)
+            Y_TOTAL_ROW = 110   # ความสูงของบรรทัดยอดรวมด้านล่าง
+
+            # --- เริ่มวนลูปเขียนข้อมูล ---
+            grand_total_income = 0
+            grand_total_tax = 0
+            
+            # แบ่งข้อมูลเป็นชุดๆ ตามจำนวนบรรทัดต่อหน้า (Pagination)
+            chunks = [data_list[i:i + MAX_ROW_PER_PAGE] for i in range(0, len(data_list), MAX_ROW_PER_PAGE)]
+            total_pages = len(chunks)
+
+            for page_idx, batch_data in enumerate(chunks):
+                # 1. สร้าง Canvas (แผ่นใส) สำหรับหน้านี้
+                packet = io.BytesIO()
+                c = canvas.Canvas(packet, pagesize=A4)
+                c.setFont("THSarabun", 14)
+                
+                # เขียนเลขหน้า
+                c.drawString(X_PAGE_NUM, Y_PAGE_NUM, f"{page_idx + 1}") # หน้าที่
+                # c.drawString(X_PAGE_NUM + 30, Y_PAGE_NUM, f"{total_pages}") # จำนวนหน้าทั้งหมด (ถ้ามีช่องให้ใส่)
+
+                current_y = Y_START
+                
+                # วนลูปข้อมูลในหน้านั้นๆ
+                for item in batch_data:
+                    # คำนวณตัวเลข
+                    inc = float(item['annual_income'] or 0)
+                    tax = float(item['annual_tax'] or 0)
+                    grand_total_income += inc
+                    grand_total_tax += tax
+                    
+                    # เตรียมข้อความ
+                    seq = (page_idx * MAX_ROW_PER_PAGE) + batch_data.index(item) + 1
+                    fullname = f"{item.get('fname','')} {item.get('lname','')}"
+                    tax_id = item.get('id_card', '').replace('-', '') # เอาขีดออก
+                    
+                    # --- วาดข้อมูล (ปากกาเขียน) ---
+                    c.drawCentredString(X_SEQ, current_y, str(seq))           # ลำดับ
+                    
+                    # จัดระยะห่างเลขบัตรประชาชน (Spacing)
+                    tax_id_spaced = "  ".join(list(tax_id)) if tax_id else ""
+                    # c.drawString(X_TAX_ID, current_y, tax_id_spaced) # ใช้แบบมีเว้นวรรค
+                    c.drawString(X_TAX_ID, current_y, tax_id)        # หรือใช้แบบปกติถ้า Template ช่องชิดกัน
+                    
+                    c.drawString(X_NAME, current_y, fullname)                 # ชื่อ
+                    c.drawCentredString(X_DATE, current_y, "ตลอดปี")          # วันที่จ่าย
+                    
+                    c.drawRightString(X_INCOME, current_y, f"{inc:,.2f}")     # เงินได้
+                    c.drawRightString(X_TAX, current_y, f"{tax:,.2f}")        # ภาษี
+                    c.drawCentredString(X_COND, current_y, "1")               # เงื่อนไข
+                    
+                    current_y -= ROW_HEIGHT # ขยับปากกาลงบรรทัดถัดไป
+
+                # ถ้าเป็น "หน้าสุดท้าย" ให้เขียนยอดรวม
+                if page_idx == total_pages - 1:
+                    c.drawRightString(X_INCOME, Y_TOTAL_ROW, f"{grand_total_income:,.2f}")
+                    c.drawRightString(X_TAX, Y_TOTAL_ROW, f"{grand_total_tax:,.2f}")
+
+                c.save()
+                packet.seek(0)
+
+                # 2. รวมร่าง (Merge)
+                # อ่านไฟล์ Template ใหม่ทุกครั้ง (เพื่อความชัวร์ว่าได้หน้าเปล่าๆ)
+                template_reader = PdfReader(open(template_path, "rb"))
+                template_page = template_reader.pages[0] # สมมติว่าแบบฟอร์มอยู่หน้าแรก
+                
+                # อ่านลายเส้นที่เราเพิ่งเขียน
+                overlay_reader = PdfReader(packet)
+                overlay_page = overlay_reader.pages[0]
+                
+                # แปะทับลงไป
+                template_page.merge_page(overlay_page)
+                
+                # ใส่เข้าเล่ม
+                output_writer.add_page(template_page)
+
+            # 5. บันทึกไฟล์ปลายทาง
+            with open(save_path, "wb") as f_out:
+                output_writer.write(f_out)
+
+            if messagebox.askyesno("สำเร็จ", f"สร้างไฟล์เรียบร้อยแล้วที่:\n{save_path}\n\nต้องการเปิดดูเลยหรือไม่?"):
+                os.startfile(save_path)
 
         except Exception as e:
-            messagebox.showerror("Error", f"สร้าง PDF ภ.ง.ด.1ก ไม่สำเร็จ:\n{e}")
+            import traceback
+            traceback.print_exc()
+            messagebox.showerror("Error", f"เกิดข้อผิดพลาดในการสร้าง PDF:\n{e}")

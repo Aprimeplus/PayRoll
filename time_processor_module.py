@@ -646,8 +646,9 @@ class TimeProcessorModule(ttk.Frame):
             
         # Config Read-only
         if is_daily_emp:
-            # รายวัน: ล็อค 0,4,5,6,7,10 (Date, Work, Leave, Late, Penalty, OT Hrs)
-            # ยอมให้แก้: Status, In, Out, OT In, OT Out, Approval
+            # รายวัน:
+            # ล็อค: 0(Date), 4(WorkHrs), 5(Leave), 6(Late), 7(Penalty), 10(OT Hrs - รอคำนวณ)
+            # ปลดล็อก: 1(Status), 2(In), 3(Out), 8(OT In), 9(OT Out), 11(Approve)
             sheet.readonly_columns(columns=[0, 4, 5, 6, 7, 10]) 
         else:
             # รายเดือน: ล็อค 0,4,5,6,7
@@ -767,15 +768,15 @@ class TimeProcessorModule(ttk.Frame):
         return leave_type
 
     def _save_details_from_popup(self, sheet, original_details_list, emp_id, popup_window, is_daily_emp=False):
-        """(ฉบับแก้ไข V7) บันทึกข้อมูลกลับลง DB (รองรับการ map columns แบบ Dynamic)"""
+        """(ฉบับแก้ไข V8 - คำนวณ OT อัตโนมัติจากเวลาที่กรอกมือ)"""
         try:
-            if not messagebox.askyesno("ยืนยันการบันทึก", "คุณต้องการบันทึกการเปลี่ยนแปลงทั้งหมดนี้ใช่หรือไม่?", parent=popup_window):
+            if not messagebox.askyesno("ยืนยันการบันทึก", "ระบบจะคำนวณชั่วโมง OT ใหม่ตามเวลาที่คุณกรอก\nต้องการบันทึกใช่หรือไม่?", parent=popup_window):
                 return 
             
             # 1. ดึงข้อมูล
             new_data_list_of_lists = sheet.get_sheet_data()
             
-            # 2. กำหนด Headers ให้ตรงกับที่โชว์ (สำคัญมาก)
+            # 2. กำหนด Headers
             if is_daily_emp:
                 headers = [
                     "date", "status", "scan_in", "scan_out", 
@@ -785,7 +786,7 @@ class TimeProcessorModule(ttk.Frame):
             else:
                 headers = [
                     "date", "status", "scan_in", "scan_out", 
-                    "work_hrs", "leave_hours", "actual_late_mins", "penalty_hrs" # 8 Cols
+                    "work_hrs", "leave_hours", "actual_late_mins", "penalty_hrs" 
                 ]
             
             new_data_map = {}
@@ -811,7 +812,7 @@ class TimeProcessorModule(ttk.Frame):
                 if val_status_new == "เลือกสถานะ": val_status_new = val_status_old
                 status_changed = (val_status_old != val_status_new)
 
-                # B. เวลาเข้า/ออก
+                # B. เวลาเข้า/ออก (งานปกติ)
                 val_in_old = str(original_row.get('scan_in') or "").strip()
                 val_in_new = new_row['scan_in']
                 if val_in_new == "None": val_in_new = ""
@@ -822,41 +823,54 @@ class TimeProcessorModule(ttk.Frame):
                 if val_out_new == "None": val_out_new = ""
                 scan_out_changed = (val_out_old != val_out_new)
 
-                # C. OT (เฉพาะรายวัน)
-                ot_in_changed = False
-                ot_out_changed = False
-                ot_approved_changed = False
+                # C. OT (เฉพาะรายวัน) - คำนวณใหม่ที่นี่!
+                ot_changed = False
+                new_calculated_ot_hours = 0.0
                 
                 val_ot_in_new = ""
                 val_ot_out_new = ""
                 val_approved_new = False
 
                 if is_daily_emp:
-                    val_ot_in_old = str(original_row.get('ot_in') or "").strip()
+                    # รับค่าเวลา OT จากหน้าจอ (ที่ User กรอกมา)
                     val_ot_in_new = new_row.get('ot_in', '')
                     if val_ot_in_new == "None": val_ot_in_new = ""
-                    ot_in_changed = (val_ot_in_old != val_ot_in_new)
-
-                    val_ot_out_old = str(original_row.get('ot_out') or "").strip()
+                    
                     val_ot_out_new = new_row.get('ot_out', '')
                     if val_ot_out_new == "None": val_ot_out_new = ""
-                    ot_out_changed = (val_ot_out_old != val_ot_out_new)
+                    
+                    # ตรวจสอบว่ามีการเปลี่ยนแปลงเวลาหรือไม่
+                    val_ot_in_old = str(original_row.get('ot_in') or "").strip()
+                    val_ot_out_old = str(original_row.get('ot_out') or "").strip()
                     
                     # เช็คสถานะอนุมัติ
                     val_appr_str = new_row.get('ot_approved', '')
                     val_approved_new = (val_appr_str == "✅ อนุมัติ")
                     val_approved_old = original_row.get('is_ot_approved', False)
-                    if val_approved_new != val_approved_old:
-                        ot_approved_changed = True
+                    
+                    # คำนวณชั่วโมง OT ใหม่ทันที!
+                    if val_ot_in_new and val_ot_out_new:
+                        new_calculated_ot_hours = self._calculate_time_diff(val_ot_in_new, val_ot_out_new)
+                    else:
+                        new_calculated_ot_hours = 0.0
+                        
+                    # เปรียบเทียบกับค่าเดิม (Hours เดิม vs Hours ใหม่)
+                    old_ot_hours = float(original_row.get('ot_hrs', 0))
+                    
+                    if (val_ot_in_new != val_ot_in_old) or \
+                       (val_ot_out_new != val_ot_out_old) or \
+                       (abs(new_calculated_ot_hours - old_ot_hours) > 0.01) or \
+                       (val_approved_new != val_approved_old):
+                        ot_changed = True
 
-                if not (status_changed or scan_in_changed or scan_out_changed or ot_in_changed or ot_out_changed or ot_approved_changed):
+                if not (status_changed or scan_in_changed or scan_out_changed or ot_changed):
                     continue 
                 
                 changes_detected += 1
                 
-                # --- เริ่มบันทึก ---
+                # --- เริ่มบันทึก --- (Logic เดิม + Logic OT ใหม่)
                 
-                # 1. Status & Leave
+                # 1. Status & Leave (เหมือนเดิม)
                 new_status_is_leave = "ลา" in val_status_new and "(" in val_status_new
                 original_status_is_leave = "ลา" in val_status_old and "(" in val_status_old
 
@@ -870,7 +884,7 @@ class TimeProcessorModule(ttk.Frame):
                                 hr_database.delete_scan_logs_on_date(emp_id, date_obj)
                             hr_database.add_employee_leave(emp_id, date_obj, leave_type, 1.0, "แก้ไขผ่าน Pop-up")
 
-                # 2. Scan Time
+                # 2. Scan Time (เหมือนเดิม)
                 if scan_in_changed or scan_out_changed:
                     hr_database.delete_scan_logs_on_date(emp_id, date_obj)
                     if val_in_new:
@@ -886,18 +900,19 @@ class TimeProcessorModule(ttk.Frame):
                             hr_database.add_manual_scan_log(emp_id, dt)
                         except ValueError: pass
 
-                # 3. OT (เฉพาะรายวัน)
-                if is_daily_emp:
-                    if (ot_in_changed or ot_out_changed) and hasattr(hr_database, 'update_employee_ot_times'):
-                         hr_database.update_employee_ot_times(emp_id, date_obj, val_ot_in_new, val_ot_out_new)
+                # 3. OT (Logic ใหม่!)
+                if is_daily_emp and ot_changed:
+                    # บันทึกเวลา + ชั่วโมง OT ที่คำนวณใหม่ ลง DB
+                    if hasattr(hr_database, 'update_employee_ot_times'):
+                         hr_database.update_employee_ot_times(emp_id, date_obj, val_ot_in_new, val_ot_out_new, new_calculated_ot_hours)
                     
-                    if ot_approved_changed and hasattr(hr_database, 'update_ot_approval_status'):
+                    if hasattr(hr_database, 'update_ot_approval_status'):
                          hr_database.update_ot_approval_status(emp_id, date_obj, val_approved_new)
 
             if changes_detected > 0:
-                messagebox.showinfo("สำเร็จ", f"บันทึกการแก้ไข {changes_detected} รายการเรียบร้อย", parent=popup_window)
+                messagebox.showinfo("สำเร็จ", f"บันทึกและคำนวณ OT ใหม่เรียบร้อย ({changes_detected} รายการ)", parent=popup_window)
                 popup_window.destroy()
-                self._run_processing() 
+                self._run_processing() # รีเฟรชหน้าจอ
             else:
                 messagebox.showinfo("ไม่เปลี่ยนแปลง", "ไม่พบการเปลี่ยนแปลงข้อมูล", parent=popup_window)
 
@@ -1084,3 +1099,21 @@ class TimeProcessorModule(ttk.Frame):
             import traceback
             traceback.print_exc() # ปริ้นท์ลงจอดำด้วยเผื่อดูรายละเอียด
             messagebox.showerror("เกิดข้อผิดพลาด", f"ระบบไม่สามารถประมวลผลได้:\n{e}")
+
+    def _calculate_time_diff(self, start_str, end_str):
+        """คำนวณระยะห่างระหว่างเวลา 2 ค่า (คืนค่าเป็นชั่วโมง float)"""
+        try:
+            if not start_str or not end_str: return 0.0
+            
+            t_start = datetime.strptime(start_str, "%H:%M")
+            t_end = datetime.strptime(end_str, "%H:%M")
+            
+            # กรณีข้ามวัน (เช่น เข้า 23:00 ออก 01:00)
+            if t_end < t_start:
+                t_end += pd.Timedelta(days=1)
+                
+            diff = t_end - t_start
+            hours = diff.total_seconds() / 3600.0
+            return round(hours, 2)
+        except:
+            return 0.0

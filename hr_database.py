@@ -2032,9 +2032,129 @@ def process_attendance_summary(start_date, end_date):
         
     return summary_report
 
+def get_auto_diligence_reward(emp_id, current_month, current_year):
+    conn = get_db_connection()
+    if not conn: return 0
+
+    try:
+        consecutive_good_months = 0
+        print(f"\n--- DEBUG: Checking Diligence for {emp_id} (Month {current_month}/{current_year}) ---")
+        
+        for i in range(1, 13): 
+            target_month = current_month - i
+            target_year = current_year
+            while target_month <= 0:
+                target_month += 12
+                target_year -= 1
+            
+            with conn.cursor() as cursor:
+                import calendar
+                last_day = calendar.monthrange(target_year, target_month)[1]
+                start_date = datetime(target_year, target_month, 1).date()
+                end_date = datetime(target_year, target_month, last_day).date()
+                
+                # 1. เช็คว่ามีวันทำงานไหม (สำคัญมาก!)
+                cursor.execute("""
+                    SELECT COUNT(*) FROM employee_daily_records 
+                    WHERE emp_id = %s AND work_date BETWEEN %s AND %s
+                """, (emp_id, start_date, end_date))
+                work_days_count = cursor.fetchone()[0]
+
+                # 2. เช็คประวัติเสีย
+                cursor.execute("SELECT COUNT(*) FROM employee_leave_records WHERE emp_id = %s AND leave_date BETWEEN %s AND %s", (emp_id, start_date, end_date))
+                leave_count = cursor.fetchone()[0]
+                
+                cursor.execute("SELECT COUNT(*) FROM employee_late_records WHERE emp_id = %s AND late_date BETWEEN %s AND %s", (emp_id, start_date, end_date))
+                late_count = cursor.fetchone()[0]
+                
+                cursor.execute("SELECT COUNT(*) FROM employee_daily_records WHERE emp_id = %s AND work_date BETWEEN %s AND %s AND (status LIKE '%%สาย%%' OR status LIKE '%%ขาด%%')", (emp_id, start_date, end_date))
+                daily_issue = cursor.fetchone()[0]
+                
+                # Debug Print
+                print(f"   > Month {target_month}/{target_year}: WorkDays={work_days_count}, Bad={leave_count+late_count+daily_issue}")
+
+                # เงื่อนไข: ต้องมีวันทำงาน (>0) และ ต้องไม่มีประวัติเสีย (==0)
+                if work_days_count > 0 and (leave_count == 0 and late_count == 0 and daily_issue == 0):
+                    consecutive_good_months += 1
+                    print(f"     ✅ PASS (Streak: {consecutive_good_months})")
+                else:
+                    print("     ❌ STOP (No work or Bad history)")
+                    break
+        
+        print(f"--- Final Streak: {consecutive_good_months} ---")
+        
+        if consecutive_good_months == 0: return 300
+        elif consecutive_good_months == 1: return 400
+        else: return 500
+            
+    except Exception as e:
+        print(f"Auto Diligence Error: {e}")
+        return 0
+    finally:
+        if conn: conn.close()
+
+def get_diligence_streak_info(emp_id, current_month, current_year):
+    """
+    คำนวณ Streak เบี้ยขยัน และจำนวนเงิน (สำหรับแสดงผลใน Popup)
+    Returns: (streak_count, reward_amount)
+    """
+    conn = get_db_connection()
+    if not conn: return 0, 0.0
+
+    try:
+        consecutive_good_months = 0
+        
+        # วนลูปย้อนหลัง 12 เดือนเพื่อนับ Streak
+        for i in range(1, 13): 
+            target_month = current_month - i
+            target_year = current_year
+            while target_month <= 0:
+                target_month += 12
+                target_year -= 1
+            
+            with conn.cursor() as cursor:
+                import calendar
+                last_day = calendar.monthrange(target_year, target_month)[1]
+                start_date = datetime(target_year, target_month, 1).date()
+                end_date = datetime(target_year, target_month, last_day).date()
+                
+                # 1. เช็ควันทำงาน
+                cursor.execute("""
+                    SELECT COUNT(*) FROM employee_daily_records 
+                    WHERE emp_id = %s AND work_date BETWEEN %s AND %s
+                """, (emp_id, start_date, end_date))
+                work_days = cursor.fetchone()[0]
+
+                # 2. เช็คประวัติเสีย
+                cursor.execute("SELECT COUNT(*) FROM employee_leave_records WHERE emp_id = %s AND leave_date BETWEEN %s AND %s", (emp_id, start_date, end_date))
+                bad_1 = cursor.fetchone()[0]
+                cursor.execute("SELECT COUNT(*) FROM employee_late_records WHERE emp_id = %s AND late_date BETWEEN %s AND %s", (emp_id, start_date, end_date))
+                bad_2 = cursor.fetchone()[0]
+                cursor.execute("SELECT COUNT(*) FROM employee_daily_records WHERE emp_id = %s AND work_date BETWEEN %s AND %s AND (status LIKE '%%สาย%%' OR status LIKE '%%ขาด%%')", (emp_id, start_date, end_date))
+                bad_3 = cursor.fetchone()[0]
+                
+                if work_days > 0 and (bad_1 + bad_2 + bad_3 == 0):
+                    consecutive_good_months += 1
+                else:
+                    break
+        
+        # คำนวณเงินรางวัลตาม Step (ปรับแก้ตัวเลขตามกฎบริษัทคุณได้เลย)
+        reward = 0.0
+        if consecutive_good_months == 0: reward = 300.0
+        elif consecutive_good_months == 1: reward = 400.0
+        else: reward = 500.0
+            
+        return consecutive_good_months, reward
+            
+    except Exception as e:
+        print(f"Streak Info Error: {e}")
+        return 0, 0.0
+    finally:
+        if conn: conn.close()
+
 def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=None):
     """
-    (สมองหลัก Payroll V24.0 - ล็อค OT ให้คิดเงินเฉพาะรายวันเท่านั้น)
+    (สมองหลัก Payroll V25.0 - Auto Diligence + OT Lock for Daily)
     """
     if user_inputs is None: user_inputs = {}
 
@@ -2071,9 +2191,8 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
             salary_from_db = float(emp_info.get("salary", 0.0))
             emp_type = emp_info.get("emp_type", "")
             
-            # --- (เช็คตรงนี้) ตรวจสอบว่าเป็นรายวันหรือไม่ ---
+            # ตรวจสอบว่าเป็นรายวันหรือไม่
             is_daily_emp = "รายวัน" in str(emp_type) or "Daily" in str(emp_type)
-            # -----------------------------------------
             
             cursor.execute("SELECT position_allowance FROM salary_history WHERE emp_id = %s ORDER BY history_id DESC LIMIT 1", (emp_id,))
             pos_row = cursor.fetchone()
@@ -2083,7 +2202,7 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
             manual_ot = float(user_inputs.get('ot', 0)) 
             result["commission"] = float(user_inputs.get('commission', 0))
             result["incentive"] = float(user_inputs.get('incentive', 0))
-            result["diligence"] = float(user_inputs.get('diligence', 0))
+            # result["diligence"] = ... (จะคำนวณอัตโนมัติด้านล่าง)
             result["bonus"] = float(user_inputs.get('bonus', 0))
             result["other_income"] = float(user_inputs.get('other_income', 0))
             result["tax"] = float(user_inputs.get('tax', 0))
@@ -2146,19 +2265,12 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
                     ot_hrs = float(daily_rec.get('ot_hours', 0) or 0)
                     is_ot_approved = bool(daily_rec.get('is_ot_approved', False))
 
-                # --- (แก้ไข Logic คิดเงิน OT: เพิ่มเงื่อนไข is_daily_emp) ---
-                # 1. ต้องมีชั่วโมง > 0
-                # 2. ต้องอนุมัติ (is_ot_approved = True)
-                # 3. ต้องเป็นพนักงานรายวัน (is_daily_emp = True) เท่านั้น!
-                
+                # คิดเงิน OT (เฉพาะรายวัน + ต้องอนุมัติ)
                 if ot_hrs > 0 and is_ot_approved and is_daily_emp:
-                    # สูตรรายวัน: ฐานเงินเดือนคือรายวันอยู่แล้ว / 8 ชม. = เรทชั่วโมง
-                    # สูตรรายเดือน: (ถ้าหลุดเข้ามา) ฐานเงินเดือน / 30 / 8
                     base_calc = salary_from_db / 30.0 if not is_daily_emp else salary_from_db
                     hourly_rate = base_calc / 8.0
                     daily_ot_pay = ot_hrs * hourly_rate * 1.5
                     total_ot_money += daily_ot_pay
-                # --------------------------------------------------------
 
                 is_present = False
                 if scans_today: is_present = True
@@ -2185,21 +2297,46 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
 
             # สรุปยอด
             result["driving_allowance"] = auto_driving_allowance
-            result["ot"] = manual_ot + total_ot_money # รวมยอด OT (เฉพาะรายวันที่อนุมัติ)
+            result["ot"] = manual_ot + total_ot_money 
             
             penalty_hours = total_penalty_minutes / 60.0
             result["debug_penalty_hours"] = penalty_hours
             result["debug_absent_days"] = total_absent_days
             
+            # ==========================================================
+            # 🏆 คำนวณเบี้ยขยันอัตโนมัติ (AUTO DILIGENCE - NEW LOGIC)
+            # ==========================================================
+            # เงื่อนไข 1: เดือนปัจจุบันต้องไม่มีสาย (penalty=0), ไม่ขาด (absent=0), ไม่ลา (leave_records_dict ว่างในงวดนี้)
+            
+            # เช็คว่ามีการลาในงวดนี้หรือไม่
+            has_leave_this_period = bool(leave_records_dict)
+            
+            # เช็คเงื่อนไขทำความดีเดือนนี้
+            is_current_period_perfect = (total_penalty_minutes == 0) and (total_absent_days == 0) and (not has_leave_this_period)
+            
+            # เงื่อนไขเพิ่มเติม: ต้องเป็นพนักงานรายวัน (ตามกฎที่คุยกัน)
+            if is_current_period_perfect and is_daily_emp:
+                # ถ้าเดือนนี้ผ่าน -> ไปเช็คประวัติย้อนหลังเพื่อหา Tier (300/400/500)
+                # ดึงเดือน/ปี จาก start_date เพื่อใช้อ้างอิง
+                m_calc = start_date.month
+                y_calc = start_date.year
+                
+                # เรียกฟังก์ชัน Auto
+                diligence_amt = get_auto_diligence_reward(emp_id, m_calc, y_calc)
+                result["diligence"] = float(diligence_amt)
+            else:
+                # ถ้าเดือนนี้ไม่ผ่าน หรือไม่ใช่รายวัน -> อด
+                result["diligence"] = 0.0
+
+            # ==========================================================
+            
             deduct_amount = 0.0
             if salary_from_db > 0:
                 if is_daily_emp:
-                    # รายวัน
                     result["base_salary"] = salary_from_db * actual_worked_days
                     hourly_rate = salary_from_db / 8.0
                     deduct_amount = penalty_hours * hourly_rate
                 else:
-                    # รายเดือน
                     result["base_salary"] = salary_from_db
                     daily_rate = salary_from_db / 30.0
                     hourly_rate = daily_rate / 8.0
@@ -2995,20 +3132,23 @@ def save_ot_details_list(emp_id, work_date, ot_list):
     finally:
         conn.close()
 
-def update_employee_ot_times(emp_id, work_date, ot_in, ot_out):
-    """(ใหม่) อัปเดตเวลาเข้า-ออก OT รายวัน"""
+def update_employee_ot_times(emp_id, work_date, ot_in, ot_out, new_ot_hours):
+    """
+    (แก้ไข V2) อัปเดตเวลาเข้า-ออก OT และจำนวนชั่วโมง OT (ที่คำนวณมาใหม่)
+    """
     conn = get_db_connection()
     if not conn: return False
     try:
         with conn.cursor() as cursor:
-            # ใช้ UPSERT: ถ้ามี record วันนั้นอยู่แล้วให้แก้ ถ้าไม่มีให้สร้างใหม่
+            # ใช้ UPSERT: อัปเดตเวลา OT และ จำนวนชั่วโมง OT
             cursor.execute("""
-                INSERT INTO employee_daily_records (emp_id, work_date, ot_in_time, ot_out_time, status)
-                VALUES (%s, %s, %s, %s, 'ทำงาน')
+                INSERT INTO employee_daily_records (emp_id, work_date, ot_in_time, ot_out_time, ot_hours, status)
+                VALUES (%s, %s, %s, %s, %s, 'ทำงาน')
                 ON CONFLICT (emp_id, work_date) DO UPDATE SET
                     ot_in_time = EXCLUDED.ot_in_time,
-                    ot_out_time = EXCLUDED.ot_out_time;
-            """, (str(emp_id), work_date, ot_in, ot_out))
+                    ot_out_time = EXCLUDED.ot_out_time,
+                    ot_hours = EXCLUDED.ot_hours;
+            """, (str(emp_id), work_date, ot_in, ot_out, float(new_ot_hours)))
             conn.commit()
             return True
     except Exception as e:
@@ -3042,3 +3182,74 @@ def update_ot_approval_status(emp_id, work_date, is_approved):
         return False
     finally:
         conn.close()
+
+def get_driving_details_range(emp_id, start_date, end_date):
+    """ดึงรายการเที่ยวรถทั้งหมด ในช่วงวันที่ระบุ (สำหรับ Drill-down ดูรายละเอียด)"""
+    conn = get_db_connection()
+    if not conn: return []
+    try:
+        with conn.cursor(cursor_factory=extras.DictCursor) as cursor:
+            # ดึงรายละเอียด: วันที่, ทะเบียน, ประเภท, คนขับ, ราคา
+            cursor.execute("""
+                SELECT 
+                    work_date, 
+                    car_type, 
+                    license_plate, 
+                    driver_name,
+                    trip_cost,
+                    service_fee
+                FROM employee_driving_details
+                WHERE emp_id = %s 
+                  AND work_date BETWEEN %s AND %s
+                ORDER BY work_date ASC
+            """, (emp_id, start_date, end_date))
+            
+            return [dict(row) for row in cursor.fetchall()]
+    except Exception as e:
+        print(f"Error fetching driving details range: {e}")
+        return []
+    finally:
+        if conn: conn.close()
+
+def get_daily_records_range(emp_id, start_date, end_date):
+    """
+    ดึงข้อมูลรายวัน (Daily Records) ในช่วงเวลาที่กำหนด 
+    เพื่อใช้แสดงรายละเอียด OT และ การเข้างาน (เบี้ยขยัน)
+    """
+    conn = get_db_connection()
+    if not conn: return []
+    try:
+        with conn.cursor(cursor_factory=extras.DictCursor) as cursor:
+            # ดึงข้อมูลจาก employee_daily_records
+            # และอาจจะ Join กับตารางอื่นถ้าต้องการข้อมูลเพิ่ม (เช่น Log สแกนนิ้ว)
+            # ในที่นี้เอาจาก daily_records เป็นหลักก่อน
+            cursor.execute("""
+                SELECT 
+                    work_date, 
+                    status, 
+                    ot_hours, 
+                    ot_in_time, 
+                    ot_out_time, 
+                    work_in_time, 
+                    work_out_time,
+                    is_ot_approved,
+                    total_amount -- (เผื่ออยากดูค่าเที่ยวด้วย)
+                FROM employee_daily_records
+                WHERE emp_id = %s 
+                  AND work_date BETWEEN %s AND %s
+                ORDER BY work_date ASC
+            """, (emp_id, start_date, end_date))
+            
+            rows = [dict(row) for row in cursor.fetchall()]
+            
+            # --- (Optional) เสริมข้อมูล: ถ้าวันไหนไม่มีใน daily_records แต่มีสแกนนิ้ว ---
+            # อาจจะไปดึง time_attendance_logs มา merge ด้วยก็ได้ 
+            # แต่เบื้องต้นเอาแค่นี้ก่อนเพื่อความรวดเร็ว
+            
+            return rows
+            
+    except Exception as e:
+        print(f"Error fetching daily records range: {e}")
+        return []
+    finally:
+        if conn: conn.close()
