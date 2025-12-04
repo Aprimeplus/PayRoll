@@ -2860,8 +2860,8 @@ def get_monthly_payroll_records(month, year):
 
 def get_annual_pnd1k_data(year_ce):
     """
-    ดึงข้อมูลทำ ภ.ง.ด. 1ก (สรุปรายได้/ภาษี ทั้งปี ของพนักงานแต่ละคน)
-    year_ce: ปี ค.ศ. (เช่น 2025)
+    ดึงข้อมูลทำ ภ.ง.ด. 1ก (สรุปรายได้/ภาษี ทั้งปี)
+    (แก้ไข: เพิ่ม start_date เพื่อใช้เรียงลำดับความอาวุโส)
     """
     conn = get_db_connection()
     if not conn: return []
@@ -2869,7 +2869,7 @@ def get_annual_pnd1k_data(year_ce):
         with conn.cursor(cursor_factory=extras.DictCursor) as cursor:
             cursor.execute("""
                 SELECT 
-                    e.emp_id, e.fname, e.lname, e.id_card, e.address, e.position,
+                    e.emp_id, e.fname, e.lname, e.id_card, e.address, e.position, e.start_date,
                     SUM(pr.total_income) as annual_income,
                     SUM(pr.tax_deduct) as annual_tax,
                     SUM(pr.sso_deduct) as annual_sso,
@@ -2877,8 +2877,8 @@ def get_annual_pnd1k_data(year_ce):
                 FROM payroll_records pr
                 JOIN employees e ON pr.emp_id = e.emp_id
                 WHERE pr.period_year = %s
-                GROUP BY e.emp_id, e.fname, e.lname, e.id_card, e.address, e.position
-                ORDER BY e.emp_id
+                GROUP BY e.emp_id, e.fname, e.lname, e.id_card, e.address, e.position, e.start_date
+                ORDER BY e.start_date ASC  -- เรียงจากเข้าก่อน (อาวุโสสุด) ไปหลัง
             """, (year_ce,))
             
             return [dict(row) for row in cursor.fetchall()]

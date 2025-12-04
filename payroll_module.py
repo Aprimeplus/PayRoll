@@ -1,6 +1,6 @@
 # (ไฟล์: payroll_module.py)
 # (เวอร์ชัน V15.0 - เพิ่มฟังก์ชันพิมพ์สลิป PDF พร้อมโลโก้)
-
+from reportlab.lib.pagesizes import A4, landscape
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog, filedialog 
 from custom_widgets import DateDropdown 
@@ -2126,8 +2126,24 @@ class PayrollModule(ttk.Frame):
             messagebox.showerror("Error", f"เกิดข้อผิดพลาด: {e}")
 
     def _print_pnd1k_pdf(self):
-        """ออกรายงาน ภ.ง.ด. 1ก (Overlay Template) - เขียนทับไฟล์ PDF ต้นฉบับ"""
+        """ออกรายงาน ภ.ง.ด. 1ก (Overlay) - ฉบับสมบูรณ์ (Pagination & Spacing Fixed + Landscape Fix)"""
         
+        # ต้องแน่ใจว่า import landscape มาแล้วด้านบนไฟล์:
+        # from reportlab.lib.pagesizes import A4, landscape
+
+        # ==========================================
+        # 🟢 Helper Function: วาดข้อความแบบกำหนดระยะห่าง
+        # ==========================================
+        def draw_spaced(c, x, y, text, char_space):
+            c.saveState()
+            t = c.beginText(x, y)
+            t.setFont("THSarabun", 14) 
+            t.setCharSpace(char_space) 
+            t.textOut(text)
+            c.drawText(t)
+            c.restoreState()
+        # ==========================================
+
         # 1. ถามปีภาษี
         current_year_be = datetime.now().year + 543
         year_str = simpledialog.askstring("เลือกปีภาษี", f"กรุณากรอกปี พ.ศ. (เช่น {current_year_be}):", initialvalue=str(current_year_be))
@@ -2141,22 +2157,17 @@ class PayrollModule(ttk.Frame):
             messagebox.showinfo("ไม่พบข้อมูล", f"ไม่พบประวัติการจ่ายเงินเดือนในปี {year_be}")
             return
 
-        # 3. เตรียมไฟล์ Template (กระดาษเปล่า)
+        # 3. ตรวจสอบไฟล์ Template
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        
-        # ชื่อไฟล์ต้นฉบับที่คุณเอาไปวางไว้
-        template_filename = "pnd1k.pdf" 
-        template_path = os.path.join(base_dir, template_filename)
-        
-        # (เผื่อหาไม่เจอ ลองดูในโฟลเดอร์ resources)
+        template_path = os.path.join(base_dir, "pnd1k.pdf")
         if not os.path.exists(template_path):
-             template_path = os.path.join(base_dir, "resources", template_filename)
+             template_path = os.path.join(base_dir, "resources", "pnd1k.pdf")
         
         if not os.path.exists(template_path):
-            messagebox.showerror("Error", f"ไม่พบไฟล์แบบฟอร์มต้นฉบับ '{template_filename}' ในโฟลเดอร์โปรแกรม")
+            messagebox.showerror("Error", "ไม่พบไฟล์แบบฟอร์มต้นฉบับ (pnd1k.pdf)")
             return
 
-        # 4. เลือกที่เซฟไฟล์ปลายทาง
+        # 4. เลือกตำแหน่งบันทึก
         save_path = filedialog.asksaveasfilename(
             defaultextension=".pdf",
             filetypes=[("PDF Files", "*.pdf")],
@@ -2166,114 +2177,111 @@ class PayrollModule(ttk.Frame):
         if not save_path: return
 
         try:
-            # เตรียม Font ภาษาไทย
+            # ลงทะเบียน Font
             font_path = os.path.join(base_dir, "resources", "THSarabunNew.ttf")
             if not os.path.exists(font_path): font_path = os.path.join(base_dir, "THSarabunNew.ttf")
-            
-            # ลงทะเบียน Font กับ ReportLab
             pdfmetrics.registerFont(TTFont('THSarabun', font_path))
 
-            # เตรียมตัวแปรสำหรับรวมไฟล์
             output_writer = PdfWriter()
             
-            # --- ตั้งค่าพิกัด (X, Y) ---
-            # จุด (0,0) อยู่มุมซ้ายล่างของกระดาษ
-            # คุณอาจต้องปรับตัวเลขพวกนี้เล็กน้อยเพื่อให้ลงช่องเป๊ะๆ
+            # ==========================================
+            # 🎯 CONFIGURATION
+            # ==========================================
+            Y_START = 413           
+            ROW_HEIGHT = 39         
+            MAX_ROW_PER_PAGE = 7    
             
-            Y_START = 528       # บรรทัดแรกของข้อมูลเริ่มที่ความสูงนี้ (ยิ่งมากยิ่งสูง)
-            ROW_HEIGHT = 23.5   # ความห่างระหว่างบรรทัด (ถ้าบรรทัดซ้อนกันให้ลดค่า, ถ้าห่างไปให้เพิ่มค่า)
-            MAX_ROW_PER_PAGE = 8 # จำนวนรายชื่อต่อ 1 หน้า (ปกติตามแบบฟอร์มคือ 7-8 คน)
-            
-            # พิกัดแนวนอน (X)
-            X_SEQ = 40          # ลำดับ
-            X_TAX_ID = 85       # เลขผู้เสียภาษี
-            X_NAME = 190        # ชื่อ-สกุล
-            X_DATE = 360        # วันเดือนปี
-            X_INCOME = 475      # เงินได้ (ชิดขวา)
-            X_TAX = 540         # ภาษี (ชิดขวา)
-            X_COND = 575        # เงื่อนไข
+            # พิกัดเลขหน้า
+            Y_PAGE = 475          
+            X_PAGE_CURR = 701       
+            X_PAGE_TOTAL = 765      
 
-            # พิกัด Header (เลขหน้า)
-            X_PAGE_NUM = 530
-            Y_PAGE_NUM = 780
-            
-            # พิกัดยอดรวม (เฉพาะหน้าสุดท้าย)
-            Y_TOTAL_ROW = 110   # ความสูงของบรรทัดยอดรวมด้านล่าง
+            # พิกัดข้อมูลอื่นๆ
+            X_SEQ = 80              
+            X_ID_1 = 111; X_ID_2 = 127; ID_SPACE_2 = 6.9 
+            X_ID_3 = 180; ID_SPACE_3 = 6.9; X_ID_4 = 247; ID_SPACE_4 = 4.7 
+            X_ID_5 = 278            
+            X_FNAME = 302; X_LNAME = 452
+            X_ADDRESS = 315; Y_ADDR_OFFSET = 15
+            X_INCOME = 680; X_TAX = 780; X_COND = 790
+            Y_TOTAL_ROW = 135       
+            # ==========================================
 
-            # --- เริ่มวนลูปเขียนข้อมูล ---
             grand_total_income = 0
             grand_total_tax = 0
             
-            # แบ่งข้อมูลเป็นชุดๆ ตามจำนวนบรรทัดต่อหน้า (Pagination)
+            # LOGIC Pagination
             chunks = [data_list[i:i + MAX_ROW_PER_PAGE] for i in range(0, len(data_list), MAX_ROW_PER_PAGE)]
-            total_pages = len(chunks)
+            total_pages = len(chunks) 
+            seq_global = 1 
 
-            for page_idx, batch_data in enumerate(chunks):
-                # 1. สร้าง Canvas (แผ่นใส) สำหรับหน้านี้
-                packet = io.BytesIO()
-                c = canvas.Canvas(packet, pagesize=A4)
-                c.setFont("THSarabun", 14)
+            # เริ่มวนลูปสร้างทีละหน้า
+            for page_idx, batch in enumerate(chunks):
+                current_page_num = page_idx + 1 
                 
-                # เขียนเลขหน้า
-                c.drawString(X_PAGE_NUM, Y_PAGE_NUM, f"{page_idx + 1}") # หน้าที่
-                # c.drawString(X_PAGE_NUM + 30, Y_PAGE_NUM, f"{total_pages}") # จำนวนหน้าทั้งหมด (ถ้ามีช่องให้ใส่)
+                packet = io.BytesIO()
+                
+                # ✅ แก้ไข: ใช้ landscape(A4) เพื่อให้ความกว้างครอบคลุมพิกัด 700+
+                c = canvas.Canvas(packet, pagesize=landscape(A4)) 
+                
+                # --- พิมพ์เลขหน้า ---
+                c.saveState()
+                c.setFont("THSarabun", 18) 
+                c.drawString(X_PAGE_CURR, Y_PAGE, str(current_page_num)) 
+                c.drawString(X_PAGE_TOTAL, Y_PAGE, str(total_pages))     
+                c.restoreState()
 
+                c.setFont("THSarabun", 14) 
                 current_y = Y_START
                 
-                # วนลูปข้อมูลในหน้านั้นๆ
-                for item in batch_data:
-                    # คำนวณตัวเลข
-                    inc = float(item['annual_income'] or 0)
-                    tax = float(item['annual_tax'] or 0)
+                # --- วนลูปรายชื่อ ---
+                for item in batch:
+                    inc = float(item.get('annual_income', 0) or 0)
+                    tax = float(item.get('annual_tax', 0) or 0)
                     grand_total_income += inc
                     grand_total_tax += tax
                     
-                    # เตรียมข้อความ
-                    seq = (page_idx * MAX_ROW_PER_PAGE) + batch_data.index(item) + 1
-                    fullname = f"{item.get('fname','')} {item.get('lname','')}"
-                    tax_id = item.get('id_card', '').replace('-', '') # เอาขีดออก
+                    c.drawCentredString(X_SEQ, current_y, str(seq_global))
                     
-                    # --- วาดข้อมูล (ปากกาเขียน) ---
-                    c.drawCentredString(X_SEQ, current_y, str(seq))           # ลำดับ
-                    
-                    # จัดระยะห่างเลขบัตรประชาชน (Spacing)
-                    tax_id_spaced = "  ".join(list(tax_id)) if tax_id else ""
-                    # c.drawString(X_TAX_ID, current_y, tax_id_spaced) # ใช้แบบมีเว้นวรรค
-                    c.drawString(X_TAX_ID, current_y, tax_id)        # หรือใช้แบบปกติถ้า Template ช่องชิดกัน
-                    
-                    c.drawString(X_NAME, current_y, fullname)                 # ชื่อ
-                    c.drawCentredString(X_DATE, current_y, "ตลอดปี")          # วันที่จ่าย
-                    
-                    c.drawRightString(X_INCOME, current_y, f"{inc:,.2f}")     # เงินได้
-                    c.drawRightString(X_TAX, current_y, f"{tax:,.2f}")        # ภาษี
-                    c.drawCentredString(X_COND, current_y, "1")               # เงื่อนไข
-                    
-                    current_y -= ROW_HEIGHT # ขยับปากกาลงบรรทัดถัดไป
+                    tid = str(item.get('id_card', '')).replace('-', '').replace(' ', '').strip()
+                    if len(tid) == 13:
+                        c.drawString(X_ID_1, current_y, tid[0])
+                        draw_spaced(c, X_ID_2, current_y, tid[1:5], ID_SPACE_2)
+                        draw_spaced(c, X_ID_3, current_y, tid[5:10], ID_SPACE_3)
+                        draw_spaced(c, X_ID_4, current_y, tid[10:12], ID_SPACE_4)
+                        c.drawString(X_ID_5, current_y, tid[12])
+                    else:
+                        c.drawString(X_ID_1, current_y, tid) 
 
-                # ถ้าเป็น "หน้าสุดท้าย" ให้เขียนยอดรวม
-                if page_idx == total_pages - 1:
+                    c.drawString(X_FNAME, current_y, item.get('fname', ''))
+                    c.drawString(X_LNAME, current_y, item.get('lname', ''))
+                    
+                    addr_y = current_y - Y_ADDR_OFFSET
+                    c.setFont("THSarabun", 10) 
+                    c.drawString(X_ADDRESS, addr_y, item.get('address', '-'))
+                    c.setFont("THSarabun", 14) 
+
+                    c.drawRightString(X_INCOME, current_y, f"{inc:,.2f}")
+                    c.drawRightString(X_TAX, current_y, f"{tax:,.2f}")
+                    c.drawCentredString(X_COND, current_y, "1")
+
+                    current_y -= ROW_HEIGHT
+                    seq_global += 1
+
+                # หน้าสุดท้าย พิมพ์ยอดรวม
+                if current_page_num == total_pages:
                     c.drawRightString(X_INCOME, Y_TOTAL_ROW, f"{grand_total_income:,.2f}")
                     c.drawRightString(X_TAX, Y_TOTAL_ROW, f"{grand_total_tax:,.2f}")
 
                 c.save()
                 packet.seek(0)
 
-                # 2. รวมร่าง (Merge)
-                # อ่านไฟล์ Template ใหม่ทุกครั้ง (เพื่อความชัวร์ว่าได้หน้าเปล่าๆ)
                 template_reader = PdfReader(open(template_path, "rb"))
-                template_page = template_reader.pages[0] # สมมติว่าแบบฟอร์มอยู่หน้าแรก
-                
-                # อ่านลายเส้นที่เราเพิ่งเขียน
+                bg_page = template_reader.pages[0] 
                 overlay_reader = PdfReader(packet)
-                overlay_page = overlay_reader.pages[0]
-                
-                # แปะทับลงไป
-                template_page.merge_page(overlay_page)
-                
-                # ใส่เข้าเล่ม
-                output_writer.add_page(template_page)
+                bg_page.merge_page(overlay_reader.pages[0])
+                output_writer.add_page(bg_page)
 
-            # 5. บันทึกไฟล์ปลายทาง
             with open(save_path, "wb") as f_out:
                 output_writer.write(f_out)
 
