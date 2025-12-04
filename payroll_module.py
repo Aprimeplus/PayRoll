@@ -1846,7 +1846,7 @@ class PayrollModule(ttk.Frame):
         DailyTimesheetWindow(self, emp_id, m_int, y_ce)
     
     def _print_50tawi_pdf(self):
-        """ออกหนังสือรับรอง 50 ทวิ (Overlay) - ฉบับปรับจูนตำแหน่ง V6 (Final + No Date)"""
+        """ออกหนังสือรับรอง 50 ทวิ (Overlay) - V7 (Dynamic Period Text)"""
         
         # 1. เช็คการเลือกพนักงาน
         selected_indexes = self.results_sheet.get_selected_rows(return_tuple=True)
@@ -1865,7 +1865,10 @@ class PayrollModule(ttk.Frame):
         year_ce = year_be - 543
 
         # 3. ดึงข้อมูล
+        # ⚠️ สำคัญ: hr_database ควรส่งค่า 'start_month' (เดือนแรกที่จ่าย) และ 'end_month' (เดือนสุดท้ายที่จ่าย) มาด้วย
+        # ตัวอย่าง SQL: SELECT MIN(month) as start_month, MAX(month) as end_month, SUM(income)... FROM payroll WHERE...
         emp_data = hr_database.get_employee_annual_summary(emp_id, year_ce)
+        
         if not emp_data:
             messagebox.showerror("Error", "ไม่พบข้อมูลการจ่ายเงินในปีที่ระบุ")
             return
@@ -1886,138 +1889,107 @@ class PayrollModule(ttk.Frame):
             # โหลดฟอนต์
             font_path = os.path.join(base_dir, "resources", "THSarabunNew.ttf")
             if not os.path.exists(font_path): font_path = os.path.join(base_dir, "THSarabunNew.ttf")
-            
             pdfmetrics.registerFont(TTFont('THSarabun', font_path))
             
             # ==================================================================================
             # 🎯 โซนตั้งค่าพิกัด
             # ==================================================================================
-            
-            # --- ข้อมูลบริษัท (ผู้จ่ายเงิน) ---
-            PAYER_TAX_ID = "0123456789000"       
+            PAYER_TAX_ID = "0205558005856"       
             PAYER_NAME = "บริษัท เอไพร์ม พลัส จำกัด"
-            PAYER_ADDR = "123/45 ถ.สุขุมวิท แขวงคลองเตย เขตคลองเตย กทม. 10110"
+            PAYER_ADDR = "9/106 ซอยเอกชัย 119 แยก 1 แขวงบางบอนใต้ เขตบางบอน กรุงเทพมหานคร 10150"
 
-            # 1.1 เลขประจำตัวผู้เสียภาษีบริษัท (13 หลัก)
-            PAYER_ID_X = 376          
-            PAYER_ID_Y = 747          
+            PAYER_ID_X = 376; PAYER_ID_Y = 747          
+            PAYER_NAME_X = 60; PAYER_NAME_Y = 730        
+            PAYER_ADDR_X = 60; PAYER_ADDR_Y = 708        
 
-            # 1.2 ชื่อบริษัท
-            PAYER_NAME_X = 60         
-            PAYER_NAME_Y = 730        
+            ID_X = 377; ID_Y = 678                
+            NAME_X = 60; NAME_Y = 660              
+            ADDR_X = 60; ADDR_Y = 631              
 
-            # 1.3 ที่อยู่บริษัท
-            PAYER_ADDR_X = 60         
-            PAYER_ADDR_Y = 708        
+            ID_SPACING = 10.9; ID_GROUP_GAP = 10.3       
 
-            # --- ข้อมูลพนักงาน (ผู้รับเงิน) ---
-            # 2.1 เลขบัตรประชาชน (13 หลัก)
-            ID_X = 377                
-            ID_Y = 678                
-
-            # 2.2 ชื่อ - นามสกุล
-            NAME_X = 60               
-            NAME_Y = 660              
-
-            # 2.3 ที่อยู่
-            ADDR_X = 60               
-            ADDR_Y = 631              
-
-            # --- การตั้งค่าระยะห่างตัวเลข ---
-            ID_SPACING = 10.9         
-            ID_GROUP_GAP = 10.3       
-
-            # --- ข้อมูลเงินได้ (ตารางกลาง) ---
             Y_INCOME_ROW_1 = 538                 
             X_DATE = 330                         
-            X_AMOUNT = 480                       
-            X_TAX = 550                          
+            X_AMOUNT = 487.5; X_TAX = 557.5                  
 
-            # --- ข้อมูลยอดรวม (ด้านล่าง) ---
             Y_TOTAL = 248                        
-            Y_SSO = 210                          
-            X_SSO = 230                          
-            X_FUND = 430                         
+            Y_SSO = 201                          
+            X_SSO = 230; X_FUND = 430                         
             
-            # Y_DATE_SIGN = 145  <-- ปิดไว้ ไม่ใช้แล้ว
-            # X_DATE_SIGN = 220  <-- ปิดไว้ ไม่ใช้แล้ว
-
-            # ==================================================================================
-            # 🛠️ ฟังก์ชันช่วยวาด (Helper Functions)
-            # ==================================================================================
+            # Helper Function วาดเลขห่างๆ
             def draw_id_card_spaced(c, x, y, text, spacing=13, group_gap=8):
-                """ฟังก์ชันสำหรับหยอดตัวเลขลงช่องสี่เหลี่ยม (เว้นระยะห่างแบบมีจังหวะ)"""
                 c.setFont('THSarabun', 16) 
                 text = str(text).replace("-", "").strip()
                 curr_x = x
-                
-                # index ที่ต้องกระโดด: หลังตัวที่ 1, 5, 10, 12 (Index: 0, 4, 9, 11)
                 jump_indices = [0, 4, 9, 11]
-
                 for i, char in enumerate(text):
                     c.drawString(curr_x, y, char)
                     step = spacing
-                    if i in jump_indices:
-                        step += group_gap
+                    if i in jump_indices: step += group_gap
                     curr_x += step
 
             # ==================================================================================
-            # 🖌️ เริ่มวาดข้อมูลจริง
+            # 🖌️ เริ่มวาดข้อมูล
             # ==================================================================================
-
-            # ---------------------------------------------------------
-            # 🔴 1. วาดข้อมูลบริษัท (ผู้จ่าย)
-            # ---------------------------------------------------------
-            draw_id_card_spaced(c, PAYER_ID_X, PAYER_ID_Y, PAYER_TAX_ID, spacing=ID_SPACING, group_gap=ID_GROUP_GAP)
             
+            # 1. ข้อมูลบริษัท
+            draw_id_card_spaced(c, PAYER_ID_X, PAYER_ID_Y, PAYER_TAX_ID, spacing=ID_SPACING, group_gap=ID_GROUP_GAP)
             c.setFont('THSarabun', 14)
             c.drawString(PAYER_NAME_X, PAYER_NAME_Y, PAYER_NAME)
             c.drawString(PAYER_ADDR_X, PAYER_ADDR_Y, PAYER_ADDR)
 
-            # ---------------------------------------------------------
-            # 🔵 2. วาดข้อมูลพนักงาน (ผู้รับ)
-            # ---------------------------------------------------------
-            emp_card_id = emp_data['id_card'] or ""
-            # วาดเลขบัตร
+            # 2. ข้อมูลพนักงาน
+            emp_card_id = emp_data.get('id_card', "") or ""
             draw_id_card_spaced(c, ID_X, ID_Y, emp_card_id, spacing=ID_SPACING, group_gap=ID_GROUP_GAP)
-            
             c.setFont('THSarabun', 14)
-            # วาดชื่อ
-            c.drawString(NAME_X, NAME_Y, f"{emp_data['fname']} {emp_data['lname']}")
-            # วาดที่อยู่
-            c.drawString(ADDR_X, ADDR_Y, emp_data['address'] or "-")
+            c.drawString(NAME_X, NAME_Y, f"{emp_data.get('fname','')} {emp_data.get('lname','')}")
+            c.drawString(ADDR_X, ADDR_Y, emp_data.get('address','') or "-")
 
-            # 3. ใส่เครื่องหมาย X ในช่อง (ภ.ง.ด.91) - ถ้าต้องการติ๊ก
-            # c.drawString(450, Y_PAYEE_START - 40, "/") 
+            # 3. ส่วนเงินได้ (Logic วันเดือนปี ที่คุณต้องการ) 🕒
+            # ------------------------------------------------------------------
+            THAI_MONTHS_SHORT = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
+            
+            # ดึงข้อมูลเดือนเริ่มต้นและสิ้นสุด (ถ้า Database ยังไม่ได้แก้ ให้ Default เป็น 1-12 ไว้ก่อนกัน Error)
+            start_month = int(emp_data.get('start_month', 1)) 
+            end_month = int(emp_data.get('end_month', 12))
+            
+            period_text = ""
+            if start_month == 1 and end_month == 12:
+                # กรณีทำเต็มปี
+                period_text = f"ตลอดปี {year_be}"
+            else:
+                # กรณีทำไม่เต็มปี (เช่น มี.ค. - ส.ค.)
+                try:
+                    s_name = THAI_MONTHS_SHORT[start_month]
+                    e_name = THAI_MONTHS_SHORT[end_month]
+                    period_text = f"{s_name} - {e_name} {year_be}"
+                except:
+                    # กันพลาดถ้าตัวเลขเดือนมาผิด
+                    period_text = f"ตลอดปี {year_be}"
 
-            # 4. ส่วนเงินได้ (40(1) เงินเดือน ค่าจ้าง ฯลฯ)
             c.setFont('THSarabun', 12)
-            c.drawString(X_DATE, Y_INCOME_ROW_1, f"ตลอดปี {year_be}")
-            
+            c.drawString(X_DATE, Y_INCOME_ROW_1, period_text) # <--- วาดข้อความที่คำนวณมา
+            # ------------------------------------------------------------------
+
             c.setFont('THSarabun', 14)
-            income_str = f"{emp_data['total_income']:,.2f}"
-            tax_str = f"{emp_data['total_tax']:,.2f}"
+            income_val = float(emp_data.get('total_income', 0))
+            tax_val = float(emp_data.get('total_tax', 0))
             
-            # วาดบรรทัดแรก (40(1))
-            c.drawRightString(X_AMOUNT, Y_INCOME_ROW_1, income_str)
-            c.drawRightString(X_TAX, Y_INCOME_ROW_1, tax_str)
+            c.drawRightString(X_AMOUNT, Y_INCOME_ROW_1, f"{income_val:,.2f}")
+            c.drawRightString(X_TAX, Y_INCOME_ROW_1, f"{tax_val:,.2f}")
 
-            # 5. ยอดรวม (Total) - บรรทัดล่างสุดของตาราง
-            c.drawRightString(X_AMOUNT, Y_TOTAL, income_str)
-            c.drawRightString(X_TAX, Y_TOTAL, tax_str)
+            # 4. ยอดรวม
+            c.drawRightString(X_AMOUNT, Y_TOTAL, f"{income_val:,.2f}")
+            c.drawRightString(X_TAX, Y_TOTAL, f"{tax_val:,.2f}")
+
+            # 5. ประกันสังคม / กองทุน
+            sso_val = float(emp_data.get('total_sso', 0))
+            fund_val = float(emp_data.get('total_fund', 0))
             
-            # แปลงยอดภาษีเป็นตัวอักษรภาษาไทย (BahtText) - ถ้ามีฟังก์ชัน
-            # c.drawString(60, Y_TOTAL - 20, bahttext(emp_data['total_tax'])) 
-
-            # 6. กองทุนประกันสังคม / กองทุนสำรองเลี้ยงชีพ
-            if emp_data['total_sso'] > 0:
-                c.drawRightString(X_SSO, Y_SSO, f"{emp_data['total_sso']:,.2f}")
-                
-            if emp_data['total_fund'] > 0:
-                c.drawRightString(X_FUND, Y_SSO, f"{emp_data['total_fund']:,.2f}")
-
-            # 7. วันที่ลงนาม (ปิดไว้ ให้บัญชีลงเอง)
-            # c.drawString(X_DATE_SIGN, Y_DATE_SIGN, datetime.now().strftime("%d/%m/%Y")) 
+            if sso_val > 0:
+                c.drawRightString(X_SSO, Y_SSO, f"{sso_val:,.2f}")
+            if fund_val > 0:
+                c.drawRightString(X_FUND, Y_SSO, f"{fund_val:,.2f}")
 
             c.save()
             packet.seek(0)

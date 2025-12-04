@@ -7,6 +7,7 @@ import hashlib
 from datetime import datetime, time, timedelta 
 import pandas as pd
 
+
 # --- !! สำคัญ !! ---
 # กรอกรายละเอียดการเชื่อมต่อ PostgreSQL ของคุณที่นี่
 def get_db_connection():
@@ -2965,6 +2966,7 @@ def add_audit_log(actor, action, emp_id, emp_name, field, old_val, new_val):
 def get_employee_annual_summary(emp_id, year_ce):
     """
     ดึงข้อมูลสรุปรายได้/ภาษี ทั้งปี ของพนักงาน 1 คน (เพื่อทำ 50 ทวิ)
+    (Update: เพิ่ม start_month, end_month เพื่อดูช่วงเวลาจ่ายเงิน)
     """
     conn = get_db_connection()
     if not conn: return None
@@ -2979,17 +2981,24 @@ def get_employee_annual_summary(emp_id, year_ce):
             if not emp: return None
             
             # 2. ดึงยอดเงินรวมทั้งปีจาก payroll_records
+            # 🟢 แก้ไข SQL ตรงนี้: เพิ่ม MIN และ MAX ของ period_month
             cursor.execute("""
                 SELECT 
                     SUM(total_income) as total_income,
                     SUM(tax_deduct) as total_tax,
                     SUM(sso_deduct) as total_sso,
-                    SUM(provident_fund) as total_fund
+                    SUM(provident_fund) as total_fund,
+                    MIN(period_month) as start_month,  -- <--- เพิ่ม: เดือนแรกที่จ่าย
+                    MAX(period_month) as end_month     -- <--- เพิ่ม: เดือนสุดท้ายที่จ่าย
                 FROM payroll_records 
                 WHERE emp_id = %s AND period_year = %s
             """, (emp_id, year_ce))
             payroll = cursor.fetchone()
             
+            # 🟢 แก้ไข Return: ส่งค่าเดือนกลับไปด้วย (ถ้าไม่มีข้อมูลให้ Default เป็น 1 กับ 12)
+            s_month = int(payroll['start_month']) if payroll['start_month'] else 1
+            e_month = int(payroll['end_month']) if payroll['end_month'] else 12
+
             return {
                 "fname": emp['fname'],
                 "lname": emp['lname'],
@@ -2998,7 +3007,9 @@ def get_employee_annual_summary(emp_id, year_ce):
                 "total_income": float(payroll['total_income'] or 0),
                 "total_tax": float(payroll['total_tax'] or 0),
                 "total_sso": float(payroll['total_sso'] or 0),
-                "total_fund": float(payroll['total_fund'] or 0)
+                "total_fund": float(payroll['total_fund'] or 0),
+                "start_month": s_month,  # <--- ส่งกลับ
+                "end_month": e_month     # <--- ส่งกลับ
             }
     except Exception as e:
         print(f"Error getting annual summary: {e}")
@@ -3253,3 +3264,4 @@ def get_daily_records_range(emp_id, start_date, end_date):
         return []
     finally:
         if conn: conn.close()
+
