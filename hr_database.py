@@ -3277,3 +3277,35 @@ def get_daily_records_range(emp_id, start_date, end_date):
     finally:
         if conn: conn.close()
 
+def get_ytd_summary(emp_id, year, current_month):
+    """
+    ดึงยอดสะสมตั้งแต่ต้นปี (ม.ค.) ถึงเดือนก่อนหน้า (current_month - 1)
+    เพื่อใช้คำนวณภาษีแบบสะสม
+    Returns: (รายได้สะสม, ภาษีที่จ่ายแล้ว, ประกันสังคมสะสม)
+    """
+    conn = get_db_connection()
+    if not conn: return 0.0, 0.0, 0.0
+    try:
+        with conn.cursor() as cursor:
+            # ดึงข้อมูลจากตาราง payroll_records
+            cursor.execute("""
+                SELECT 
+                    COALESCE(SUM(total_income), 0),
+                    COALESCE(SUM(tax_deduct), 0),
+                    COALESCE(SUM(sso_deduct), 0)
+                FROM payroll_records 
+                WHERE emp_id = %s 
+                  AND period_year = %s 
+                  AND period_month < %s
+            """, (str(emp_id), year, current_month))
+            
+            row = cursor.fetchone()
+            if row:
+                return float(row[0]), float(row[1]), float(row[2])
+            return 0.0, 0.0, 0.0
+            
+    except Exception as e:
+        print(f"YTD Error: {e}")
+        return 0.0, 0.0, 0.0
+    finally:
+        if conn: conn.close()
