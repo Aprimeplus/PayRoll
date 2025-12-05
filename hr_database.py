@@ -2966,36 +2966,47 @@ def add_audit_log(actor, action, emp_id, emp_name, field, old_val, new_val):
 def get_employee_annual_summary(emp_id, year_ce):
     """
     ดึงข้อมูลสรุปรายได้/ภาษี ทั้งปี ของพนักงาน 1 คน (เพื่อทำ 50 ทวิ)
-    (Update: เพิ่ม start_month, end_month เพื่อดูช่วงเวลาจ่ายเงิน)
+    (Update: เพิ่มการหาลำดับที่ (Sequence No) ให้ตรงกับ ภ.ง.ด. 1ก)
     """
     conn = get_db_connection()
     if not conn: return None
     try:
         with conn.cursor(cursor_factory=extras.DictCursor) as cursor:
-            # 1. ดึงข้อมูลส่วนตัว + ที่อยู่
+            # 1. ดึงข้อมูลส่วนตัว
             cursor.execute("""
-                SELECT fname, lname, id_card, address, position 
+                SELECT fname, lname, id_card, address, position, start_date 
                 FROM employees WHERE emp_id = %s
             """, (emp_id,))
             emp = cursor.fetchone()
             if not emp: return None
             
-            # 2. ดึงยอดเงินรวมทั้งปีจาก payroll_records
-            # 🟢 แก้ไข SQL ตรงนี้: เพิ่ม MIN และ MAX ของ period_month
+            # 2. ดึงยอดเงินรวมทั้งปี
             cursor.execute("""
                 SELECT 
                     SUM(total_income) as total_income,
                     SUM(tax_deduct) as total_tax,
                     SUM(sso_deduct) as total_sso,
                     SUM(provident_fund) as total_fund,
-                    MIN(period_month) as start_month,  -- <--- เพิ่ม: เดือนแรกที่จ่าย
-                    MAX(period_month) as end_month     -- <--- เพิ่ม: เดือนสุดท้ายที่จ่าย
+                    MIN(period_month) as start_month,
+                    MAX(period_month) as end_month
                 FROM payroll_records 
                 WHERE emp_id = %s AND period_year = %s
             """, (emp_id, year_ce))
             payroll = cursor.fetchone()
             
-            # 🟢 แก้ไข Return: ส่งค่าเดือนกลับไปด้วย (ถ้าไม่มีข้อมูลให้ Default เป็น 1 กับ 12)
+            # 3. [NEW] หา "ลำดับที่" ให้ตรงกับ ภ.ง.ด. 1ก
+            # โดยการดึงรายการ ภ.ง.ด. 1ก ทั้งหมดของปีนั้น (ซึ่งเรียงตาม start_date แล้ว) มาหา index
+            # (นี่คือวิธีที่แม่นยำที่สุดเพื่อให้ลำดับตรงกันเป๊ะ)
+            pnd1k_list = get_annual_pnd1k_data(year_ce)
+            sequence_no = 0
+            for index, item in enumerate(pnd1k_list):
+                if str(item['emp_id']) == str(emp_id):
+                    sequence_no = index + 1
+                    break
+            
+            # กรณีหาไม่เจอ (เช่น เพิ่งเพิ่มข้อมูลแต่ยังไม่ได้คำนวณเงินเดือน) ให้เป็น 0 หรือ 999
+            if sequence_no == 0: sequence_no = 999
+
             s_month = int(payroll['start_month']) if payroll['start_month'] else 1
             e_month = int(payroll['end_month']) if payroll['end_month'] else 12
 
@@ -3008,8 +3019,9 @@ def get_employee_annual_summary(emp_id, year_ce):
                 "total_tax": float(payroll['total_tax'] or 0),
                 "total_sso": float(payroll['total_sso'] or 0),
                 "total_fund": float(payroll['total_fund'] or 0),
-                "start_month": s_month,  # <--- ส่งกลับ
-                "end_month": e_month     # <--- ส่งกลับ
+                "start_month": s_month,
+                "end_month": e_month,
+                "sequence_no": sequence_no  # <--- ส่งค่าลำดับกลับไปด้วย
             }
     except Exception as e:
         print(f"Error getting annual summary: {e}")

@@ -1846,7 +1846,7 @@ class PayrollModule(ttk.Frame):
         DailyTimesheetWindow(self, emp_id, m_int, y_ce)
     
     def _print_50tawi_pdf(self):
-        """ออกหนังสือรับรอง 50 ทวิ (Overlay) - V7 (Dynamic Period Text)"""
+        """ออกหนังสือรับรอง 50 ทวิ (Overlay) - V9 (Sequence No. Added - Clean Version)"""
         
         # 1. เช็คการเลือกพนักงาน
         selected_indexes = self.results_sheet.get_selected_rows(return_tuple=True)
@@ -1865,8 +1865,6 @@ class PayrollModule(ttk.Frame):
         year_ce = year_be - 543
 
         # 3. ดึงข้อมูล
-        # ⚠️ สำคัญ: hr_database ควรส่งค่า 'start_month' (เดือนแรกที่จ่าย) และ 'end_month' (เดือนสุดท้ายที่จ่าย) มาด้วย
-        # ตัวอย่าง SQL: SELECT MIN(month) as start_month, MAX(month) as end_month, SUM(income)... FROM payroll WHERE...
         emp_data = hr_database.get_employee_annual_summary(emp_id, year_ce)
         
         if not emp_data:
@@ -1892,7 +1890,22 @@ class PayrollModule(ttk.Frame):
             pdfmetrics.registerFont(TTFont('THSarabun', font_path))
             
             # ==================================================================================
-            # 🎯 โซนตั้งค่าพิกัด
+            # 🎯 1. คำนวณตัวเลขต่างๆ (Sequence Logic)
+            # ==================================================================================
+            seq_no = emp_data.get('sequence_no', 0)
+            yy = str(year_be)[-2:] 
+            
+            # 1.1 ลำดับที่ (เช่น 001)
+            seq_text_3digit = f"{seq_no:03d}"
+            
+            # 1.2 เล่มที่ (YY/01)
+            book_no_text = f"{yy}/01"
+            
+            # 1.3 เลขที่ (AP + YY + 12 + ลำดับ 2 หลัก)
+            running_no_text = f"AP{yy}12{seq_no:02d}"
+
+            # ==================================================================================
+            # 🎯 2. โซนตั้งค่าพิกัด (Coordinates Config)
             # ==================================================================================
             PAYER_TAX_ID = "0205558005856"       
             PAYER_NAME = "บริษัท เอไพร์ม พลัส จำกัด"
@@ -1902,6 +1915,15 @@ class PayrollModule(ttk.Frame):
             PAYER_NAME_X = 60; PAYER_NAME_Y = 730        
             PAYER_ADDR_X = 60; PAYER_ADDR_Y = 708        
 
+            # --- [NEW] พิกัดโซนเลขที่เอกสาร (มุมขวาบน) ---
+            X_BOOK_NO = 490; Y_BOOK_NO = 783
+            X_RUNNING_NO = 500; Y_RUNNING_NO = 768
+            
+            # 🔴 ลำดับที่ (Sequence No)
+            X_SEQ_NO = 80
+            Y_SEQ_NO = 605 
+            
+            # ข้อมูลพนักงาน
             ID_X = 377; ID_Y = 678                
             NAME_X = 60; NAME_Y = 660              
             ADDR_X = 60; ADDR_Y = 631              
@@ -1932,44 +1954,49 @@ class PayrollModule(ttk.Frame):
             # 🖌️ เริ่มวาดข้อมูล
             # ==================================================================================
             
-            # 1. ข้อมูลบริษัท
+            # 1. วาด "เล่มที่"
+            c.setFont('THSarabun', 16)
+            c.drawRightString(X_BOOK_NO + 60, Y_BOOK_NO, book_no_text)     
+
+            # 2. วาด "เลขที่" (ลดขนาดฟอนต์ลงเล็กน้อย)
+            c.setFont('THSarabun', 14)  
+            c.drawRightString(X_RUNNING_NO + 60, Y_RUNNING_NO, running_no_text)
+            
+            # 3. 🔴 วาด "ลำดับที่"
+            c.setFont('THSarabun', 16) # ใช้ฟอนต์ขนาดปกติ
+            c.drawString(X_SEQ_NO, Y_SEQ_NO, seq_text_3digit)
+            
+            # 4. ข้อมูลบริษัท
             draw_id_card_spaced(c, PAYER_ID_X, PAYER_ID_Y, PAYER_TAX_ID, spacing=ID_SPACING, group_gap=ID_GROUP_GAP)
             c.setFont('THSarabun', 14)
             c.drawString(PAYER_NAME_X, PAYER_NAME_Y, PAYER_NAME)
             c.drawString(PAYER_ADDR_X, PAYER_ADDR_Y, PAYER_ADDR)
 
-            # 2. ข้อมูลพนักงาน
+            # 5. ข้อมูลพนักงาน
             emp_card_id = emp_data.get('id_card', "") or ""
             draw_id_card_spaced(c, ID_X, ID_Y, emp_card_id, spacing=ID_SPACING, group_gap=ID_GROUP_GAP)
             c.setFont('THSarabun', 14)
             c.drawString(NAME_X, NAME_Y, f"{emp_data.get('fname','')} {emp_data.get('lname','')}")
             c.drawString(ADDR_X, ADDR_Y, emp_data.get('address','') or "-")
-
-            # 3. ส่วนเงินได้ (Logic วันเดือนปี ที่คุณต้องการ) 🕒
-            # ------------------------------------------------------------------
-            THAI_MONTHS_SHORT = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
             
-            # ดึงข้อมูลเดือนเริ่มต้นและสิ้นสุด (ถ้า Database ยังไม่ได้แก้ ให้ Default เป็น 1-12 ไว้ก่อนกัน Error)
+            # 6. ส่วนเงินได้
+            THAI_MONTHS_SHORT = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
             start_month = int(emp_data.get('start_month', 1)) 
             end_month = int(emp_data.get('end_month', 12))
             
             period_text = ""
             if start_month == 1 and end_month == 12:
-                # กรณีทำเต็มปี
                 period_text = f"ตลอดปี {year_be}"
             else:
-                # กรณีทำไม่เต็มปี (เช่น มี.ค. - ส.ค.)
                 try:
                     s_name = THAI_MONTHS_SHORT[start_month]
                     e_name = THAI_MONTHS_SHORT[end_month]
                     period_text = f"{s_name} - {e_name} {year_be}"
                 except:
-                    # กันพลาดถ้าตัวเลขเดือนมาผิด
                     period_text = f"ตลอดปี {year_be}"
 
             c.setFont('THSarabun', 12)
-            c.drawString(X_DATE, Y_INCOME_ROW_1, period_text) # <--- วาดข้อความที่คำนวณมา
-            # ------------------------------------------------------------------
+            c.drawString(X_DATE, Y_INCOME_ROW_1, period_text)
 
             c.setFont('THSarabun', 14)
             income_val = float(emp_data.get('total_income', 0))
@@ -1978,11 +2005,11 @@ class PayrollModule(ttk.Frame):
             c.drawRightString(X_AMOUNT, Y_INCOME_ROW_1, f"{income_val:,.2f}")
             c.drawRightString(X_TAX, Y_INCOME_ROW_1, f"{tax_val:,.2f}")
 
-            # 4. ยอดรวม
+            # 7. ยอดรวม
             c.drawRightString(X_AMOUNT, Y_TOTAL, f"{income_val:,.2f}")
             c.drawRightString(X_TAX, Y_TOTAL, f"{tax_val:,.2f}")
 
-            # 5. ประกันสังคม / กองทุน
+            # 8. ประกันสังคม / กองทุน
             sso_val = float(emp_data.get('total_sso', 0))
             fund_val = float(emp_data.get('total_fund', 0))
             
@@ -2003,10 +2030,11 @@ class PayrollModule(ttk.Frame):
             output.add_page(page)
             
             # บันทึก
+            clean_run_no = running_no_text.replace('/', '-')
             save_filename = filedialog.asksaveasfilename(
                 defaultextension=".pdf",
                 filetypes=[("PDF Files", "*.pdf")],
-                initialfile=f"50Tawi_{emp_id}_{year_be}.pdf",
+                initialfile=f"50Tawi_{clean_run_no}_{emp_id}.pdf",
                 title="บันทึกหนังสือรับรอง 50 ทวิ"
             )
             

@@ -8,12 +8,6 @@ import calendar
 import hr_database
 from custom_widgets import DateDropdown
 
-# พยายาม Import Popup ของ OT
-try:
-    from ot_manager import OTDetailsPopup
-except ImportError:
-    OTDetailsPopup = None
-
 # ==========================================
 #  ส่วนที่ 1: Popup บันทึกเที่ยวรถ (Driving)
 # ==========================================
@@ -240,10 +234,14 @@ class DailyTimesheetWindow(tk.Toplevel):
         
         lbl_style = {"font": ("", 10, "bold"), "anchor": "center"}
         ttk.Label(h_frame, text="วันที่", width=15, **lbl_style).pack(side="left")
+        
+        # ส่วนค่าเที่ยว (มีปุ่ม)
         ttk.Label(h_frame, text="💰 ค่าเที่ยว (บาท)", width=20, **lbl_style).pack(side="left", padx=10)
-        ttk.Label(h_frame, text="", width=15).pack(side="left") 
+        ttk.Label(h_frame, text="", width=15).pack(side="left") # พื้นที่สำหรับปุ่มเที่ยวรถ
+        
+        # ส่วน OT (แสดงอย่างเดียว ตัดช่องว่างปุ่มออก)
         ttk.Label(h_frame, text="⏱️ OT (ชม.)", width=15, **lbl_style).pack(side="left", padx=10)
-        ttk.Label(h_frame, text="", width=15).pack(side="left") 
+        # ttk.Label(h_frame, text="", width=15).pack(side="left")  <-- ลบช่องว่างปุ่ม OT ออก
 
         # Scrollable Area
         canvas = tk.Canvas(self)
@@ -273,7 +271,7 @@ class DailyTimesheetWindow(tk.Toplevel):
         lbl_date = tk.Label(row_frame, text=date_str, width=15, anchor="center", bg=bg_color, relief="flat")
         lbl_date.pack(side="left")
 
-        # --- ส่วนเที่ยวรถ (Driving) ---
+        # --- ส่วนเที่ยวรถ (Driving) : ยังคงเดิม มีปุ่มกด ---
         driving_details = hr_database.get_driving_details(self.emp_id, current_date)
         drive_amt = sum(d.get('trip_cost', 0) + d.get('service_fee', 0) for d in driving_details)
         
@@ -284,20 +282,22 @@ class DailyTimesheetWindow(tk.Toplevel):
                                command=lambda d=current_date: self._open_driving_popup(d))
         btn_drive.pack(side="left", padx=2)
 
-        # --- ส่วน OT ---
+        # --- ส่วน OT (แก้ไข: แสดงเฉพาะยอดรวม ไม่มีปุ่มกด) ---
+        # ยังคงดึงข้อมูลมาแสดงผลเหมือนเดิม
         ot_details = hr_database.get_ot_details_list(self.emp_id, current_date)
         ot_hrs = sum(d['period_hours'] for d in ot_details)
         
         lbl_ot = ttk.Label(row_frame, text=f"{ot_hrs:.2f}", width=15, anchor="center", foreground="red" if ot_hrs > 0 else "black")
         lbl_ot.pack(side="left", padx=10)
         
-        btn_ot = ttk.Button(row_frame, text="⏱️ OT", width=12,
-                            command=lambda d=current_date: self._open_ot_popup(d))
-        btn_ot.pack(side="left", padx=2)
+        # --- ลบปุ่มนี้ออก ---
+        # btn_ot = ttk.Button(row_frame, text="⏱️ OT", width=12,
+        #                     command=lambda d=current_date: self._open_ot_popup(d))
+        # btn_ot.pack(side="left", padx=2)
         
         self.row_widgets[current_date] = {
             "lbl_drive": lbl_drive,
-            "lbl_ot": lbl_ot,
+            "lbl_ot": lbl_ot,         # เก็บ Label ไว้เผื่ออยากอัปเดต (แต่ตอนนี้ Read-only)
             "drive_data": driving_details,
             "ot_data": ot_details
         }
