@@ -984,7 +984,7 @@ class PayrollModule(ttk.Frame):
                     month_idx=month_idx,
                     is_resigned=is_resigned
                 )
-                
+                print(f"Emp: {emp_id}, YTD_Income: {ytd_income}, YTD_Tax: {ytd_tax}, Calc_Tax: {pnd1_calc}")
                 # บันทึกค่าภาษีกลับลงไป
                 res['pnd1'] = pnd1_calc
                 res['pnd3'] = pnd3_calc
