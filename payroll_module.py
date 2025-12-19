@@ -21,6 +21,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from pypdf import PdfReader, PdfWriter
 import io
+from bahttext import bahttext
 
 class PayrollModule(ttk.Frame):
 
@@ -1898,7 +1899,7 @@ class PayrollModule(ttk.Frame):
         DailyTimesheetWindow(self, emp_id, m_int, y_ce)
     
     def _print_50tawi_pdf(self):
-        """ออกหนังสือรับรอง 50 ทวิ (Overlay) - V9 (Sequence No. Added - Clean Version)"""
+        """ออกหนังสือรับรอง 50 ทวิ (Overlay) - V10 (เพิ่ม Bahttext)"""
         
         # 1. เช็คการเลือกพนักงาน
         selected_indexes = self.results_sheet.get_selected_rows(return_tuple=True)
@@ -1942,53 +1943,60 @@ class PayrollModule(ttk.Frame):
             pdfmetrics.registerFont(TTFont('THSarabun', font_path))
             
             # ==================================================================================
-            # 🎯 1. คำนวณตัวเลขต่างๆ (Sequence Logic)
+            # 🎯 1. ดึงข้อมูลบริษัทจาก Database (แทนการ Hardcode)
+            # ==================================================================================
+            tax_id_db = hr_database.get_company_setting("tax_id")
+            PAYER_TAX_ID = tax_id_db if tax_id_db else "0205558005856" 
+            
+            locations = hr_database.get_company_locations()
+            hq_info = next((loc for loc in locations if loc['loc_type'] == 'สำนักงานใหญ่'), None)
+            
+            if hq_info:
+                PAYER_NAME = hq_info['loc_name']
+                # (ถ้ามีที่อยู่จริงใน DB ก็ดึงมาใส่ตรงนี้ครับ)
+                PAYER_ADDR = "9/106 ซอยเอกชัย 119 แยก 1 แขวงบางบอนใต้ เขตบางบอน กรุงเทพมหานคร 10150" 
+            else:
+                PAYER_NAME = "บริษัท เอไพร์ม พลัส จำกัด"
+                PAYER_ADDR = "9/106 ซอยเอกชัย 119 แยก 1 แขวงบางบอนใต้ เขตบางบอน กรุงเทพมหานคร 10150"
+
+            # ==================================================================================
+            # 🎯 2. คำนวณตัวเลขต่างๆ (Sequence Logic)
             # ==================================================================================
             seq_no = emp_data.get('sequence_no', 0)
             yy = str(year_be)[-2:] 
-            
-            # 1.1 ลำดับที่ (เช่น 001)
             seq_text_3digit = f"{seq_no:03d}"
-            
-            # 1.2 เล่มที่ (YY/01)
             book_no_text = f"{yy}/01"
-            
-            # 1.3 เลขที่ (AP + YY + 12 + ลำดับ 2 หลัก)
-            running_no_text = f"AP{yy}12{seq_no:02d}"
+            running_no_text = f"AP{yy}-{seq_no:02d}"
 
             # ==================================================================================
-            # 🎯 2. โซนตั้งค่าพิกัด (Coordinates Config)
+            # 🎯 3. โซนตั้งค่าพิกัด (Coordinates Config)
             # ==================================================================================
-            PAYER_TAX_ID = "0205558005856"       
-            PAYER_NAME = "บริษัท เอไพร์ม พลัส จำกัด"
-            PAYER_ADDR = "9/106 ซอยเอกชัย 119 แยก 1 แขวงบางบอนใต้ เขตบางบอน กรุงเทพมหานคร 10150"
-
             PAYER_ID_X = 376; PAYER_ID_Y = 747          
             PAYER_NAME_X = 60; PAYER_NAME_Y = 730        
             PAYER_ADDR_X = 60; PAYER_ADDR_Y = 708        
 
-            # --- [NEW] พิกัดโซนเลขที่เอกสาร (มุมขวาบน) ---
             X_BOOK_NO = 490; Y_BOOK_NO = 783
-            X_RUNNING_NO = 500; Y_RUNNING_NO = 768
+            X_RUNNING_NO = 493; Y_RUNNING_NO = 768
             
-            # 🔴 ลำดับที่ (Sequence No)
-            X_SEQ_NO = 80
-            Y_SEQ_NO = 605 
+            X_SEQ_NO = 80; Y_SEQ_NO = 605 
             
-            # ข้อมูลพนักงาน
             ID_X = 377; ID_Y = 678                
             NAME_X = 60; NAME_Y = 660              
             ADDR_X = 60; ADDR_Y = 631              
 
-            ID_SPACING = 10.9; ID_GROUP_GAP = 10.3       
+            ID_SPACING = 10.9; ID_GROUP_GAP = 10.3
 
-            Y_INCOME_ROW_1 = 538                 
-            X_DATE = 330                         
-            X_AMOUNT = 487.5; X_TAX = 557.5                  
+            Y_INCOME_ROW_1 = 538
+            X_DATE = 330
+            X_AMOUNT = 487.5; X_TAX = 557.5
 
-            Y_TOTAL = 248                        
-            Y_SSO = 201                          
-            X_SSO = 230; X_FUND = 430                         
+            Y_TOTAL = 181
+            Y_SSO = 144.5
+            X_SSO = 400; X_FUND = 430  
+            
+            # --- [NEW] พิกัดสำหรับ "ตัวอักษรภาษาไทย" ---
+            X_BAHT_TEXT = 210  # ปรับซ้ายขวาตรงนี้ (ค่าเดิมประมาณนี้)
+            Y_BAHT_TEXT = 160  # ปรับขึ้นลงตรงนี้ (อยู่เหนือช่องรวมเงิน)                      
             
             # Helper Function วาดเลขห่างๆ
             def draw_id_card_spaced(c, x, y, text, spacing=13, group_gap=8):
@@ -2006,32 +2014,28 @@ class PayrollModule(ttk.Frame):
             # 🖌️ เริ่มวาดข้อมูล
             # ==================================================================================
             
-            # 1. วาด "เล่มที่"
+            # 1. วาด "เล่มที่" / "เลขที่" / "ลำดับที่"
             c.setFont('THSarabun', 16)
             c.drawRightString(X_BOOK_NO + 60, Y_BOOK_NO, book_no_text)     
-
-            # 2. วาด "เลขที่" (ลดขนาดฟอนต์ลงเล็กน้อย)
             c.setFont('THSarabun', 14)  
             c.drawRightString(X_RUNNING_NO + 60, Y_RUNNING_NO, running_no_text)
-            
-            # 3. 🔴 วาด "ลำดับที่"
-            c.setFont('THSarabun', 16) # ใช้ฟอนต์ขนาดปกติ
+            c.setFont('THSarabun', 16) 
             c.drawString(X_SEQ_NO, Y_SEQ_NO, seq_text_3digit)
             
-            # 4. ข้อมูลบริษัท
+            # 2. ข้อมูลบริษัท
             draw_id_card_spaced(c, PAYER_ID_X, PAYER_ID_Y, PAYER_TAX_ID, spacing=ID_SPACING, group_gap=ID_GROUP_GAP)
             c.setFont('THSarabun', 14)
             c.drawString(PAYER_NAME_X, PAYER_NAME_Y, PAYER_NAME)
             c.drawString(PAYER_ADDR_X, PAYER_ADDR_Y, PAYER_ADDR)
 
-            # 5. ข้อมูลพนักงาน
+            # 3. ข้อมูลพนักงาน
             emp_card_id = emp_data.get('id_card', "") or ""
             draw_id_card_spaced(c, ID_X, ID_Y, emp_card_id, spacing=ID_SPACING, group_gap=ID_GROUP_GAP)
             c.setFont('THSarabun', 14)
             c.drawString(NAME_X, NAME_Y, f"{emp_data.get('fname','')} {emp_data.get('lname','')}")
             c.drawString(ADDR_X, ADDR_Y, emp_data.get('address','') or "-")
             
-            # 6. ส่วนเงินได้
+            # 4. ส่วนเงินได้ (ตารางกลาง)
             THAI_MONTHS_SHORT = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."]
             start_month = int(emp_data.get('start_month', 1)) 
             end_month = int(emp_data.get('end_month', 12))
@@ -2057,11 +2061,23 @@ class PayrollModule(ttk.Frame):
             c.drawRightString(X_AMOUNT, Y_INCOME_ROW_1, f"{income_val:,.2f}")
             c.drawRightString(X_TAX, Y_INCOME_ROW_1, f"{tax_val:,.2f}")
 
-            # 7. ยอดรวม
+            # 5. ยอดรวม (บรรทัดล่าง)
             c.drawRightString(X_AMOUNT, Y_TOTAL, f"{income_val:,.2f}")
             c.drawRightString(X_TAX, Y_TOTAL, f"{tax_val:,.2f}")
 
-            # 8. ประกันสังคม / กองทุน
+            # --- [NEW] พิมพ์ตัวอักษรภาษาไทย (Bahttext) ---
+            try:
+                # แปลงยอดภาษีรวม เป็นภาษาไทย (หรือจะใช้ income_val ก็ได้ถ้าต้องการยอดเงินได้)
+                # ปกติช่อง "รวมเงินภาษีที่หักนำส่ง (ตัวอักษร)" จะอยู่ข้างล่างยอดรวมภาษี
+                text_baht = bahttext(tax_val) 
+                
+                c.setFont('THSarabun', 14)
+                c.drawString(X_BAHT_TEXT, Y_BAHT_TEXT, f"({text_baht})")
+            except Exception as e:
+                print(f"Bahttext Error: {e}")
+            # ---------------------------------------------
+
+            # 6. ประกันสังคม / กองทุน
             sso_val = float(emp_data.get('total_sso', 0))
             fund_val = float(emp_data.get('total_fund', 0))
             
@@ -2069,6 +2085,10 @@ class PayrollModule(ttk.Frame):
                 c.drawRightString(X_SSO, Y_SSO, f"{sso_val:,.2f}")
             if fund_val > 0:
                 c.drawRightString(X_FUND, Y_SSO, f"{fund_val:,.2f}")
+
+            # 7. ลงชื่อ
+            # วันที่จ่าย/ลงชื่อ (ถ้าต้องการ Fix วันที่พิมพ์)
+            # c.drawString(X_DATE_SIGN, Y_DATE_SIGN, datetime.now().strftime("%d/%m/%Y"))
 
             c.save()
             packet.seek(0)
@@ -2178,7 +2198,7 @@ class PayrollModule(ttk.Frame):
             messagebox.showerror("Error", f"เกิดข้อผิดพลาด: {e}")
 
     def _print_pnd1k_pdf(self):
-        """ออกรายงาน ภ.ง.ด. 1ก (Overlay) - ฉบับสมบูรณ์ (Pagination & Spacing Fixed + Landscape Fix)"""
+        """ออกรายงาน ภ.ง.ด. 1ก (Overlay) - ฉบับสมบูรณ์ (รวมยอดแยกตามหน้า)"""
         
         # ต้องแน่ใจว่า import landscape มาแล้วด้านบนไฟล์:
         # from reportlab.lib.pagesizes import A4, landscape
@@ -2258,9 +2278,6 @@ class PayrollModule(ttk.Frame):
             X_INCOME = 680; X_TAX = 780; X_COND = 790
             Y_TOTAL_ROW = 135       
             # ==========================================
-
-            grand_total_income = 0
-            grand_total_tax = 0
             
             # LOGIC Pagination
             chunks = [data_list[i:i + MAX_ROW_PER_PAGE] for i in range(0, len(data_list), MAX_ROW_PER_PAGE)]
@@ -2273,7 +2290,7 @@ class PayrollModule(ttk.Frame):
                 
                 packet = io.BytesIO()
                 
-                # ✅ แก้ไข: ใช้ landscape(A4) เพื่อให้ความกว้างครอบคลุมพิกัด 700+
+                # ✅ ใช้ landscape(A4)
                 c = canvas.Canvas(packet, pagesize=landscape(A4)) 
                 
                 # --- พิมพ์เลขหน้า ---
@@ -2290,8 +2307,6 @@ class PayrollModule(ttk.Frame):
                 for item in batch:
                     inc = float(item.get('annual_income', 0) or 0)
                     tax = float(item.get('annual_tax', 0) or 0)
-                    grand_total_income += inc
-                    grand_total_tax += tax
                     
                     c.drawCentredString(X_SEQ, current_y, str(seq_global))
                     
@@ -2320,10 +2335,19 @@ class PayrollModule(ttk.Frame):
                     current_y -= ROW_HEIGHT
                     seq_global += 1
 
-                # หน้าสุดท้าย พิมพ์ยอดรวม
-                if current_page_num == total_pages:
-                    c.drawRightString(X_INCOME, Y_TOTAL_ROW, f"{grand_total_income:,.2f}")
-                    c.drawRightString(X_TAX, Y_TOTAL_ROW, f"{grand_total_tax:,.2f}")
+                # =========================================================
+                # 🎯 แก้ไข: สรุปยอดรวม "ตามหน้า" (Page Total) ไม่ใช่สะสม
+                # =========================================================
+                
+                # 1. คำนวณผลรวมเฉพาะข้อมูลในหน้านี้ (batch)
+                page_income = sum(float(item.get('annual_income', 0) or 0) for item in batch)
+                page_tax = sum(float(item.get('annual_tax', 0) or 0) for item in batch)
+
+                # 2. สั่งพิมพ์ลงทุกหน้าเลย (ไม่ต้องเช็คว่าเป็นหน้าสุดท้ายไหม)
+                c.drawRightString(X_INCOME, Y_TOTAL_ROW, f"{page_income:,.2f}")
+                c.drawRightString(X_TAX, Y_TOTAL_ROW, f"{page_tax:,.2f}")
+
+                # =========================================================
 
                 c.save()
                 packet.seek(0)

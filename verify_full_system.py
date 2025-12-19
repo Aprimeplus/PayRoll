@@ -10,7 +10,7 @@ DB_CONFIG = {
     "dbname": "aplus_com_test",
     "user": "app_user",
     "password": "cailfornia123",
-    "host": "192.168.1.51",
+    "host": "Server-APrime",
     "port": "5432",
     "connect_timeout": 5
 }

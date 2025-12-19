@@ -1,4 +1,4 @@
-# (ไฟล์ใหม่: user_management_module.py)
+# (ไฟล์: user_management_module.py)
 
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
@@ -61,7 +61,11 @@ class UserManagementModule(ttk.Frame):
         self.new_pass_entry.pack(anchor="w")
 
         ttk.Label(form_frame, text="Role (สิทธิ์):").pack(anchor="w", pady=5)
-        self.role_combo = ttk.Combobox(form_frame, values=["hr", "approver"], state="readonly", width=22)
+        
+        # --- (แก้ไขตรงนี้: เพิ่ม 'dispatcher') ---
+        self.role_combo = ttk.Combobox(form_frame, values=["hr", "approver", "dispatcher"], state="readonly", width=22)
+        # -------------------------------------
+        
         self.role_combo.set("hr")
         self.role_combo.pack(anchor="w")
 

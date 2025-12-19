@@ -16,7 +16,7 @@ def get_db_connection():
             dbname="aplus_com_test",
             user="app_user",
             password="cailfornia123",
-            host="192.168.1.51",
+            host="Server-APrime",
             port="5432"
         )
         return conn
@@ -153,6 +153,15 @@ def init_db():
                     ADD COLUMN IF NOT EXISTS diligence_streak INTEGER DEFAULT 0; 
                 """)
             except Exception: conn.rollback()
+
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id SERIAL PRIMARY KEY,
+                    username TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    role TEXT NOT NULL CHECK (role IN ('hr', 'approver', 'dispatcher')) -- <--- เติมตรงนี้
+                );
+            """)
 
             # 2. ตาราง Email Queue
             try:
@@ -2514,7 +2523,7 @@ def get_asmart_connection():
     """สร้าง Connection ไปหาฐานข้อมูล A+ Smart (เครื่อง 192.168.1.60)"""
     try:
         return psycopg2.connect(
-            host="192.168.1.51",      # IP ของ A+ Smart
+            host="Server-APrime",      # IP ของ A+ Smart
             dbname="aplus_com_test",
             user="app_user",
             password="cailfornia123",
