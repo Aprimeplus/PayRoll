@@ -1,4 +1,4 @@
-# (ไฟล์ใหม่: custom_widgets.py)
+# (ไฟล์: custom_widgets.py) - ปรับปรุงช่วงปีเกิด (2500 - ปัจจุบัน+5)
 
 import tkinter as tk
 from tkinter import ttk
@@ -34,9 +34,12 @@ class DateDropdown(ttk.Frame):
         self.day_list = list(range(1, 32))
         self.month_list = self.THAI_MONTHS
         
-        # (สร้าง list ปี พ.ศ. 40 ปีย้อนหลัง และ 5 ปีล่วงหน้า)
+        # --- [แก้ไขจุดที่ 1] ปรับช่วงปี พ.ศ. ---
         current_year_be = datetime.now().year + 543
-        self.year_list = list(range(current_year_be + 5, current_year_be - 40, -1))
+        
+        # สร้างรายการปีจาก (ปัจจุบัน + 5 ปี) ถอยลงไปจนถึงปี 2500
+        # range(start, stop, step) -> stop=2499 เพื่อให้จบที่ 2500
+        self.year_list = list(range(current_year_be + 5, 2499, -1))
 
         # --- สร้าง Widgets ---
         self.day_combo = ttk.Combobox(self, values=self.day_list, 
@@ -85,7 +88,7 @@ class DateDropdown(ttk.Frame):
                 self.day_var.set("")
                 
         except Exception as e:
-            print(f"Error updating days: {e}")
+            # print(f"Error updating days: {e}") # ปิด print error รกหน้าจอ
             self.day_combo.config(values=self.day_list)
 
     def get_date(self):
@@ -144,7 +147,7 @@ class DateDropdown(ttk.Frame):
             self.year_var.set(str(year_be))
             self._update_days() # (สำคัญ)
         except Exception as e:
-            print(f"Error setting date from string: {e}")
+            # print(f"Error setting date from string: {e}")
             self.clear()
 
     def insert(self, index, text):

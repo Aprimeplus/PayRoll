@@ -32,11 +32,8 @@ class EmployeeModule(ttk.Frame):
         self.controller = controller
         self.current_user = current_user 
 
-        self.welfare_options = [ 
-            "ค่าที่พัก", "สิทธิ์ที่พักฟรี", "ค่าอาหาร", "ค่าเดินทาง",
-            "ค่าน้ำมัน","ค่าน้ำมัน (Fleet Card)","ค่าที่พักต่างจังหวัด", "ค่าเสื่อมรถยนต์",
-            "ค่าโทรศัพท์", "เบี้ยเลี้ยง"
-        ]
+        loaded_settings = hr_database.load_allowance_settings()
+        self.welfare_options = [item['name'] for item in loaded_settings]
         
         # (สร้าง List เวลา 00:00 - 23:45)
         self.time_options = [f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 15, 30, 45)]
@@ -119,26 +116,52 @@ class EmployeeModule(ttk.Frame):
         self.form_page.tkraise()
 
     def _build_list_page(self):
-        """สร้าง Treeview ที่สวยงามขึ้น"""
+        """สร้างหน้ารายชื่อพนักงาน (List Page) แบบจัดลำดับใหม่ (Fix ปุ่มตกจอ)"""
+        
+        # 1. สร้าง Container หลัก
         main_container = ttk.Frame(self.list_page)
         main_container.pack(fill="both", expand=True, padx=15, pady=10)
         
+        # 2. ส่วนค้นหา (Search Bar) ด้านบน
         search_frame = ttk.Frame(main_container)
         search_frame.pack(fill="x", pady=(0, 10))
         
         ttk.Label(search_frame, text="🔍 ค้นหา:", font=("Segoe UI", 10)).pack(side="left", padx=(0, 5))
         self.search_entry = ttk.Entry(search_frame, width=40, font=("Segoe UI", 10))
         self.search_entry.pack(side="left", padx=(0, 10))
+        self.search_entry.bind("<Return>", lambda event: self._search_employees()) 
+        
         ttk.Button(search_frame, text="ค้นหา", width=10, command=self._search_employees).pack(side="left")
         ttk.Button(search_frame, text="ล้าง", width=10, command=self._clear_search).pack(side="left", padx=5)
-        ttk.Button(search_frame, text="💾 Export Excel (ทั้งหมด)", 
-                   command=self._export_to_excel).pack(side="right", padx=10)
+        ttk.Button(search_frame, text="💾 Export Excel", command=self._export_to_excel).pack(side="right", padx=10)
         
-        tree_frame = ttk.LabelFrame(main_container, text="  รายชื่อพนักงานทั้งหมด  ", padding=15)
+        # 3. กรอบตารางและปุ่มสั่งงาน
+        tree_frame = ttk.LabelFrame(main_container, text=" รายชื่อพนักงาน ", padding=15)
         tree_frame.pack(fill="both", expand=True)
 
+        # --- [จุดแก้ไขสำคัญ 1] วางปุ่มด้านล่าง (Action Panel) ก่อน! ---
+        # เพื่อจองพื้นที่ด้านล่างไว้เสมอ ไม่ให้ตารางดันจนตกจอ
+        action_panel = ttk.LabelFrame(tree_frame, text=" คำสั่งจัดการ ", padding=10)
+        action_panel.pack(side="bottom", fill="x", pady=(10, 0))
+
+        btn_edit = ttk.Button(action_panel, text="📝 ดู/แก้ไขข้อมูล", command=self._load_and_show_form, width=20)
+        btn_edit.pack(side="left", padx=5)
+        
+        btn_delete = ttk.Button(action_panel, text="🗑️ ลบพนักงาน", command=self.delete_employee, width=15)
+        btn_delete.pack(side="left", padx=5)
+
+        # --- [จุดแก้ไขสำคัญ 2] วางสรุปยอด (Summary) ไว้เหนือปุ่มกด ---
+        summary_frame = ttk.Frame(tree_frame)
+        summary_frame.pack(side="bottom", fill="x", pady=(5, 0))
+        self.summary_label = ttk.Label(summary_frame, text="📊 จำนวนพนักงานทั้งหมด: 0 คน", 
+                                     font=("Segoe UI", 9), foreground="#7f8c8d")
+        self.summary_label.pack(side="left", padx=5)
+
+        # --- [จุดแก้ไขสำคัญ 3] วางตาราง (Treeview) เป็นลำดับสุดท้าย ---
+        # และลด height เหลือ 10 (เพื่อให้มันไม่สูงเกินจอ Notebook)
+        # expand=True จะทำให้มันยืดเต็มพื้นที่ที่เหลือเองครับ
         tree_container = ttk.Frame(tree_frame)
-        tree_container.pack(fill="both", expand=True)
+        tree_container.pack(side="top", fill="both", expand=True)
 
         scrollbar_y = ttk.Scrollbar(tree_container, orient="vertical")
         scrollbar_y.pack(side="right", fill="y")
@@ -151,38 +174,33 @@ class EmployeeModule(ttk.Frame):
             show="headings",
             yscrollcommand=scrollbar_y.set,
             xscrollcommand=scrollbar_x.set,
-            height=22
+            height=10 # <--- ลดลงจาก 20 เหลือ 10 เพื่อเซฟที่
         )
+        
+        # ตั้งค่าหัวตาราง (เหมือนเดิม)
         self.employee_tree.heading("id", text="รหัส")
         self.employee_tree.heading("name", text="ชื่อ-นามสกุล")
-        self.employee_tree.heading("phone", text="📞 เบอร์โทร")
-        self.employee_tree.heading("position", text="💼 ตำแหน่ง")
-        self.employee_tree.heading("department", text="🏢 ฝ่าย")
-        self.employee_tree.heading("status", text="📊 สถานะ")
-        self.employee_tree.heading("id_card", text="💳 เลขบัตรประชาชน")
-        self.employee_tree.heading("salary", text="💰 เงินเดือน")
+        self.employee_tree.heading("phone", text="เบอร์โทร")
+        self.employee_tree.heading("position", text="ตำแหน่ง")
+        self.employee_tree.heading("department", text="ฝ่าย")
+        self.employee_tree.heading("status", text="สถานะ")
+        self.employee_tree.heading("id_card", text="บัตรประชาชน")
+        self.employee_tree.heading("salary", text="เงินเดือน")
+        
         self.employee_tree.column("id", width=80, anchor="center")
         self.employee_tree.column("name", width=220, anchor="w")
         self.employee_tree.column("phone", width=120, anchor="center")
         self.employee_tree.column("position", width=180, anchor="w")
         self.employee_tree.column("department", width=150, anchor="w")
-        self.employee_tree.column("status", width=150, anchor="center")
+        self.employee_tree.column("status", width=120, anchor="center")
         self.employee_tree.column("id_card", width=150, anchor="center")
         self.employee_tree.column("salary", width=100, anchor="e")
+        
         self.employee_tree.pack(side="left", fill="both", expand=True)
         scrollbar_y.config(command=self.employee_tree.yview)
         scrollbar_x.config(command=self.employee_tree.xview)
-
-        btn_frame = ttk.Frame(tree_frame)
-        btn_frame.pack(fill="x", pady=(15, 5))
-        ttk.Button(btn_frame, text="📝 ดู/แก้ไข", command=self._load_and_show_form, width=15).pack(side="left", padx=5)
-        ttk.Button(btn_frame, text="🗑️ ลบ", command=self.delete_employee, width=15).pack(side="left", padx=5)
         
-        summary_frame = ttk.Frame(tree_frame)
-        summary_frame.pack(fill="x", pady=(10, 0))
-        self.summary_label = ttk.Label(summary_frame, text="📊 จำนวนพนักงานทั้งหมด: 0 คน", 
-                                       font=("Segoe UI", 9), foreground="#7f8c8d")
-        self.summary_label.pack(side="left")
+        self.employee_tree.bind("<Double-1>", lambda event: self._load_and_show_form())
 
     def _search_employees(self):
         search_term = self.search_entry.get().strip()
@@ -251,6 +269,18 @@ class EmployeeModule(ttk.Frame):
         self.emp_id_entry = ttk.Entry(basic_frame, width=25, font=("Segoe UI", 10))
         self.emp_id_entry.grid(row=row, column=1, sticky="w", pady=8)
         ttk.Label(basic_frame, text="*", foreground="red").grid(row=row, column=2, sticky="w")
+
+        row += 1
+        ttk.Label(basic_frame, text="คำนำหน้า:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=8)
+        
+        prefix_frame = ttk.Frame(basic_frame)
+        prefix_frame.grid(row=row, column=1, sticky="w", pady=8)
+        
+        self.combo_prefix = ttk.Combobox(prefix_frame, values=["นาย", "นาง", "นางสาว", "อื่นๆ"], state="readonly", width=10, font=("Segoe UI", 10))
+        self.combo_prefix.pack(side="left")
+        self.combo_prefix.bind("<<ComboboxSelected>>", self._on_prefix_change)
+        
+        self.entry_prefix_other = ttk.Entry(prefix_frame, width=15, font=("Segoe UI", 10))
 
         row += 1
         ttk.Label(basic_frame, text="ชื่อ:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=8)
@@ -969,18 +999,31 @@ class EmployeeModule(ttk.Frame):
 
                                 
     def _create_form_buttons(self):
-        btn_frame = ttk.Frame(self.form_page)
-        btn_frame.pack(fill="x", padx=15, pady=(0, 15))
-        left_frame = ttk.Frame(btn_frame)
-        left_frame.pack(side="left")
-        ttk.Button(left_frame, text="💾 บันทึกข้อมูล", command=self.save_employee, 
-                  width=18, style="Success.TButton").pack(side="left", padx=5)
-        ttk.Button(left_frame, text="🗑️ ล้างฟอร์ม", command=self.clear_form, 
-                  width=15).pack(side="left", padx=5)
-        right_frame = ttk.Frame(btn_frame)
-        right_frame.pack(side="right")
-        ttk.Button(right_frame, text="📄 Export PDF (รายนี้)", 
-                   command=self._export_to_pdf).pack(side="right", padx=5)
+        """สร้างปุ่ม Action Bar ด้านล่างฟอร์ม (จัด Layout ใหม่กันตกขอบ)"""
+        
+        # ใช้ LabelFrame เพื่อแบ่งส่วนชัดเจน
+        action_bar = ttk.LabelFrame(self.form_page, text=" บันทึกและจัดการข้อมูล ", padding=10)
+        action_bar.pack(fill="x", side="bottom", padx=15, pady=15) # side="bottom" เพื่อให้เกาะล่างเสมอ
+
+        # โซนซ้าย: ปุ่มหลัก (บันทึก / ล้าง)
+        left_zone = ttk.Frame(action_bar)
+        left_zone.pack(side="left")
+
+        self.btn_save = ttk.Button(left_zone, text="💾 บันทึกข้อมูล", command=self.save_employee, 
+                                  width=18, style="Success.TButton")
+        self.btn_save.pack(side="left", padx=5)
+
+        self.btn_clear = ttk.Button(left_zone, text="🗑️ ล้างฟอร์ม", command=self.clear_form, 
+                                   width=15)
+        self.btn_clear.pack(side="left", padx=5)
+
+        # โซนขวา: ปุ่มเสริม (Export PDF)
+        right_zone = ttk.Frame(action_bar)
+        right_zone.pack(side="right")
+
+        self.btn_pdf = ttk.Button(right_zone, text="📄 Export PDF (รายนี้)", 
+                                 command=self._export_to_pdf, width=20)
+        self.btn_pdf.pack(side="right", padx=5)
 
     # === ฟังก์ชัน Helper === 
     def _add_training_record(self):
@@ -1005,6 +1048,13 @@ class EmployeeModule(ttk.Frame):
         self.train_date_input.clear()
         self.train_name_input.delete(0, tk.END)
         self.train_cost_input.delete(0, tk.END)
+
+    def _on_prefix_change(self, event=None):
+        if self.combo_prefix.get() == "อื่นๆ":
+            self.entry_prefix_other.pack(side="left", padx=5)
+        else:
+            self.entry_prefix_other.pack_forget()
+            self.entry_prefix_other.delete(0, tk.END)
 
     def _delete_training_record(self):
         selected = self.training_tree.selection()
@@ -1046,9 +1096,9 @@ class EmployeeModule(ttk.Frame):
             processed_data = []
             welfare_options = [
                 "ค่าที่พัก", "สิทธิ์ที่พักฟรี", "ค่าอาหาร", "ค่าเดินทาง",
-                "ค่าน้ำมัน", "ค่าที่พักต่างจังหวัด", "ค่าเสื่อมรถยนต์",
-                "ค่าโทรศัพท์", "เบี้ยเลี้ยง"
-            ] 
+                "ค่าน้ำมัน","ค่าน้ำมัน (Fleet Card)","ค่าที่พักต่างจังหวัด", "ค่าเสื่อมรถยนต์",
+                "ค่าโทรศัพท์", "เบี้ยเลี้ยง", "ค่าตำแหน่ง" 
+            ]
             
             for emp in employees_to_export:
                 flat_emp = emp.copy()
@@ -1591,10 +1641,15 @@ class EmployeeModule(ttk.Frame):
                 "course_name": vals[1],
                 "cost": vals[2]
             })
+
+        final_prefix = self.combo_prefix.get()
+        if final_prefix == "อื่นๆ":
+            final_prefix = self.entry_prefix_other.get().strip()
         # --- (จบส่วนที่เพิ่ม) ---
 
         employee_data = {
             "id": self.emp_id_entry.get(),
+            "prefix": final_prefix,
             "fname": self.fname_entry.get(),
             "nickname": self.nickname_entry.get(),
             "lname": self.lname_entry.get(),
@@ -1966,6 +2021,19 @@ class EmployeeModule(ttk.Frame):
         
         # --- 1. ข้อมูลพื้นฐาน ---
         self.emp_id_entry.insert(0, str(employee.get("id", "") or ""))
+        prefix = str(employee.get("prefix", "") or "")
+        if prefix in ["นาย", "นาง", "นางสาว"]:
+            self.combo_prefix.set(prefix)
+            self.entry_prefix_other.pack_forget()
+        elif not prefix:
+            self.combo_prefix.set("")
+            self.entry_prefix_other.pack_forget()
+        else:
+            # ถ้าเป็นคำอื่นๆ (เช่น ดร., ทพ.)
+            self.combo_prefix.set("อื่นๆ")
+            self.entry_prefix_other.pack(side="left", padx=5)
+            self.entry_prefix_other.delete(0, tk.END)
+            self.entry_prefix_other.insert(0, prefix)
         self.fname_entry.insert(0, str(employee.get("fname", "") or ""))
         self.nickname_entry.insert(0, str(employee.get("nickname", "") or ""))
         self.lname_entry.insert(0, str(employee.get("lname", "") or ""))
@@ -2137,6 +2205,9 @@ class EmployeeModule(ttk.Frame):
                 self.clear_form()
 
     def clear_form(self):
+        self.combo_prefix.set("")
+        self.entry_prefix_other.delete(0, tk.END)
+        self.entry_prefix_other.pack_forget()
         self.emergency_name.delete(0, tk.END)
         self.emergency_phone.delete(0, tk.END)
         self.emergency_relation.delete(0, tk.END)

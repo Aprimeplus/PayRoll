@@ -25,6 +25,58 @@ from bahttext import bahttext
 
 class PayrollModule(ttk.Frame):
 
+    def _calculate_tax_step_ladder(self, net_income):
+        """คำนวณภาษีตามขั้นบันได (Step Ladder) ปีปัจจุบัน"""
+        
+        # ตารางภาษี: (เพดานเงินได้, อัตราภาษี)
+        # 0 - 150,000 = ยกเว้น (0%)
+        # 150,001 - 300,000 = 5%
+        # 300,001 - 500,000 = 10%
+        # ... ไปเรื่อยๆ
+        
+        tax = 0.0
+        
+        # ขั้นที่ 1: 0 - 150,000 (ยกเว้น)
+        if net_income <= 150000:
+            return 0.0
+        
+        # ขั้นที่ 2: 150,001 - 300,000 (5%)
+        # คำนวณส่วนที่เกิน 150,000 แต่ไม่เกิน 300,000
+        amount = min(net_income, 300000) - 150000
+        tax += amount * 0.05
+        if net_income <= 300000: return tax
+        
+        # ขั้นที่ 3: 300,001 - 500,000 (10%)
+        amount = min(net_income, 500000) - 300000
+        tax += amount * 0.10
+        if net_income <= 500000: return tax
+        
+        # ขั้นที่ 4: 500,001 - 750,000 (15%)
+        amount = min(net_income, 750000) - 500000
+        tax += amount * 0.15
+        if net_income <= 750000: return tax
+        
+        # ขั้นที่ 5: 750,001 - 1,000,000 (20%)
+        amount = min(net_income, 1000000) - 750000
+        tax += amount * 0.20
+        if net_income <= 1000000: return tax
+        
+        # ขั้นที่ 6: 1,000,001 - 2,000,000 (25%)
+        amount = min(net_income, 2000000) - 1000000
+        tax += amount * 0.25
+        if net_income <= 2000000: return tax
+        
+        # ขั้นที่ 7: 2,000,001 - 5,000,000 (30%)
+        amount = min(net_income, 5000000) - 2000000
+        tax += amount * 0.30
+        if net_income <= 5000000: return tax
+        
+        # ขั้นที่ 8: 5,000,001 ขึ้นไป (35%)
+        amount = net_income - 5000000
+        tax += amount * 0.35
+        
+        return tax
+
 
     def _open_email_approval_window(self):
         """(Approver) หน้าจอตรวจสอบและอนุมัติการส่งอีเมล"""
@@ -351,49 +403,77 @@ class PayrollModule(ttk.Frame):
         ttk.Label(parent_tab, text="💡 ดับเบิลคลิกที่รายชื่อ เพื่อกรอก OT, โบนัส, ภาษี(ก้าวหน้า), และรายการหักอื่นๆ", foreground="gray").pack(pady=5)
 
     def _build_results_tab(self, parent_tab):
-        btn_frame = ttk.Frame(parent_tab)
-        btn_frame.pack(fill="x", pady=(0, 10))
+        # สร้าง Container หลักสำหรับส่วนปุ่มกด
+        # ใช้ LabelFrame เพื่อตีกรอบให้ดูเป็นสัดส่วน และไม่กินพื้นที่ Grid มากเกินไป
+        control_panel = ttk.LabelFrame(parent_tab, text=" แผงควบคุม (Control Panel) ", padding=10)
+        control_panel.pack(fill="x", pady=(0, 10))
         
-        ttk.Button(btn_frame, text="🚀 คำนวณเงินเดือน", command=self._run_payroll_calculation, style="Success.TButton").pack(side="left")
-        self.export_btn = ttk.Button(btn_frame, text="📄 Export Excel", command=self._export_payroll_to_excel, state="disabled")
-        self.export_btn.pack(side="left", padx=10)
+        # --- แถวที่ 1: การจัดการหลัก (คำนวณ / บันทึก / สลิป / Excel) ---
+        row1 = ttk.Frame(control_panel)
+        row1.pack(fill="x", pady=2)
         
-        self.print_btn = ttk.Button(btn_frame, text="🖨️ พิมพ์สลิป (PDF)", command=self._print_selected_payslip, state="disabled")
-        self.print_btn.pack(side="left", padx=10)
+        ttk.Label(row1, text="1. จัดการเงินเดือน:", width=15, font=("", 9, "bold")).pack(side="left")
+        
+        ttk.Button(row1, text="🚀 คำนวณเงินเดือน", command=self._run_payroll_calculation, style="Success.TButton").pack(side="left", padx=2)
+        
+        self.save_db_btn = ttk.Button(row1, text="💾 บันทึกงวดบัญชี (DB)", command=self._save_payroll_to_database, state="disabled")
+        self.save_db_btn.pack(side="left", padx=2)
+        
+        ttk.Button(row1, text="📜 ดูประวัติย้อนหลัง", command=self._open_history_window).pack(side="left", padx=2)
+        
+        # คั่นด้วย Separator แนวตั้ง
+        ttk.Separator(row1, orient="vertical").pack(side="left", fill="y", padx=5)
 
-        self.pnd1_btn = ttk.Button(btn_frame, text="🏛️ ใบปะหน้า ภ.ง.ด.1", command=self._print_pnd1_summary, state="disabled")
-        self.pnd1_btn.pack(side="left", padx=10)
+        self.export_btn = ttk.Button(row1, text="📄 Export Excel", command=self._export_payroll_to_excel, state="disabled")
+        self.export_btn.pack(side="left", padx=2)
+        
+        self.print_btn = ttk.Button(row1, text="🖨️ พิมพ์สลิป (PDF)", command=self._print_selected_payslip, state="disabled")
+        self.print_btn.pack(side="left", padx=2)
 
-        self.pnd3_btn = ttk.Button(btn_frame, text="🏛️ ใบปะหน้า ภ.ง.ด.3", command=self._print_pnd3_summary, state="disabled")
-        self.pnd3_btn.pack(side="left", padx=10)
+        # --- แถวที่ 2: นำส่งสรรพากร/ประกันสังคม (รายเดือน) ---
+        row2 = ttk.Frame(control_panel)
+        row2.pack(fill="x", pady=2)
+        
+        ttk.Label(row2, text="2. นำส่งรายเดือน:", width=15, font=("", 9, "bold")).pack(side="left")
 
-        self.save_db_btn = ttk.Button(btn_frame, text="💾 บันทึกงวดบัญชี (DB)", command=self._save_payroll_to_database, state="disabled")
-        self.save_db_btn.pack(side="left", padx=10)
+        self.pnd1_btn = ttk.Button(row2, text="🏛️ ใบปะหน้า ภ.ง.ด.1", command=self._print_pnd1_summary, state="disabled")
+        self.pnd1_btn.pack(side="left", padx=2)
 
-        ttk.Button(btn_frame, text="📜 ดูประวัติย้อนหลัง", command=self._open_history_window).pack(side="left", padx=10)
+        self.pnd3_btn = ttk.Button(row2, text="🏛️ ใบปะหน้า ภ.ง.ด.3", command=self._print_pnd3_summary, state="disabled")
+        self.pnd3_btn.pack(side="left", padx=2)
 
-        self.pnd1k_btn = ttk.Button(btn_frame, text="📄 ภ.ง.ด.1ก (รายปี)", command=self._export_pnd1k_excel)
-        self.pnd1k_btn.pack(side="left", padx=10)
+        self.sso_btn = ttk.Button(row2, text="🏥 สปส. 1-10 (Excel)", command=self._export_sso_excel, state="disabled")
+        self.sso_btn.pack(side="left", padx=2)
 
-        self.pnd1k_pdf_btn = ttk.Button(btn_frame, text="📄 ภ.ง.ด.1ก (PDF)", command=self._print_pnd1k_pdf)
-        self.pnd1k_pdf_btn.pack(side="left", padx=5)
+        # --- แถวที่ 3: รายปี / ฟีเจอร์พิเศษ (Email) ---
+        row3 = ttk.Frame(control_panel)
+        row3.pack(fill="x", pady=2)
+        
+        ttk.Label(row3, text="3. รายปี/อื่นๆ:", width=15, font=("", 9, "bold")).pack(side="left")
 
-        self.btn_50tawi = ttk.Button(btn_frame, text="📄 ใบ 50 ทวิ (รายคน)", command=self._print_50tawi_pdf)
-        self.btn_50tawi.pack(side="left", padx=10)
+        self.pnd1k_btn = ttk.Button(row3, text="📄 ภ.ง.ด.1ก (Excel)", command=self._export_pnd1k_excel)
+        self.pnd1k_btn.pack(side="left", padx=2)
 
-        self.sso_btn = ttk.Button(btn_frame, text="🏥 สปส. 1-10 (Excel)", command=self._export_sso_excel, state="disabled")
-        self.sso_btn.pack(side="left", padx=10)
+        self.pnd1k_pdf_btn = ttk.Button(row3, text="📄 ภ.ง.ด.1ก (PDF)", command=self._print_pnd1k_pdf)
+        self.pnd1k_pdf_btn.pack(side="left", padx=2)
 
-        self.email_req_btn = ttk.Button(btn_frame, text="📧 ขอส่งสลิป (Email)", command=self._request_email_approval, state="disabled")
-        self.email_req_btn.pack(side="left", padx=10)
+        self.btn_50tawi = ttk.Button(row3, text="📄 ใบ 50 ทวิ (รายคน)", command=self._print_50tawi_pdf)
+        self.btn_50tawi.pack(side="left", padx=2)
+        
+        # คั่นด้วย Separator แนวตั้ง
+        ttk.Separator(row3, orient="vertical").pack(side="left", fill="y", padx=5)
+
+        self.email_req_btn = ttk.Button(row3, text="📧 ขอส่งสลิป (Email)", command=self._request_email_approval, state="disabled")
+        self.email_req_btn.pack(side="left", padx=2)
 
         if self.current_user['role'] == 'approver':
-            self.email_approve_btn = ttk.Button(btn_frame, text="✅ อนุมัติการส่งเมล", command=self._open_email_approval_window)
-            self.email_approve_btn.pack(side="left", padx=10)
+            self.email_approve_btn = ttk.Button(row3, text="✅ อนุมัติการส่งเมล", command=self._open_email_approval_window)
+            self.email_approve_btn.pack(side="left", padx=2)
 
-        # --- ส่วนแสดงผลตาราง (ใช้ Sheet อันเดียว) ---
+        # --- ส่วนแสดงผลตาราง (Sheet) ---
+        # ใช้ Frame หุ้มเพื่อให้ขยายเต็มพื้นที่ที่เหลือ
         sheet_frame = ttk.Frame(parent_tab)
-        sheet_frame.pack(fill="both", expand=True)
+        sheet_frame.pack(fill="both", expand=True, pady=(5,0))
         
         self.results_sheet = Sheet(sheet_frame,
                                    show_x_scrollbar=True,
@@ -414,11 +494,8 @@ class PayrollModule(ttk.Frame):
             "copy"
         )
         
-        # --- (จุดแก้ไข 1: สำคัญมาก) ---
-        # Bind Event โดยตรงกับ Widget เพื่อจับ Mouse X,Y (แก้ปัญหา row_select บัง column)
+        # Bind Event จับ Mouse X,Y
         self.results_sheet.bind("<Double-1>", self._on_result_double_click)
-        
-        # เก็บ extra_bindings ไว้เป็น Backup (เผื่อ tksheet อัปเดตในอนาคต)
         self.results_sheet.extra_bindings("cell_double_click", func=self._on_result_double_click)
 
     def _on_result_double_click(self, event=None):
@@ -897,205 +974,287 @@ class PayrollModule(ttk.Frame):
         ttk.Button(frame, text="💾 บันทึก", command=save_popup, style="Success.TButton").grid(row=row+1, column=0, columnspan=2, pady=20)
 
     def _run_payroll_calculation(self):
+        """
+        ฟังก์ชันหลักคำนวณเงินเดือน (Main Payroll Engine) - ฉบับสมบูรณ์
+        - รองรับ SSO Config รายปี
+        - รองรับ Taxable/Non-Taxable Welfare
+        - รองรับ Smart Tax Calculation
+        """
+        # --- 1. ตรวจสอบวันที่และการตั้งค่าเบื้องต้น ---
         try:
             start_date = self.start_date_entry.get_date()
             end_date = self.end_date_entry.get_date()
             if not start_date or not end_date: 
                 messagebox.showwarning("แจ้งเตือน", "กรุณาเลือกวันที่ให้ครบ")
                 return
-        except: return
+            
+            # ดึงเดือน/ปี ที่คำนวณ (ใช้สำหรับดึงยอดสะสม YTD และ Config รายปี)
+            current_month = start_date.month
+            current_year = start_date.year # ใช้ปี ค.ศ. เป็นหลัก
+        except: 
+            return
 
         employee_ids = self.input_tree.get_children()
         if not employee_ids:
             messagebox.showwarning("แจ้งเตือน", "กรุณาโหลดรายชื่อพนักงานก่อน")
             return
 
-        # ดึงเดือน/ปี ที่กำลังคำนวณ (สำคัญมากสำหรับการดึงยอดสะสม)
+        # --- 2. โหลดค่า Config (หัวใจสำคัญ) ---
+        
+        # 2.1 โหลดตั้งค่าสวัสดิการ (แยก Taxable / Non-Taxable)
         try:
-            # ใช้ start_date เป็นตัวระบุงวด (เช่น คำนวณของเดือน 3)
-            month_idx = start_date.month
-            year_ce = start_date.year
+            allowance_settings = hr_database.load_allowance_settings()
+            # สร้าง Map: { "ค่าตำแหน่ง": True, "ค่าน้ำมัน(บิล)": False }
+            taxable_map = { item['name']: item['is_taxable'] for item in allowance_settings }
         except:
-            month_idx = datetime.now().month
-            year_ce = datetime.now().year
+            taxable_map = {} 
+            
+        # 2.2 โหลดตั้งค่าประกันสังคม (ตามปีที่คำนวณ)
+        try:
+            # ส่งปี current_year (ค.ศ.) ไปโหลดค่าของปีนั้นๆ
+            sso_cfg = hr_database.load_sso_config(current_year) 
+            
+            sso_rate = sso_cfg.get('rate', 5.0) / 100.0   # แปลง 5% -> 0.05
+            sso_max_base = sso_cfg.get('max_salary', 15000)
+            sso_min_base = sso_cfg.get('min_salary', 1650)
+            
+            print(f"DEBUG: Using SSO Config Year {current_year}: Rate={sso_rate}, Max={sso_max_base}") # Debug ดูค่า
+        except:
+            # Fallback (กรณีโหลดไม่ได้ ให้ใช้ค่ามาตรฐาน)
+            sso_rate = 0.05
+            sso_max_base = 15000
+            sso_min_base = 1650
 
-        # ล้างข้อมูลเก่า
+        # --- 3. เริ่ม Loop คำนวณทีละคน ---
         self.last_payroll_results = []
         sheet_data = []
         
-        # --- ตัวแปรสำหรับเก็บยอดรวม ---
+        # ตัวแปรเก็บยอดรวมทั้งบริษัท (Grand Total)
         total_sum = {
-            "base_salary": 0.0, "position_allowance": 0.0,
-            "ot": 0.0, "commission": 0.0, "bonus": 0.0, 
-            "incentive": 0.0, "diligence": 0.0,
-            "other_income": 0.0, "driving_allowance": 0.0,
-            "total_income": 0.0,
-            "sso": 0.0, "pnd1": 0.0, "pnd3": 0.0,
-            "provident_fund": 0.0, "loan": 0.0, 
-            "late_deduct": 0.0, "other_deduct": 0.0,
-            "total_deduct": 0.0, "net_salary": 0.0
+            "base_salary": 0.0, "position": 0.0, "ot": 0.0, 
+            "bonus": 0.0, "commission": 0.0, "other_income": 0.0,
+            "welfare_taxable": 0.0, "welfare_nontaxable": 0.0,
+            "total_income": 0.0, "net_salary": 0.0,
+            "sso": 0.0, "tax": 0.0, "provident_fund": 0.0, 
+            "loan": 0.0, "late": 0.0, "other_deduct": 0.0, "total_deduct": 0.0
         }
 
-        for i, emp_id in enumerate(employee_ids):
+        for emp_id in employee_ids:
+            # ดึง Input ที่ user กรอก
             user_in = self.payroll_inputs.get(emp_id, {})
             
-            # 1. คำนวณรายได้เดือนปัจจุบัน (Base Salary, OT, etc.)
+            # 3.1 คำนวณรายได้พื้นฐาน (เงินเดือน, OT, หักมาสาย)
             res = hr_database.calculate_payroll_for_employee(emp_id, start_date, end_date, user_in)
             
             if res:
-                # เติมข้อมูลพื้นฐานพนักงาน
-                name = self.input_tree.item(emp_id, "values")[1]
-                res['name'] = name
-                
-                # ดึงข้อมูลพนักงานเพื่อเช็คสถานะ และ ข้อมูลประกอบอื่นๆ
+                # โหลดข้อมูลพนักงานเพิ่มเติม
                 emp_info = hr_database.load_single_employee(emp_id)
+                emp_name = self.input_tree.item(emp_id, "values")[1]
+                res['name'] = emp_name
                 
                 is_resigned = False
                 if emp_info:
-                    res['position'] = emp_info.get('position', '')
-                    res['department'] = emp_info.get('department', '')
-                    res['id_card'] = emp_info.get('id_card', '-')  
-                    res['fname'] = emp_info.get('fname', '')       
-                    res['lname'] = emp_info.get('lname', '')
-                    
-                    # เช็คสถานะลาออก (เพื่อหยุดการประมาณการรายได้ทั้งปี)
-                    status = emp_info.get('status', '')
-                    if status in ['พ้นสภาพพนักงาน', 'ลาออก']:
-                        is_resigned = True
+                     if emp_info.get('status') in ['พ้นสภาพพนักงาน', 'ลาออก']:
+                         is_resigned = True
 
-                # 2. คำนวณภาษี (ภ.ง.ด. 1) แบบสะสม (Accumulated Method)
+                # --- 3.2 คำนวณสวัสดิการ (Welfare) แบบแยกประเภท ---
+                welfare_taxable_sum = 0.0
+                welfare_nontaxable_sum = 0.0
                 
-                # 2.1 ดึงยอดสะสมจากต้นปี (Income, Tax, SSO)
-                ytd_income, ytd_tax, ytd_sso = hr_database.get_ytd_summary(emp_id, year_ce, month_idx)
+                if emp_info:
+                    w_flags = emp_info.get('welfare', [])
+                    w_amounts = emp_info.get('welfare_amounts', [])
+                    w_options = emp_info.get('welfare_options', [])
+
+                    for idx, amt_str in enumerate(w_amounts):
+                        if idx < len(w_flags) and w_flags[idx] and idx < len(w_options):
+                            try:
+                                amt = float(amt_str or 0)
+                                if amt > 0:
+                                    w_name = w_options[idx]
+                                    # เช็ค Config ว่ารายการนี้คิดภาษีไหม
+                                    is_taxable = taxable_map.get(w_name, True) 
+                                    
+                                    if is_taxable:
+                                        welfare_taxable_sum += amt
+                                    else:
+                                        welfare_nontaxable_sum += amt
+                            except: pass
+
+                # --- 3.3 คำนวณประกันสังคม (SSO) ด้วย Config ที่โหลดมา ---
+                # ฐานเงินเดือนที่นำมาคิด (ปกติใช้ Base Salary ไม่รวม OT)
+                sso_wage_base = res['base_salary']
                 
-                # 2.2 แยกยอดรายได้สำหรับคำนวณ PND1 (หักคอมมิชชั่นออก เพราะคอมฯ คิด PND3)
-                commission_amt = res['commission']
-                pnd3_calc = commission_amt * 0.03 # ภาษีคอมมิชชั่น 3%
+                # Clamp (ไม่เกิน Max, ไม่ต่ำกว่า Min)
+                if sso_wage_base > sso_max_base:
+                    sso_calc_base = sso_max_base
+                elif sso_wage_base < sso_min_base:
+                    sso_calc_base = sso_min_base
+                else:
+                    sso_calc_base = sso_wage_base
                 
-                # รายได้ที่จะนำไปคิด PND1 (รายได้รวม - คอมมิชชั่น)
-                income_for_pnd1 = res['total_income'] - commission_amt
+                # คำนวณและปัดเศษ (ปกติปัดเศษ .5 ขึ้น)
+                current_sso = int((sso_calc_base * sso_rate) + 0.5)
+                res['sso'] = current_sso 
+
+                # --- 3.4 เตรียมยอดรายได้เพื่อคิดภาษี (Taxable Income) ---
+                # รวม: เงินเดือน + OT + โบนัส + เบี้ยขยัน + สวัสดิการ(เฉพาะ Taxable)
+                income_for_tax = (
+                    res['base_salary'] + 
+                    res['position_allowance'] + 
+                    res['ot'] + 
+                    res['bonus'] + 
+                    res['incentive'] + 
+                    res['diligence'] + 
+                    res['other_income'] + 
+                    welfare_taxable_sum  # <--- รวมเฉพาะส่วนที่ต้องเสียภาษี
+                )
                 
-                # 2.3 เรียกฟังก์ชันคำนวณภาษีตัวใหม่ (ต้องแก้ฟังก์ชัน _calculate_smart_tax ให้รับค่าพวกนี้ด้วยนะครับ)
+                # (ถ้า Commission รวมคำนวณภาษีด้วย ให้เปิดบรรทัดล่างนี้)
+                # income_for_tax += res['commission'] 
+
+                # --- 3.5 คำนวณภาษี (Smart Tax Calculation) ---
+                # ดึงยอดสะสม YTD
+                ytd_income, ytd_tax, ytd_sso = hr_database.get_ytd_summary(emp_id, current_year, current_month)
+                
                 pnd1_calc = self._calculate_smart_tax(
-                    current_income=income_for_pnd1,
+                    current_income=income_for_tax,
                     current_sso=res['sso'],
+                    current_pfund=res['provident_fund'], # <--- ยอดกองทุนฯ (ลดหย่อนได้)
                     ytd_income=ytd_income,
                     ytd_tax_paid=ytd_tax,
                     ytd_sso=ytd_sso,
-                    month_idx=month_idx,
-                    is_resigned=is_resigned
+                    ytd_pfund=0, 
+                    month_idx=current_month,
+                    is_resigned=is_resigned,
+                    other_allowances=0 
                 )
-                print(f"Emp: {emp_id}, YTD_Income: {ytd_income}, YTD_Tax: {ytd_tax}, Calc_Tax: {pnd1_calc}")
-                # บันทึกค่าภาษีกลับลงไป
+
+                # ภาษีหัก ณ ที่จ่าย 3% (สำหรับค่าคอมมิชชั่น แยกต่างหาก)
+                pnd3_calc = res['commission'] * 0.03
+                
                 res['pnd1'] = pnd1_calc
                 res['pnd3'] = pnd3_calc
-                res['tax'] = pnd1_calc + pnd3_calc
-                
-                # 3. สรุปยอดหักและยอดสุทธิใหม่
-                res['total_deduct'] = (
-                    res['sso'] + res['tax'] + res['provident_fund'] + 
-                    res['loan'] + res['late_deduct'] + res['other_deduct']
+                res['tax'] = pnd1_calc + pnd3_calc # รวมภาษีที่ต้องหักทั้งหมด
+
+                # --- 3.6 สรุปยอดสุทธิ (Net Salary) ---
+                # รายได้รวม (เข้ากระเป๋าจริง รวม Non-Taxable ด้วย)
+                res['total_income'] = (
+                    income_for_tax + 
+                    res['commission'] + 
+                    welfare_nontaxable_sum +
+                    res.get('driving_allowance', 0)
                 )
+
+                # รายจ่ายรวม
+                res['total_deduct'] = (
+                    res['sso'] + 
+                    res['tax'] + 
+                    res['provident_fund'] + 
+                    res['loan'] + 
+                    res['late_deduct'] + 
+                    res['other_deduct']
+                )
+
                 res['net_salary'] = res['total_income'] - res['total_deduct']
                 
-                # เก็บผลลัพธ์
                 self.last_payroll_results.append(res)
-
-                # 4. บวกยอดรวม (Total Sum) สำหรับบรรทัดสุดท้าย
-                total_sum["base_salary"] += res.get('base_salary', 0)
-                total_sum["position_allowance"] += res.get('position_allowance', 0)
-                total_sum["ot"] += res.get('ot', 0)
-                total_sum["commission"] += res.get('commission', 0)
-                total_sum["bonus"] += res.get('bonus', 0)
-                total_sum["incentive"] += res.get('incentive', 0)
-                total_sum["diligence"] += res.get('diligence', 0)
-                total_sum["other_income"] += res.get('other_income', 0)
-                total_sum["driving_allowance"] += res.get('driving_allowance', 0)
-                total_sum["total_income"] += res.get('total_income', 0)
                 
-                total_sum["sso"] += res.get('sso', 0)
-                total_sum["pnd1"] += res.get('pnd1', 0)
-                total_sum["pnd3"] += res.get('pnd3', 0)
-                total_sum["provident_fund"] += res.get('provident_fund', 0)
-                total_sum["loan"] += res.get('loan', 0)
-                total_sum["late_deduct"] += res.get('late_deduct', 0)
-                total_sum["other_deduct"] += res.get('other_deduct', 0)
-                total_sum["total_deduct"] += res.get('total_deduct', 0)
-                total_sum["net_salary"] += res.get('net_salary', 0)
+                # --- 3.7 อัปเดตยอดรวม (Grand Total) ---
+                total_sum['base_salary'] += res['base_salary']
+                total_sum['position'] += res['position_allowance']
+                total_sum['ot'] += res['ot']
+                total_sum['bonus'] += res['bonus']
+                total_sum['commission'] += res['commission']
+                total_sum['welfare_taxable'] += welfare_taxable_sum
+                total_sum['welfare_nontaxable'] += welfare_nontaxable_sum
+                total_sum['total_income'] += res['total_income']
+                total_sum['sso'] += res['sso']
+                total_sum['tax'] += res['tax']
+                total_sum['provident_fund'] += res['provident_fund']
+                total_sum['loan'] += res['loan']
+                total_sum['late'] += res['late_deduct']
+                total_sum['total_deduct'] += res['total_deduct']
+                total_sum['net_salary'] += res['net_salary']
 
-                # สร้างแถวข้อมูลสำหรับแสดงในตาราง
-                row = [
-                    emp_id, name,
-                    f"{res['base_salary']:,.2f}", f"{res['position_allowance']:,.2f}",
-                    f"{res['ot']:,.2f}", f"{res['commission']:,.2f}", 
-                    f"{res.get('incentive', 0):,.2f}", f"{res.get('diligence', 0):,.2f}",
+                # --- 3.8 เตรียมข้อมูลลงตาราง ---
+                # รวมสวัสดิการโชว์ในช่อง "อื่นๆ" (Display Purpose)
+                display_other = (
+                    res['other_income'] + 
+                    welfare_taxable_sum + 
+                    welfare_nontaxable_sum + 
+                    res.get('driving_allowance', 0)
+                )
+                
+                row_data = [
+                    emp_id, emp_name,
+                    f"{res['base_salary']:,.2f}", 
+                    f"{res['position_allowance']:,.2f}",
+                    f"{res['ot']:,.2f}", 
+                    f"{res['commission']:,.2f}", 
+                    f"{res.get('incentive',0):,.2f}", 
+                    f"{res.get('diligence',0):,.2f}",
                     f"{res['bonus']:,.2f}", 
-                    f"{res['other_income']:,.2f}", f"{res.get('driving_allowance', 0):,.2f}",
+                    f"{display_other:,.2f}", 
+                    f"{res.get('driving_allowance',0):,.2f}",
                     f"{res['total_income']:,.2f}", 
-                    f"{res['sso']:,.2f}", f"{res['pnd1']:,.2f}", f"{res['pnd3']:,.2f}",
-                    f"{res['provident_fund']:,.2f}", f"{res['loan']:,.2f}", 
-                    f"{res['late_deduct']:,.2f}", f"{res['other_deduct']:,.2f}",
+                    f"{res['sso']:,.2f}", 
+                    f"{res['pnd1']:,.2f}", 
+                    f"{res['pnd3']:,.2f}",
+                    f"{res['provident_fund']:,.2f}", 
+                    f"{res['loan']:,.2f}", 
+                    f"{res['late_deduct']:,.2f}", 
+                    f"{res['other_deduct']:,.2f}",
                     f"{res['total_deduct']:,.2f}", 
                     f"{res['net_salary']:,.2f}"    
                 ]
-                sheet_data.append(row)
+                sheet_data.append(row_data)
 
-        # --- สร้างแถวสรุปยอดรวม (Total Row) ---
+        # --- 4. เพิ่มแถวสรุป (Total Row) ---
+        display_total_other = (total_sum['other_income'] + total_sum['welfare_taxable'] + total_sum['welfare_nontaxable'])
+        
         summary_row = [
             "TOTAL", "รวมทั้งสิ้น",
-            f"{total_sum['base_salary']:,.2f}", f"{total_sum['position_allowance']:,.2f}",
-            f"{total_sum['ot']:,.2f}", f"{total_sum['commission']:,.2f}", 
-            f"{total_sum['incentive']:,.2f}", f"{total_sum['diligence']:,.2f}",
+            f"{total_sum['base_salary']:,.2f}", 
+            f"{total_sum['position']:,.2f}",
+            f"{total_sum['ot']:,.2f}", 
+            f"{total_sum['commission']:,.2f}", 
+            "-", "-", 
             f"{total_sum['bonus']:,.2f}",
-            f"{total_sum['other_income']:,.2f}", f"{total_sum['driving_allowance']:,.2f}",
+            f"{display_total_other:,.2f}", 
+            "-",
             f"{total_sum['total_income']:,.2f}",
-            f"{total_sum['sso']:,.2f}", f"{total_sum['pnd1']:,.2f}", f"{total_sum['pnd3']:,.2f}",
-            f"{total_sum['provident_fund']:,.2f}", f"{total_sum['loan']:,.2f}",
-            f"{total_sum['late_deduct']:,.2f}", f"{total_sum['other_deduct']:,.2f}",
+            f"{total_sum['sso']:,.2f}", 
+            f"{total_sum['tax']:,.2f}",
+            "-",
+            f"{total_sum['provident_fund']:,.2f}", 
+            f"{total_sum['loan']:,.2f}",
+            f"{total_sum['late']:,.2f}", 
+            f"{total_sum['other_deduct']:,.2f}",
             f"{total_sum['total_deduct']:,.2f}",
             f"{total_sum['net_salary']:,.2f}"
         ]
         sheet_data.append(summary_row)
 
-        # ตั้งค่า Headers ของตาราง
-        headers = [
-            "รหัส", "ชื่อ-สกุล", 
-            "เงินเดือน", "ค่าตำแหน่ง", "OT", "คอมฯ", 
-            "Incentive", "เบี้ยขยัน", 
-            "โบนัส", "อื่นๆ(รับ)", "ค่าเที่ยว", "รวมรับ",
-            "ประกันสังคม", "ภ.ง.ด.1", "ภ.ง.ด.3", "กองทุนฯ", "เงินกู้", "ขาด/สาย", "อื่นๆ(หัก)", "รวมหัก",
-            "สุทธิ"
-        ]
-        self.results_sheet.headers(headers)
+        # --- 5. อัปเดตหน้าจอ ---
         self.results_sheet.set_sheet_data(sheet_data)
         
-        # --- ใส่สีคอลัมน์และแถวรวม ---
-        # Income (คอลัมน์ 2-11) สีฟ้าอ่อน
-        self.results_sheet.highlight_columns(columns=list(range(2, 12)), bg="#e6f7ff", fg="black") 
-        # Deduct (คอลัมน์ 12-19) สีส้มอ่อน
-        self.results_sheet.highlight_columns(columns=list(range(12, 20)), bg="#fff7e6", fg="black") 
-        # Net (คอลัมน์ 20) สีเหลืองอ่อน
-        self.results_sheet.highlight_columns(columns=[20], bg="#ffffcc", fg="black") 
-        
-        # แถว Total สีเขียวอ่อน
+        # Highlight สี
         last_row_idx = len(sheet_data) - 1
-        self.results_sheet.highlight_rows(rows=[last_row_idx], bg="#ccffcc", fg="black") 
+        self.results_sheet.highlight_rows(rows=[last_row_idx], bg="#ccffcc", fg="black") # สีเขียวแถว Total
+        self.results_sheet.highlight_columns(columns=[20], bg="#ffffcc", fg="black") # สีเหลืองช่อง Net Salary
 
-        # เปิดปุ่มต่างๆ ให้ใช้งานได้
+        # เปิดปุ่มใช้งาน
         self.export_btn.config(state="normal")
         self.print_btn.config(state="normal")
         self.pnd1_btn.config(state="normal")
         self.pnd3_btn.config(state="normal")
-        self.email_req_btn.config(state="normal")
-        if hasattr(self, 'pnd1_attach_btn'): self.pnd1_attach_btn.config(state="normal")
-        if hasattr(self, 'pnd1_cover_btn'): self.pnd1_cover_btn.config(state="normal")
-        if hasattr(self, 'pnd1_list_btn'): self.pnd1_list_btn.config(state="normal")
-        if hasattr(self, 'sso_btn'): self.sso_btn.config(state="normal")
-        if hasattr(self, 'save_db_btn'): self.save_db_btn.config(state="normal")
+        self.save_db_btn.config(state="normal")
+        self.sso_btn.config(state="normal")
         
         # สลับไปหน้าผลลัพธ์
         self.notebook.select(self.tab2)
-        messagebox.showinfo("สำเร็จ", "คำนวณเงินเดือน (แบบสะสมภาษี) เรียบร้อยแล้ว")
+        messagebox.showinfo("สำเร็จ", f"คำนวณเงินเดือนเรียบร้อยแล้ว\n(ใช้เรทประกันสังคมปี {current_year+543})")
 
     def _export_payroll_to_excel(self):
         if not self.last_payroll_results: 
@@ -1475,82 +1634,49 @@ class PayrollModule(ttk.Frame):
             self.start_date_entry.set_date(datetime(y, m, 1))
             self.end_date_entry.set_date(datetime(y, m, last))
     
-    def _calculate_smart_tax(self, current_income, current_sso, ytd_income, ytd_tax_paid, ytd_sso, month_idx, is_resigned):
-        """
-        คำนวณภาษีแบบสะสม (Accumulated Method) - แก้ปัญหา OT แกว่ง / ออกระหว่างปี
-        """
-        # 1. รวมยอดสะสมทั้งหมด (อดีต + เดือนนี้)
+    def _calculate_smart_tax(self, current_income, current_sso, current_pfund, 
+                             ytd_income, ytd_tax_paid, ytd_sso, ytd_pfund, 
+                             month_idx, is_resigned, other_allowances=0):
+        
+        # 1. ประมาณการรายได้ทั้งปี (Annualized Income)
         total_income_ytd = ytd_income + current_income
         total_sso_ytd = ytd_sso + current_sso
+        total_pfund_ytd = ytd_pfund + current_pfund
         
-        # 2. หา "รายได้ประมาณการทั้งปี" (Annualized Income)
         if is_resigned or month_idx == 12:
-            # กรณีลาออก หรือ เดือน ธ.ค. -> ใช้ยอดจริงสะสมเลย (ไม่คูณ 12) *แก้ปัญหาฐานภาษีสูงเกินจริง*
             annual_income = total_income_ytd
             annual_sso = total_sso_ytd
+            annual_pfund = total_pfund_ytd
         else:
-            # กรณีปกติ -> หรารายได้เฉลี่ยต่อเดือน แล้วคูณ 12 (Projection)
             m = max(1, month_idx)
             annual_income = (total_income_ytd / m) * 12
             annual_sso = (total_sso_ytd / m) * 12
-            
-        # (Cap ประกันสังคมไม่เกิน 9,000 ต่อปี ตามกฎหมาย หรือตามจริงถ้าต่ำกว่า)
+            annual_pfund = (total_pfund_ytd / m) * 12
+
+        # Cap ประกันสังคม (ไม่เกิน 9,000 ต่อปี)
         if annual_sso > 9000: annual_sso = 9000
 
-        # 3. คำนวณภาษีทั้งปี (Annual Tax) ตามขั้นบันได
-        expenses = min(annual_income * 0.5, 100000) # หักค่าใช้จ่าย 50% ไม่เกิน 1แสน
-        allowances = 60000 + annual_sso             # ลดหย่อนส่วนตัว + ประกันสังคม
-        
-        net_taxable = annual_income - expenses - allowances
-        annual_tax = 0.0
-        
-        if net_taxable > 0:
-            # Step 1: 0 - 150,000 (0%)
-            net_taxable -= 150000
-            
-            if net_taxable > 0: # Step 2: 150k - 300k (5%)
-                step = min(net_taxable, 150000)
-                annual_tax += step * 0.05
-                net_taxable -= step
-                
-            if net_taxable > 0: # Step 3: 300k - 500k (10%)
-                step = min(net_taxable, 200000)
-                annual_tax += step * 0.10
-                net_taxable -= step
-                
-            if net_taxable > 0: # Step 4: 500k - 750k (15%)
-                step = min(net_taxable, 250000)
-                annual_tax += step * 0.15
-                net_taxable -= step
-                
-            if net_taxable > 0: # Step 5: 750k - 1M (20%)
-                step = min(net_taxable, 250000)
-                annual_tax += step * 0.20
-                net_taxable -= step
-            
-            if net_taxable > 0: # Step 6: 1M - 2M (25%)
-                step = min(net_taxable, 1000000)
-                annual_tax += step * 0.25
-                net_taxable -= step
-                
-            if net_taxable > 0: # Step 7: > 2M (30%+)
-                annual_tax += net_taxable * 0.30
+        # 2. หักค่าใช้จ่าย (50% ไม่เกิน 100,000)
+        expenses = min(annual_income * 0.5, 100000)
 
-        # 4. หาภาษีที่ต้องจ่าย "เฉพาะเดือนนี้"
+        # 3. หักค่าลดหย่อน (ส่วนตัว 60,000 + SSO + P.Fund + อื่นๆ)
+        total_deductions = 60000 + annual_sso + annual_pfund + other_allowances
+
+        # 4. เงินได้สุทธิ
+        net_taxable = max(0, annual_income - expenses - total_deductions)
+
+        # 5. คำนวณภาษีทั้งปี (Step Ladder)
+        annual_tax = self._calculate_tax_step_ladder(net_taxable)
+
+        # 6. หาภาษีงวดนี้ (วิธีสะสมยอด)
         if is_resigned or month_idx == 12:
-            # เดือนสุดท้าย/ลาออก -> ภาษีที่ต้องจ่ายรวม = ภาษีทั้งปีจริงๆ
-            tax_due_to_date = annual_tax
+            tax_this_month = annual_tax - ytd_tax_paid
         else:
-            # เดือนปกติ -> เฉลี่ยภาษีตามสัดส่วนเวลา (Pro-rate)
-            # เช่น เดือน 3 ควรจ่ายภาษีไปแล้ว 3/12 ของภาษีทั้งปี
-            tax_due_to_date = annual_tax * (month_idx / 12)
-            
-        tax_this_month = tax_due_to_date - ytd_tax_paid
-        
-        # ป้องกันติดลบ (ไม่คืนภาษีในสลิป ให้ไปขอคืนกรมสรรพากรปลายปี)
-        if tax_this_month < 0: tax_this_month = 0
-        
-        return tax_this_month
+            # (ภาษีทั้งปี / 12 * จำนวนเดือนที่ผ่านไป) - ภาษีที่จ่ายแล้ว
+            expected_tax_ytd = (annual_tax / 12) * month_idx
+            tax_this_month = expected_tax_ytd - ytd_tax_paid
+
+        return max(0, tax_this_month)
     
     def _print_pnd1_summary(self):
         """(ฉบับแก้ไข 100%) ออกรายงาน ภ.ง.ด. 1 (PDF) พร้อมรายชื่อพนักงาน + ยอดรวม"""

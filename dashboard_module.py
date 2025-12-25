@@ -68,21 +68,44 @@ class DashboardModule(ttk.Frame):
         self.canvas_chart = FigureCanvasTkAgg(self.figure, master=chart_frame)
         self.canvas_chart.get_tk_widget().pack(fill="both", expand=True)
         
-        # (ขวา: ตารางแจ้งเตือน)
-        alert_frame = ttk.LabelFrame(content_frame, text=" 🔔 แจ้งเตือน: ใกล้ผ่านโปร (30 วัน) ", padding=10)
-        alert_frame.pack(side="right", fill="both", expand=True)
+        # (ขวา: Panel รวมแจ้งเตือน) - [แก้ไขส่วนนี้]
+        right_panel = ttk.Frame(content_frame)
+        right_panel.pack(side="right", fill="both", expand=True)
+        
+        # 1. ตารางแจ้งเตือนผ่านโปร (ด้านบน)
+        alert_frame = ttk.LabelFrame(right_panel, text=" 🔔 ใกล้ผ่านโปร (30 วัน) ", padding=10)
+        alert_frame.pack(side="top", fill="both", expand=True, pady=(0, 10))
         
         columns = ("name", "dept", "date")
-        self.alert_tree = ttk.Treeview(alert_frame, columns=columns, show="headings", height=15)
+        # ลดความสูงลงเหลือ 6 บรรทัด เพื่อแบ่งพื้นที่
+        self.alert_tree = ttk.Treeview(alert_frame, columns=columns, show="headings", height=6) 
         self.alert_tree.heading("name", text="ชื่อ-สกุล")
         self.alert_tree.heading("dept", text="แผนก")
         self.alert_tree.heading("date", text="วันครบกำหนด")
-        
-        self.alert_tree.column("name", width=150)
-        self.alert_tree.column("dept", width=100)
-        self.alert_tree.column("date", width=100)
-        
+        self.alert_tree.column("name", width=120)
+        self.alert_tree.column("dept", width=80)
+        self.alert_tree.column("date", width=80)
         self.alert_tree.pack(fill="both", expand=True)
+        
+        # 2. [เพิ่มใหม่] ตารางแจ้งเตือนไม่สแกนนิ้ว (ด้านล่าง)
+        missing_frame = ttk.LabelFrame(right_panel, text=" ⚠️ ไม่สแกนนิ้ว/ขาดงาน (เดือนนี้) ", padding=10)
+        missing_frame.pack(side="bottom", fill="both", expand=True)
+        
+        m_columns = ("date", "name", "dept")
+        self.missing_tree = ttk.Treeview(missing_frame, columns=m_columns, show="headings", height=8)
+        self.missing_tree.heading("date", text="วันที่")
+        self.missing_tree.heading("name", text="ชื่อ-สกุล")
+        self.missing_tree.heading("dept", text="แผนก")
+        
+        self.missing_tree.column("date", width=80)
+        self.missing_tree.column("name", width=120)
+        self.missing_tree.column("dept", width=80)
+        
+        # ใส่ Scrollbar ให้ตารางนี้หน่อยเผื่อข้อมูลเยอะ
+        m_scroll = ttk.Scrollbar(missing_frame, orient="vertical", command=self.missing_tree.yview)
+        self.missing_tree.configure(yscrollcommand=m_scroll.set)
+        self.missing_tree.pack(side="left", fill="both", expand=True)
+        m_scroll.pack(side="right", fill="y")
         
         # ปุ่มรีเฟรช
         ttk.Button(self.scroll_frame, text="🔄 รีเฟรชข้อมูล", command=self.refresh_data).pack(pady=10)
@@ -110,57 +133,96 @@ class DashboardModule(ttk.Frame):
 
     def refresh_data(self):
         """ดึงข้อมูลจาก DB มาอัปเดตหน้าจอ"""
+        # ดึงข้อมูลล่าสุดจาก Database
         stats = hr_database.get_dashboard_stats()
         
-        # 1. อัปเดตการ์ด (เหมือนเดิม)
-        self.card_total.config(text=f"{stats['total_employees']} คน")
-        self.card_leave.config(text=f"{stats['on_leave_today']} คน")
-        self.card_late.config(text=f"{stats['late_today']} คน")
+        # =========================================
+        # 1. อัปเดตการ์ดตัวเลข (KPI Cards)
+        # =========================================
+        self.card_total.config(text=f"{stats.get('total_employees', 0)} คน")
+        self.card_leave.config(text=f"{stats.get('on_leave_today', 0)} คน")
+        self.card_late.config(text=f"{stats.get('late_today', 0)} คน")
         
-        # 2. อัปเดตกราฟ
-        self.ax.clear()
-        dept_data = stats['dept_counts']
+        # =========================================
+        # 2. อัปเดตกราฟวงกลม (Pie Chart)
+        # =========================================
+        self.ax.clear() # ล้างกราฟเก่าก่อนวาดใหม่
+        
+        dept_data = stats.get('dept_counts', [])
         
         if dept_data:
+            # เตรียมข้อมูลสำหรับกราฟ
             labels = [d['dept'] for d in dept_data]
             sizes = [d['count'] for d in dept_data]
-            total_employees = stats['total_employees'] 
+            total_employees = stats.get('total_employees', 1) # ป้องกันหารด้วย 0
 
+            # ฟังก์ชันจัดรูปแบบป้ายกำกับ (% และ จำนวนคน)
             def format_label(pct):
-                """ฟังก์ชัน Custom Autopct"""
                 absolute_count = int(round(pct / 100. * total_employees))
                 return f'{pct:.1f}% ({absolute_count} คน)'
             
+            # สีของกราฟ
             colors = ['#ff9999','#66b3ff','#99ff99','#ffcc99', '#c2c2f0', '#ffb3e6']
             
-            # (!!! เพิ่มพารามิเตอร์จัดการระยะห่างตรงนี้ !!!)
-            self.ax.pie(sizes, 
-                        labels=labels, 
-                        autopct=format_label, 
-                        startangle=90, 
-                        colors=colors,
-                        labeldistance=1.05,       # ขยับชื่อแผนก (labels) ออกไปเล็กน้อย (แก้ไขปัญหาซ้อนทับ)
-                        pctdistance=0.75,         # ขยับ %/จำนวนคน (autopct) เข้ามาใกล้ศูนย์กลาง
-                        wedgeprops={'linewidth': 0.5, 'edgecolor': 'white'} # เพิ่มเส้นแบ่ง (ทำให้ดูเป็นระเบียบ)
-                        ) 
-            
-            self.ax.axis('equal') 
+            # วาดกราฟ
+            try:
+                self.ax.pie(sizes, 
+                            labels=labels, 
+                            autopct=format_label, 
+                            startangle=90, 
+                            colors=colors,
+                            labeldistance=1.1,       # ระยะห่างชื่อแผนก
+                            pctdistance=0.75,        # ระยะห่างตัวเลข %
+                            wedgeprops={'linewidth': 1, 'edgecolor': 'white'}
+                            ) 
+                self.ax.axis('equal') # บังคับให้เป็นวงกลม
+            except Exception as e:
+                print(f"Graph Error: {e}")
+                self.ax.text(0.5, 0.5, "Error วาดกราฟ", ha='center')
         else:
-            self.ax.text(0.5, 0.5, "ไม่มีข้อมูล", ha='center')
+            # กรณีไม่มีข้อมูลพนักงานเลย
+            self.ax.text(0.5, 0.5, "ไม่มีข้อมูลพนักงาน", ha='center', fontdict={'size': 12})
             
-        self.canvas_chart.draw()
+        self.canvas_chart.draw() # สั่งให้ Canvas วาดภาพใหม่
         
-        # 3. อัปเดตแจ้งเตือน (เหมือนเดิม)
+        # =========================================
+        # 3. อัปเดตตาราง: ใกล้ผ่านโปร (30 วัน)
+        # =========================================
+        # ล้างข้อมูลเก่าในตารางทิ้งก่อน
         for item in self.alert_tree.get_children():
             self.alert_tree.delete(item)
             
-        for emp in stats['probation_upcoming']:
-            # แปลงวันที่เป็น พ.ศ.
-            d = emp['probation_end_date']
-            date_str = f"{d.day}/{d.month}/{d.year + 543}"
+        # ใส่ข้อมูลใหม่ (แก้ไข: ลบส่วนที่ซ้ำออกแล้ว)
+        for emp in stats.get('probation_upcoming', []):
+            d = emp.get('probation_end_date')
+            if d:
+                date_str = f"{d.day}/{d.month}/{d.year + 543}"
+            else:
+                date_str = "-"
             
             self.alert_tree.insert("", "end", values=(
-                f"{emp['fname']} {emp['lname']}",
-                emp['department'],
+                f"{emp.get('fname', '')} {emp.get('lname', '')}",
+                emp.get('department', '-'),
                 date_str
+            ))
+            
+        # =========================================
+        # 4. อัปเดตตาราง: ไม่สแกนนิ้ว/ขาดงาน (เดือนนี้)
+        # =========================================
+        # ล้างข้อมูลเก่าในตารางทิ้งก่อน
+        for item in self.missing_tree.get_children():
+            self.missing_tree.delete(item)
+            
+        # ใส่ข้อมูลใหม่ (ใช้ .get() เพื่อความปลอดภัย)
+        for miss in stats.get('missing_scans', []):
+            d = miss.get('work_date')
+            if d:
+                date_str = f"{d.day}/{d.month}/{d.year + 543}"
+            else:
+                date_str = "-"
+                
+            self.missing_tree.insert("", "end", values=(
+                date_str,
+                f"{miss.get('fname', '')} {miss.get('lname', '')}",
+                miss.get('department', '-')
             ))
