@@ -41,7 +41,7 @@ class TimeProcessorModule(ttk.Frame):
         upload_frame.pack(fill="x", pady=(0, 15))
         
         ttk.Button(upload_frame, text="เลือกไฟล์ Excel (.xlsx, .csv)", 
-                   command=self._load_file, width=30).pack(side="left", padx=10)
+                   command=self._import_fingerprint_file, width=30).pack(side="left", padx=10)
         self.save_to_db_btn = ttk.Button(upload_frame, text="💾 บันทึก Log ลงฐานข้อมูล", 
                                  command=self._save_logs_to_db, state="disabled")
         self.save_to_db_btn.pack(side="left", padx=10)

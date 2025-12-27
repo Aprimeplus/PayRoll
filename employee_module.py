@@ -133,6 +133,8 @@ class EmployeeModule(ttk.Frame):
         
         ttk.Button(search_frame, text="ค้นหา", width=10, command=self._search_employees).pack(side="left")
         ttk.Button(search_frame, text="ล้าง", width=10, command=self._clear_search).pack(side="left", padx=5)
+        ttk.Button(search_frame, text="💾 Export Excel", command=self._export_to_excel).pack(side="right", padx=5)
+        ttk.Button(search_frame, text="📂 Mass Import", command=self._open_mass_import_window).pack(side="right", padx=5)
         ttk.Button(search_frame, text="💾 Export Excel", command=self._export_to_excel).pack(side="right", padx=10)
         
         # 3. กรอบตารางและปุ่มสั่งงาน
@@ -201,6 +203,33 @@ class EmployeeModule(ttk.Frame):
         scrollbar_x.config(command=self.employee_tree.xview)
         
         self.employee_tree.bind("<Double-1>", lambda event: self._load_and_show_form())
+
+    def _open_mass_import_window(self):
+        """เปิดหน้าต่างเลือกไฟล์ Excel เพื่ออัปเดตข้อมูล (Mass Upsert)"""
+        file_path = filedialog.askopenfilename(
+            title="เลือกไฟล์ Excel ข้อมูลพนักงาน (Mass Update)",
+            filetypes=[("Excel Files", "*.xlsx *.xls")]
+        )
+        
+        if not file_path: return
+        
+        if not messagebox.askyesno("ยืนยันการนำเข้า", 
+                                   "ระบบจะทำการ 'ทับข้อมูลเดิม' ด้วยข้อมูลใน Excel\n"
+                                   "กรุณาตรวจสอบว่ารหัสพนักงานถูกต้อง\n\nต้องการดำเนินการต่อหรือไม่?"):
+            return
+            
+        # เรียกฟังก์ชันที่สร้างไว้ใน hr_database
+        # (ต้องมั่นใจว่าแก้ hr_database.py ไปแล้วนะครับ)
+        try:
+            count, msg = hr_database.mass_upsert_employees_from_excel(file_path)
+            
+            if count > 0:
+                messagebox.showinfo("สำเร็จ", msg)
+                self._show_list_page() # รีเฟรชหน้ารายชื่อใหม่
+            else:
+                messagebox.showwarning("แจ้งเตือน", msg)
+        except AttributeError:
+            messagebox.showerror("Error", "ไม่พบฟังก์ชัน mass_upsert ใน hr_database\nกรุณาอัปเดตไฟล์ hr_database.py ก่อน")
 
     def _search_employees(self):
         search_term = self.search_entry.get().strip()
