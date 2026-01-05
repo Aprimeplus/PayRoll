@@ -1851,9 +1851,7 @@ def get_work_rules(work_location):
     }
 
 def process_attendance_summary(start_date, end_date):
-    """
-    (ฉบับแก้ไข V35.0 - Smart Logic: รองรับลาครึ่งวัน และปรับเกณฑ์เวลาทำงานอัตโนมัติ)
-    """
+    """(ฉบับแก้ไข V36.0 - Smart Logic: มีเวลาสแกน = มาทำงาน 100%)"""
     conn = get_db_connection()
     if not conn: return []
     
@@ -1861,7 +1859,7 @@ def process_attendance_summary(start_date, end_date):
 
     try:
         with conn.cursor(cursor_factory=extras.DictCursor) as cursor:
-            # 1. ดึงข้อมูลพนักงาน
+            # 1. ดึงข้อมูลพนักงาน (เฉพาะที่ยังทำงานอยู่)
             cursor.execute("""
                 SELECT emp_id, fname, lname, work_location, department, position, emp_type
                 FROM employees
@@ -1872,56 +1870,61 @@ def process_attendance_summary(start_date, end_date):
             """, (start_date,))
             employees = [dict(row) for row in cursor.fetchall()]
             
-            # 2. ดึงข้อมูลประกอบ
+            # 2. ดึงข้อมูลวันหยุด
             cursor.execute("SELECT holiday_date, description FROM company_holidays WHERE holiday_date BETWEEN %s AND %s", (start_date, end_date))
             holiday_dict = {row['holiday_date']: row['description'] for row in cursor.fetchall()}
             
+            # 3. ดึงข้อมูลการลา
             cursor.execute("SELECT emp_id, leave_date, leave_type, num_days FROM employee_leave_records WHERE leave_date BETWEEN %s AND %s", (start_date, end_date))
             leaves = {}
-            for row in cursor.fetchall(): leaves[(row['emp_id'], row['leave_date'])] = row
+            for row in cursor.fetchall(): 
+                eid = str(row['emp_id'])
+                dt = row['leave_date']
+                if eid not in leaves: leaves[eid] = {}
+                leaves[eid][dt] = row
 
+            # 4. ดึงข้อมูลเวลาสแกน (Logs)
             cursor.execute("""
                 SELECT emp_id, scan_timestamp FROM time_attendance_logs 
                 WHERE DATE(scan_timestamp) BETWEEN %s AND %s ORDER BY scan_timestamp ASC
             """, (start_date, end_date))
             logs_map = {}
             for row in cursor.fetchall():
-                eid = row['emp_id']
+                eid = str(row['emp_id'])
                 dt = row['scan_timestamp'].date()
-                if (eid, dt) not in logs_map: logs_map[(eid, dt)] = []
-                logs_map[(eid, dt)].append(row['scan_timestamp'])
+                if eid not in logs_map: logs_map[eid] = {}
+                if dt not in logs_map[eid]: logs_map[eid][dt] = []
+                logs_map[eid][dt].append(row['scan_timestamp'])
 
+            # 5. ดึงข้อมูลรายวันที่เคยบันทึกไว้ (ถ้ามี)
             cursor.execute("""
                 SELECT emp_id, work_date, ot_hours, ot_in_time, ot_out_time, status, is_ot_approved 
                 FROM employee_daily_records 
                 WHERE work_date BETWEEN %s AND %s
             """, (start_date, end_date))
-            
             daily_records_map = {}
             for row in cursor.fetchall():
-                daily_records_map[(row['emp_id'], row['work_date'])] = dict(row)
+                daily_records_map[(str(row['emp_id']), row['work_date'])] = dict(row)
 
-            # กฎพื้นฐาน (Office)
+            # กฎกติกา (Rules)
             WORK_RULES = {
                 "default": { "standard_in": time(9, 0), "standard_out": time(18, 0), "tier_1_cutoff": time(9, 30), "penalty_1_mins": 60, "penalty_2_mins": 120 }
             }
 
             all_dates = pd.date_range(start_date, end_date).date
             
+            # --- วนลูปพนักงานแต่ละคน ---
             for emp in employees:
-                emp_id = emp['emp_id']
+                emp_id = str(emp['emp_id'])
                 emp_name = f"{emp['fname']} {emp['lname']}"
                 
-                # กฎคลังสินค้า
+                # กฎรายบุคคล (เช่น คลังสินค้า)
                 work_loc = emp.get('work_location', '')
                 rule = WORK_RULES['default']
                 if work_loc and "คลังสินค้า" in work_loc:
                      rule = { 
-                         "standard_in": time(8, 30), 
-                         "standard_out": time(17, 0),  
-                         "tier_1_cutoff": time(8, 59), 
-                         "penalty_1_mins": 60,         
-                         "penalty_2_mins": 120         
+                         "standard_in": time(8, 30), "standard_out": time(17, 0),  
+                         "tier_1_cutoff": time(8, 59), "penalty_1_mins": 60, "penalty_2_mins": 120         
                      }
                 
                 is_warehouse = (work_loc == "คลังสินค้า")
@@ -1932,18 +1935,20 @@ def process_attendance_summary(start_date, end_date):
                 total_absent_days = 0.0
                 daily_details = []
                 
+                # --- วนลูปแต่ละวัน ---
                 for curr_date in all_dates:
+                    # ค่าเริ่มต้น (Default Values)
                     status = "ปกติ"
                     late_mins_penalty = 0 
                     actual_late_mins = 0 
                     ot_hours_to_save = 0.0 
-                    
                     scan_in_str = "-"
                     scan_out_str = "-"
                     saved_ot_in = ""
                     saved_ot_out = ""
                     is_ot_approved = False 
 
+                    # A. ดึงข้อมูลเดิม (ถ้ามี)
                     existing_rec = daily_records_map.get((emp_id, curr_date))
                     if existing_rec:
                         saved_ot_in = existing_rec.get('ot_in_time') or ""
@@ -1951,36 +1956,32 @@ def process_attendance_summary(start_date, end_date):
                         is_ot_approved = bool(existing_rec.get('is_ot_approved', False))
                         if is_ot_approved:
                              ot_hours_to_save = float(existing_rec.get('ot_hours', 0))
-                        if existing_rec.get('status'):
-                             status = existing_rec['status']
+                        # ไม่เอา status เดิมมาใช้ตรงๆ เพราะเราจะคำนวณใหม่ให้ถูกต้อง
 
-                    day_logs = logs_map.get((emp_id, curr_date), [])
-                    leave_info = leaves.get((emp_id, curr_date))
+                    # B. เตรียมข้อมูลประกอบการตัดสินใจ
+                    day_logs = logs_map.get(emp_id, {}).get(curr_date, [])
+                    leave_info = leaves.get(emp_id, {}).get(curr_date)
                     is_holiday = curr_date in holiday_dict
                     is_sunday = (curr_date.weekday() == 6)
 
-                    # --- [SMART LOGIC 1] คำนวณเวลาทำงานที่ "ต้องทำจริง" (Target) ---
-                    required_work_mins = 480 # มาตรฐาน 8 ชม. (480 นาที)
+                    # C. เริ่มตัดสินสถานะ (Decision Tree)
                     
-                    if leave_info:
-                        leave_days = float(leave_info.get('num_days', 0))
-                        # ถ้าลา 0.5 วัน -> ต้องทำแค่ (1 - 0.5) * 480 = 240 นาที (4 ชม.)
-                        if leave_days < 1.0:
-                            required_work_mins = 480 * (1.0 - leave_days)
-                        else:
-                            required_work_mins = 0 # ลาเต็มวัน ไม่ต้องทำงาน
-
                     if day_logs:
+                        # -----------------------------
+                        # กรณีที่ 1: มีเวลาสแกน (มาทำงานแน่นอน)
+                        # -----------------------------
                         scan_in = min(day_logs).time()
                         scan_out = max(day_logs).time()
                         scan_in_str = scan_in.strftime("%H:%M")
-                        
-                        # 1. คำนวณสาย (ยังคงเดิม แต่ถ้าลาเช้าอาจต้องปรับ Logic เพิ่มในอนาคต)
-                        # เบื้องต้นถ้ามี scan_in สาย ก็คือสาย (เว้นแต่ลาเช้า)
+                        if len(day_logs) > 1:
+                            scan_out_str = scan_out.strftime("%H:%M")
+
+                        # 1.1 เช็คสาย
                         if scan_in > rule['standard_in']:
-                            # ถ้าลาครึ่งวัน (สมมติลาเช้า) แล้วมาสแกนบ่าย -> ไม่ควรนับว่าสาย
-                            # แต่ระบบยังไม่รู้ว่าลาครึ่งไหน เอา Logic เดิมไปก่อน แต่ลดหย่อนได้
-                            if not leave_info: # ถ้าไม่ได้ลาเลย ถึงคิดสายเต็มๆ
+                            if leave_info:
+                                status = f"ลา {leave_info['leave_type']} (มาสาย)" # ลาแล้วสาย = หยวนๆ
+                            else:
+                                # คำนวณนาทีสายจริง
                                 dummy = datetime.today()
                                 t_in = datetime.combine(dummy, scan_in)
                                 t_std = datetime.combine(dummy, rule['standard_in'])
@@ -1993,75 +1994,42 @@ def process_attendance_summary(start_date, end_date):
                                     late_mins_penalty = rule['penalty_1_mins']
                                     status = "สาย (08:31-08:59)"
                         else:
-                            if not existing_rec or existing_rec.get('status') == "ปกติ":
-                                status = "ปกติ"
+                            status = "ปกติ"
 
-                        # 2. คำนวณเวลาทำงานสุทธิ (Smart Check)
-                        if len(day_logs) > 1:
-                            scan_out_str = scan_out.strftime("%H:%M")
-                            
-                            dummy = datetime.today()
-                            dt_in = datetime.combine(dummy, scan_in)
-                            dt_out = datetime.combine(dummy, scan_out)
-                            
-                            # เวลาทำงานรวม (นาที) - หักพัก 1 ชม. (ถ้าทำเกิน 4 ชม.)
-                            duration_mins = (dt_out - dt_in).total_seconds() / 60.0
-                            
-                            # ถ้าทำงานน้อยกว่า 4 ชม. ไม่น่าจะได้พักเที่ยง (ไม่หัก 60)
-                            # แต่ถ้าปกติ หัก 60
-                            deduct_break = 60 if duration_mins > 240 else 0
-                            net_work_mins = duration_mins - deduct_break
-                            
-                            # --- [SMART LOGIC 2] เทียบกับเวลาที่ "ต้องทำจริง" ---
-                            # เช่น ถ้าลาครึ่งวัน (required=240) แล้วทำได้ 230 -> ขาด 10 นาที (หยวนๆ ได้หรือหัก)
-                            # ในที่นี้เอาแบบเป๊ะๆ คือถ้าน้อยกว่า required -> หัก
-                            
-                            if required_work_mins > 0 and net_work_mins < required_work_mins: 
-                                # เช็คว่าขาดเยอะไหม (Buffer 15 นาทีเผื่อ error)
-                                if (required_work_mins - net_work_mins) > 15:
-                                    if late_mins_penalty == 0:
-                                        late_mins_penalty += 60 # ปรับ 1 ชม.
-                                        status = "กลับก่อนเวลา"
-                                    else:
-                                        late_mins_penalty += 60 
-                                        status += " + กลับก่อน"
+                        # 1.2 คำนวณ OT (ถ้ามีสิทธิ์)
+                        if allow_ot_calc and not is_ot_approved and not leave_info and len(day_logs) > 1:
+                            if scan_out > rule['standard_out']:
+                                dummy = datetime.today()
+                                t_out = datetime.combine(dummy, scan_out)
+                                t_std_out = datetime.combine(dummy, rule['standard_out'])
+                                raw_ot_mins = int((t_out - t_std_out).total_seconds() / 60)
+                                
+                                if raw_ot_mins >= 30: 
+                                    ot_hours_to_save = round(raw_ot_mins / 60.0, 2)
 
-                            # 3. คำนวณ OT
-                            if allow_ot_calc and not is_ot_approved and not leave_info:
-                                if scan_out > rule['standard_out']:
-                                    t_out = datetime.combine(dummy, scan_out)
-                                    t_std_out = datetime.combine(dummy, rule['standard_out'])
-                                    raw_ot_mins = int((t_out - t_std_out).total_seconds() / 60)
-                                    real_excess_mins = max(0, net_work_mins - 480)
-                                    final_ot_mins = min(raw_ot_mins, real_excess_mins)
-                                    
-                                    if final_ot_mins >= 30: 
-                                        ot_hours_to_save = round(final_ot_mins / 60.0, 2)
-                                    else:
-                                        ot_hours_to_save = 0.0 
-                                else:
-                                    ot_hours_to_save = 0.0
                     else:
-                        scan_in = None
-                        if not is_ot_approved: ot_hours_to_save = 0.0
+                        # -----------------------------
+                        # กรณีที่ 2: ไม่มีการสแกน (ขาด/ลา/หยุด)
+                        # -----------------------------
+                        if leave_info:
+                            status = f"ลา {leave_info['leave_type']}"
+                        elif is_holiday:
+                            status = f"วันหยุด ({holiday_dict[curr_date]})"
+                        elif is_sunday:
+                            status = "วันหยุด"
+                        else:
+                            status = "ขาดงาน"
+                            total_absent_days += 1.0
 
-                    if not allow_ot_calc:
-                        ot_hours_to_save = 0.0
+                    # D. สรุปยอดหักเงิน (Penalty Summary)
+                    # หักเงินเฉพาะ: "สาย" และ "ไม่ใช่ลา" และ "ไม่ใช่ขาดงาน" (ขาดงานหักอีกแบบ)
+                    is_leave = status.startswith("ลา")
+                    if status != "ขาดงาน" and not is_leave and late_mins_penalty > 0:
+                         total_late_mins_penalty += late_mins_penalty
 
-                    # บันทึกสถานะ (Override status สุดท้าย)
-                    if leave_info:
-                        status = f"ลา {leave_info['leave_type']}" # ระบบจะเห็นว่าเป็น "ลา ..."
-                    elif is_holiday:
-                        status = f"วันหยุด ({holiday_dict[curr_date]})"
-                    elif is_sunday:
-                        status = "วันหยุด"
-                    elif not day_logs and not existing_rec:
-                        status = "ขาดงาน"
-                        total_absent_days += 1.0
-                    
-                    # Upsert Database
-                    prev_ot = float(existing_rec.get('ot_hours', 0)) if existing_rec else 0.0
-                    should_save = (ot_hours_to_save > 0) or (prev_ot > 0) or (day_logs) or (status == "ขาดงาน")
+                    # E. บันทึกลง Database (Upsert)
+                    # บันทึกเฉพาะที่มีความเคลื่อนไหว เพื่อประหยัดพื้นที่
+                    should_save = (ot_hours_to_save > 0) or (day_logs) or (status != "ปกติ") or existing_rec
                     
                     if should_save:
                         cursor.execute("""
@@ -2072,19 +2040,12 @@ def process_attendance_summary(start_date, end_date):
                             status = EXCLUDED.status;
                         """, (emp_id, curr_date, ot_hours_to_save, status))
 
-                    # --- [SMART LOGIC 3] แก้ไขการรวมยอดหัก (Fix Bug) ---
-                    # เช็คว่าสถานะขึ้นต้นด้วย "ลา" หรือไม่ (เช่น "ลา ป่วย", "ลา กิจ")
-                    is_leave = status.startswith("ลา")
-                    
-                    # หักเงินเฉพาะ: ไม่ใช่ขาดงาน AND ไม่ใช่ลา AND มีค่าปรับ
-                    if status != "ขาดงาน" and not is_leave and late_mins_penalty > 0:
-                         total_late_mins_penalty += late_mins_penalty
-
+                    # F. เก็บรายละเอียดไว้แสดงผล
                     daily_details.append({
                         "date": f"{curr_date.day:02d}/{curr_date.month:02d}/{curr_date.year + 543}",
                         "status": status,
-                        "scan_in": scan_in_str if scan_in_str else "-",
-                        "scan_out": scan_out_str if scan_out_str else "-",
+                        "scan_in": scan_in_str,
+                        "scan_out": scan_out_str,
                         "actual_late_mins": actual_late_mins,       
                         "penalty_hrs": late_mins_penalty / 60.0,    
                         "ot_hrs": ot_hours_to_save,
@@ -2093,6 +2054,7 @@ def process_attendance_summary(start_date, end_date):
                         "is_ot_approved": is_ot_approved
                     })
 
+                # จบ 1 คน -> เพิ่มลงรายงานรวม
                 summary_report.append({
                     "emp_id": emp_id,
                     "name": emp_name,

@@ -138,8 +138,50 @@ class TimeProcessorModule(ttk.Frame):
 
         self.result_tree.bind("<Double-1>", self._show_attendance_details)
     
+    def _import_fingerprint_file(self):
+        """ฟังก์ชันหลักสำหรับเลือกไฟล์และจัดการโหมดการนำเข้า (Mass Edit)"""
+        file_path = filedialog.askopenfilename(
+            title="เลือกไฟล์สแกนนิ้ว (Excel/CSV)",
+            filetypes=[("Excel/CSV", "*.xlsx *.xls *.csv")]
+        )
+        if not file_path: return
+
+        # 1. โหลดข้อมูลเข้า Memory
+        self._load_file(file_path)
+        
+        if not self.raw_log_data: 
+            return # ถ้าโหลดไม่ผ่าน จบการทำงาน
+
+        try:
+            # หาช่วงวันที่จากข้อมูลในไฟล์
+            all_timestamps = [item[1] for item in self.raw_log_data]
+            min_date = min(all_timestamps).date()
+            max_date = max(all_timestamps).date()
+            
+            # 2. ถาม User: ต้องการโหมดไหน?
+            msg = (f"ข้อมูลในไฟล์: {min_date.strftime('%d/%m/%Y')} ถึง {max_date.strftime('%d/%m/%Y')}\n"
+                   f"จำนวน: {len(self.raw_log_data)} รายการ\n\n"
+                   "คุณต้องการทำรายการแบบไหน?\n"
+                   "✅ [YES] = ลบข้อมูลเก่าในระบบทิ้ง แล้วลงข้อมูลใหม่ (Mass Edit/Replace)\n"
+                   "❌ [NO]  = เพิ่มข้อมูลใหม่เข้าไปต่อท้าย (Append)")
+            
+            is_replace = messagebox.askyesno("ยืนยันการนำเข้า", msg)
+            
+            if is_replace:
+                hr_database.delete_scan_logs_range(min_date, max_date)
+                
+            # 3. บันทึกข้อมูลลง DB
+            count = hr_database.insert_scan_logs(self.raw_log_data)
+            
+            messagebox.showinfo("สำเร็จ", f"นำเข้าข้อมูลเรียบร้อย {count} รายการ")
+            
+            # 4. สั่งประมวลผลทันที
+            self._save_logs_to_db()
+
+        except Exception as e:
+            messagebox.showerror("Error", f"เกิดข้อผิดพลาด: {e}")
     
-    def _load_file(self):
+    def _load_file(self, file_path):
         file_path = filedialog.askopenfilename(
             title="เลือกไฟล์ Log (Excel หรือ CSV)",
             filetypes=[("Excel files", "*.xlsx"), ("CSV files", "*.csv"), ("All files", "*.*")]
@@ -337,33 +379,41 @@ class TimeProcessorModule(ttk.Frame):
             messagebox.showerror("Database Error", f"ไม่สามารถบันทึก Log ได้:\n{e}")
 
     def _run_processing(self):
+        """เริ่มประมวลผลและแสดงลงตารางทันที (แก้ไขแล้ว)"""
         try:
+            # 1. ดึงและเช็ควันที่
             start_date = self.start_date_entry.get_date()
             end_date = self.end_date_entry.get_date()
+            
             if not start_date or not end_date: 
-                raise ValueError("วันที่ไม่ได้เลือก หรือเลือกไม่ครบ")
-        except Exception:
-            messagebox.showwarning("ข้อมูลไม่ครบ", "กรุณาเลือกช่วงวันที่ (วัน/เดือน/ปี) ให้ถูกต้อง")
-            return
+                messagebox.showwarning("ข้อมูลไม่ครบ", "กรุณาเลือกช่วงวันที่ให้ถูกต้อง")
+                return
             
-        if start_date > end_date:
-            messagebox.showwarning("วันที่ผิดพลาด", "วันที่เริ่มต้น ต้องมาก่อนวันที่สิ้นสุด")
-            return
+            if start_date > end_date:
+                messagebox.showwarning("วันที่ผิดพลาด", "วันที่เริ่มต้น ต้องมาก่อนวันที่สิ้นสุด")
+                return
             
-        try:
+            # 2. เริ่มคำนวณ (เปลี่ยนเคอร์เซอร์เป็นนาฬิกาทราย)
+            self.config(cursor="wait")
+            self.update()
+            
+            # เรียกฟังก์ชันคำนวณหลักจาก Database
             summary_report = hr_database.process_attendance_summary(start_date, end_date)
 
-            print("--- ผลลัพธ์จาก 'การคำนวน' ---")
-            print(summary_report[:5]) 
+            # คืนค่าเคอร์เซอร์
+            self.config(cursor="") 
 
+            # 3. อัปเดตข้อมูลลงตัวแปร
             self.last_summary_report = summary_report 
             self.export_btn.config(state="normal")  
             
+            # 4. เคลียร์ตารางเก่า
             for item in self.result_tree.get_children():
                 self.result_tree.delete(item)
 
             self.result_frame.config(text=f"  ผลลัพธ์การประมวลผล ({start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')})  ")
             
+            # 5. วนลูปเติมข้อมูลใหม่ลงตาราง (แทนที่ _display_summary)
             if summary_report:
                 for i, report in enumerate(summary_report):
                     tag_to_use = 'striped' if i % 2 == 0 else '' 
@@ -371,21 +421,24 @@ class TimeProcessorModule(ttk.Frame):
                     self.result_tree.insert("", "end", iid=report['emp_id'], values=(
                         report['emp_id'],
                         report['name'],
-                        report['emp_type'],     
-                        report['department'], 
-                        report['position'],   
+                        report.get('emp_type', ''),     
+                        report.get('department', ''), 
+                        report.get('position', ''),   
                         f"{report['total_late_minutes']:.0f}", 
                         f"{report['total_late_hours']:.2f}",  
                         report['absent_days']
                     ), tags=(tag_to_use,))
+                
+                messagebox.showinfo("สำเร็จ", f"ประมวลผลเรียบร้อย {len(summary_report)} คน")
             else:
-                self.result_frame.config(text=f"  ผลลัพธ์: ไม่พบข้อมูลพนักงาน ({start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')})  ")
+                self.result_frame.config(text=f"  ผลลัพธ์: ไม่พบข้อมูล ({start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')})  ")
+                messagebox.showinfo("แจ้งเตือน", "ไม่พบข้อมูลพนักงาน หรือไม่มีการสแกนนิ้วในช่วงเวลานี้")
 
         except Exception as e:
+            self.config(cursor="")
             self.export_btn.config(state="disabled") 
+            import traceback; traceback.print_exc()
             messagebox.showerror("Processing Error", f"เกิดข้อผิดพลาดขณะประมวลผล:\n{e}")
-        finally:
-            pass
             
     def _export_summary_to_excel(self):
         if not self.last_summary_report:
@@ -1089,7 +1142,7 @@ class TimeProcessorModule(ttk.Frame):
 
             # 4. แสดงผลลัพธ์ลงตาราง
             self.last_summary_report = summary_data
-            self._display_summary(summary_data)
+            
             
             messagebox.showinfo("สำเร็จ", f"ประมวลผลเรียบร้อยแล้ว!\nพนักงานทั้งหมด: {len(summary_data)} คน")
 
