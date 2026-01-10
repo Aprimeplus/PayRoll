@@ -169,6 +169,7 @@ def init_db():
                     role TEXT NOT NULL CHECK (role IN ('hr', 'approver', 'dispatcher')) -- <--- เติมตรงนี้
                 );
             """)
+            
 
             # 2. ตาราง Email Queue
             try:

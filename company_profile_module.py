@@ -1,4 +1,4 @@
-# (ไฟล์ใหม่: company_profile_module.py)
+# (ไฟล์: company_profile_module.py)
 
 import tkinter as tk
 from tkinter import ttk, messagebox

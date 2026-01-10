@@ -1015,8 +1015,9 @@ class PayrollModule(ttk.Frame):
 
     def _run_payroll_calculation(self):
         """
-        ฟังก์ชันหลักคำนวณเงินเดือน (Main Payroll Engine) - ฉบับแก้ไข (Fix Separator Bug)
-        - กรองแถว Separator ทิ้ง ไม่ให้นำมาคำนวณ
+        ฟังก์ชันหลักคำนวณเงินเดือน (Main Payroll Engine) - ฉบับแก้ไขสมบูรณ์ (V16)
+        - กรองแถว Separator ทิ้ง
+        - โหลดค่าประกันสังคม (SSO) จาก Database ตามปีที่เลือก
         """
         # --- 1. ตรวจสอบวันที่และการตั้งค่าเบื้องต้น ---
         try:
@@ -1031,7 +1032,7 @@ class PayrollModule(ttk.Frame):
         except: 
             return
 
-        # --- [แก้ไขจุดที่ 1.5] กรองรายชื่อ (ตัดเส้นแบ่งออก) ---
+        # --- กรองรายชื่อ (ตัดเส้นแบ่งออก) ---
         all_items = self.input_tree.get_children()
         employee_ids = []
         
@@ -1043,26 +1044,34 @@ class PayrollModule(ttk.Frame):
             if 'separator' in tags:
                 continue
                 
-            # ถ้าเป็นคนจริงๆ ให้เก็บ ID ไว้ (เพราะเราตั้ง iid=emp_id ตอน insert)
+            # ถ้าเป็นคนจริงๆ ให้เก็บ ID ไว้
             employee_ids.append(item_iid)
 
         if not employee_ids:
             messagebox.showwarning("แจ้งเตือน", "ไม่พบรายชื่อพนักงานที่จะคำนวณ (กรุณาโหลดรายชื่อก่อน)")
             return
 
-        # --- 2. โหลดค่า Config ---
+        # --- 2. โหลดค่า Config (สวัสดิการ & ประกันสังคม) ---
         try:
             allowance_settings = hr_database.load_allowance_settings()
             taxable_map = { item['name']: item['is_taxable'] for item in allowance_settings }
         except:
             taxable_map = {} 
             
+        # [จุดที่แก้ไข] โหลด SSO Config จากปีปัจจุบัน
         try:
-            sso_cfg = hr_database.load_sso_config(current_year) 
-            sso_rate = sso_cfg.get('rate', 5.0) / 100.0
-            sso_max_base = sso_cfg.get('max_salary', 15000)
-            sso_min_base = sso_cfg.get('min_salary', 1650)
-        except:
+            if hasattr(hr_database, 'load_sso_config'):
+                sso_cfg = hr_database.load_sso_config(current_year) 
+                sso_rate = sso_cfg.get('rate', 5.0) / 100.0  # แปลง 5.0 -> 0.05
+                sso_max_base = sso_cfg.get('max_salary', 15000)
+                sso_min_base = sso_cfg.get('min_salary', 1650)
+            else:
+                # Fallback ถ้ายังไม่ได้อัปเดต DB
+                sso_rate = 0.05
+                sso_max_base = 15000
+                sso_min_base = 1650
+        except Exception as e:
+            print(f"Error loading SSO config: {e}")
             sso_rate = 0.05
             sso_max_base = 15000
             sso_min_base = 1650
@@ -1112,14 +1121,21 @@ class PayrollModule(ttk.Frame):
                                         welfare_nontaxable_sum += amt
                             except: pass
 
-                # คำนวณประกันสังคม
+                # --- [จุดที่แก้ไข] คำนวณประกันสังคม (Flexible Logic) ---
                 sso_wage_base = res['base_salary']
-                if sso_wage_base > sso_max_base: sso_calc_base = sso_max_base
-                elif sso_wage_base < sso_min_base: sso_calc_base = sso_min_base
-                else: sso_calc_base = sso_wage_base
                 
+                # ปรับฐานเงินเดือนตาม Min/Max ที่โหลดมา
+                if sso_wage_base > sso_max_base: 
+                    sso_calc_base = sso_max_base
+                elif sso_wage_base < sso_min_base: 
+                    sso_calc_base = sso_min_base
+                else: 
+                    sso_calc_base = sso_wage_base
+                
+                # คำนวณยอด (ฐาน * Rate) + ปัดเศษ (Standard Rounding .5 up)
                 current_sso = int((sso_calc_base * sso_rate) + 0.5)
                 res['sso'] = current_sso 
+                # -----------------------------------------------------
 
                 # คำนวณภาษี
                 income_for_tax = (
@@ -1194,7 +1210,7 @@ class PayrollModule(ttk.Frame):
                     f"{res['sso']:,.2f}", f"{res['pnd1']:,.2f}", f"{res['pnd3']:,.2f}",
                     f"{res['provident_fund']:,.2f}", f"{res['loan']:,.2f}", 
                     f"{res['late_deduct']:,.2f}", f"{res['other_deduct']:,.2f}",
-                    f"{res['total_deduct']:,.2f}", f"{res['net_salary']:,.2f}"    
+                    f"{res['total_deduct']:,.2f}", f"{res['net_salary']:,.2f}"     
                 ]
                 sheet_data.append(row_data)
 
