@@ -141,13 +141,16 @@ class EmployeeModule(ttk.Frame):
         tree_frame = ttk.LabelFrame(main_container, text=" รายชื่อพนักงาน ", padding=15)
         tree_frame.pack(fill="both", expand=True)
 
-        # --- [จุดแก้ไขสำคัญ 1] วางปุ่มด้านล่าง (Action Panel) ก่อน! ---
-        # เพื่อจองพื้นที่ด้านล่างไว้เสมอ ไม่ให้ตารางดันจนตกจอ
+        # --- [จุดแก้ไข] เพิ่มปุ่มใน Action Panel ---
         action_panel = ttk.LabelFrame(tree_frame, text=" คำสั่งจัดการ ", padding=10)
         action_panel.pack(side="bottom", fill="x", pady=(10, 0))
 
         btn_edit = ttk.Button(action_panel, text="📝 ดู/แก้ไขข้อมูล", command=self._load_and_show_form, width=20)
         btn_edit.pack(side="left", padx=5)
+        
+        # [NEW] ปุ่มประวัติการลา
+        btn_history = ttk.Button(action_panel, text="📜 ประวัติการลา", command=self._show_leave_history_popup, width=15)
+        btn_history.pack(side="left", padx=5)
         
         btn_delete = ttk.Button(action_panel, text="🗑️ ลบพนักงาน", command=self.delete_employee, width=15)
         btn_delete.pack(side="left", padx=5)
@@ -238,6 +241,77 @@ class EmployeeModule(ttk.Frame):
         else:
             results = hr_database.search_employees(search_term)
         self.update_employee_list(results)
+
+    def _show_leave_history_popup(self):
+        """แสดงหน้าต่างประวัติการลาของพนักงานที่เลือก"""
+        selection = self.employee_tree.selection()
+        if not selection:
+            messagebox.showwarning("เตือน", "กรุณาคลิกเลือกพนักงานในตารางก่อนครับ")
+            return
+        
+        # ดึงข้อมูลพนักงานที่เลือก
+        item = self.employee_tree.item(selection[0])
+        emp_id = item["values"][0]
+        emp_name = item["values"][1]
+        
+        # สร้างหน้าต่าง Popup
+        win = tk.Toplevel(self)
+        win.title(f"📜 ประวัติการลา - {emp_name} ({emp_id})")
+        win.geometry("700x450")
+        
+        # หัวข้อ
+        ttk.Label(win, text=f"ประวัติการลา: {emp_name}", font=("Segoe UI", 12, "bold")).pack(pady=10)
+        
+        # ตารางแสดงข้อมูล
+        cols = ("date", "type", "days", "reason")
+        tree = ttk.Treeview(win, columns=cols, show="headings", height=15)
+        
+        tree.heading("date", text="วันที่ลา")
+        tree.heading("type", text="ประเภท")
+        tree.heading("days", text="จำนวนวัน")
+        tree.heading("reason", text="เหตุผล")
+        
+        tree.column("date", width=100, anchor="center")
+        tree.column("type", width=120, anchor="center")
+        tree.column("days", width=80, anchor="center")
+        tree.column("reason", width=350, anchor="w")
+        
+        tree.pack(fill="both", expand=True, padx=10, pady=5)
+        
+        # ดึงข้อมูลจากฐานข้อมูลโดยตรง
+        try:
+            conn = hr_database.get_db_connection()
+            if conn:
+                with conn.cursor() as cursor:
+                    # ดึงข้อมูลการลา เรียงจากวันที่ล่าสุด
+                    cursor.execute("""
+                        SELECT leave_date, leave_type, num_days, reason 
+                        FROM employee_leave_records 
+                        WHERE emp_id = %s 
+                        ORDER BY leave_date DESC
+                    """, (str(emp_id),))
+                    records = cursor.fetchall()
+                    
+                    if records:
+                        for row in records:
+                            # แปลงวันที่เป็น พ.ศ.
+                            d = row[0]
+                            date_str = f"{d.day:02d}/{d.month:02d}/{d.year + 543}"
+                            
+                            tree.insert("", "end", values=(
+                                date_str,
+                                row[1], # leave_type
+                                row[2], # num_days
+                                row[3] or "-" # reason
+                            ))
+                    else:
+                        tree.insert("", "end", values=("-", "ไม่พบประวัติการลา", "-", "-"))
+                conn.close()
+        except Exception as e:
+            messagebox.showerror("Error", f"ไม่สามารถดึงข้อมูลได้: {e}")
+            
+        # ปุ่มปิด
+        ttk.Button(win, text="ปิดหน้าต่าง", command=win.destroy).pack(pady=10)
 
     def _clear_search(self):
         self.search_entry.delete(0, tk.END)
@@ -902,7 +976,7 @@ class EmployeeModule(ttk.Frame):
 
         ttk.Label(leave_frame, text="ประเภท:", font=("Segoe UI", 10)).grid(row=row, column=2, sticky="e", padx=(20, 10), pady=10)
         self.att_leave_type = ttk.Combobox(leave_frame, width=20, font=("Segoe UI", 10),
-                                           values=["ลาป่วย", "ลากิจ", "ลาพักร้อน", "ลาอื่นๆ"], state="readonly")
+                                           values=["ลาป่วย", "ลากิจ", "ลาพักร้อน", "ลาไม่รับค่าจ้าง", "ลาอื่นๆ"], state="readonly")   
         self.att_leave_type.grid(row=row, column=3, sticky="w", pady=10)
         
         row += 1
@@ -965,7 +1039,7 @@ class EmployeeModule(ttk.Frame):
                    width=20, style="Primary.TButton").grid(row=row, column=1, columnspan=3, sticky="e", pady=10)
 
         # --- กรอบสำหรับ "บันทึกใบเตือน" ---
-        warn_frame = ttk.LabelFrame(scroll_frame, text="  📜 บันทึกใบเตือน (ใบมีด)  ", padding=20)
+        warn_frame = ttk.LabelFrame(scroll_frame, text="  📜 บันทึกใบเตือน   ", padding=20)
         warn_frame.pack(fill="x", pady=(0, 15))
         
         row = 0

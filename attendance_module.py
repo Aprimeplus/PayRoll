@@ -1,8 +1,8 @@
 # (ไฟล์: attendance_module.py)
-# (เวอร์ชันอัปเกรด - รองรับ "ลารายชั่วโมง")
+# (เวอร์ชันอัปเกรด - รองรับ "ลารายชั่วโมง" และ "ลาไม่รับค่าจ้าง")
 
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog, simpledialog # <--- (1. เพิ่ม simpledialog)
+from tkinter import ttk, messagebox, filedialog, simpledialog 
 from custom_widgets import DateDropdown 
 import hr_database
 from datetime import datetime, time, timedelta
@@ -91,7 +91,7 @@ class AttendanceModule(ttk.Frame):
         
         ttk.Label(header_frame, text="บันทึกข้อมูลสำหรับ:", font=("Segoe UI", 12)).pack(side="left")
         self.selected_emp_label = ttk.Label(header_frame, textvariable=self.selected_emp_name, 
-                                            font=("Segoe UI", 12, "bold"), foreground="#007bff")
+                                              font=("Segoe UI", 12, "bold"), foreground="#007bff")
         self.selected_emp_label.pack(side="left", padx=5)
         self.selected_emp_name.set("--- (ยังไม่ได้เลือกพนักงาน) ---") 
 
@@ -152,6 +152,10 @@ class AttendanceModule(ttk.Frame):
         self.att_leave_date = DateDropdown(leave_frame, font=("Segoe UI", 10))
         self.att_leave_date.grid(row=row, column=1, sticky="w", pady=10)
 
+        self.att_leave_date.day_var.trace_add("write", self._on_end_date_changed)
+        self.att_leave_date.month_var.trace_add("write", self._on_end_date_changed)
+        self.att_leave_date.year_var.trace_add("write", self._on_end_date_changed)
+
         # (เพิ่ม "ถึงวันที่")
         ttk.Label(leave_frame, text="ถึงวันที่:", font=("Segoe UI", 10)).grid(row=row, column=2, sticky="e", padx=(20, 10), pady=10)
         self.att_leave_date_end = DateDropdown(leave_frame, font=("Segoe UI", 10))
@@ -164,8 +168,12 @@ class AttendanceModule(ttk.Frame):
         
         row += 1
         ttk.Label(leave_frame, text="ประเภท:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=10)
+        
+        # --- [จุดแก้ไข] เพิ่ม "ลาไม่รับค่าจ้าง" ใน values ---
         self.att_leave_type = ttk.Combobox(leave_frame, width=20, font=("Segoe UI", 10),
-                                           values=["ลาป่วย", "ลากิจ", "ลาพักร้อน", "ลาอื่นๆ"], state="readonly")
+                                           values=["ลาป่วย", "ลากิจ", "ลาพักร้อน", "ลาไม่รับค่าจ้าง", "ลาอื่นๆ"], state="readonly")
+        # --------------------------------------------------
+        
         self.att_leave_type.grid(row=row, column=1, sticky="w", pady=10)
 
         
@@ -291,21 +299,16 @@ class AttendanceModule(ttk.Frame):
             self.att_leave_end_time.set("")
 
     def _on_end_date_changed(self, *args):
-        """(ใหม่) เมื่อมีการเปลี่ยนแปลง 'ถึงวันที่'"""
+        """(แก้ไข V2) ปลดล็อกให้เลือก 'ครึ่งวัน' หรือ 'ระบุเวลา' ได้เสมอ แม้จะลาหลายวัน"""
         try:
-            # (พยายามดึงวันที่สิ้นสุด)
-            end_date = self.att_leave_date_end.get_date()
-            if end_date:
-                # ถ้ามีวันที่สิ้นสุด (ลาแบบช่วง)
-                self.att_leave_duration_type.set("เต็มวัน (1.0)")
-                self.att_leave_duration_type.config(state="disabled")
-                self._toggle_leave_time_entries() # (สั่งซ่อนช่องกรอกเวลา)
-            else:
-                # ถ้าไม่มีวันที่สิ้นสุด (ลาวันเดียว)
-                self.att_leave_duration_type.config(state="normal")
+            # ไม่ว่าจะเลือกวันเดียวหรือหลายวัน ให้เปิดให้เลือก Duration ได้เสมอ
+            self.att_leave_duration_type.config(state="readonly")
+            
+            # เช็คเพิ่มเติม: ถ้าเลือกแบบ "ระบุเวลา" ให้โชว์ช่องเวลาด้วย
+            self._toggle_leave_time_entries()
+
         except Exception:
-            # ถ้าวันที่ยังเลือกไม่ครบ (เช่น เลือกแค่วัน แต่ยังไม่เลือกเดือน)
-            self.att_leave_duration_type.config(state="normal")
+            self.att_leave_duration_type.config(state="readonly")
 
     def _on_mousewheel(self, event, widget):
         try:
@@ -360,7 +363,7 @@ class AttendanceModule(ttk.Frame):
             
             self._clear_forms()
             self._load_attendance_report(emp_id) 
-            self._load_att_warning_doc_status()
+            self._load_att_warning_doc_status() 
             
         else:
              self.selected_emp_id.set("")
@@ -478,47 +481,81 @@ class AttendanceModule(ttk.Frame):
             messagebox.showwarning("ข้อมูลไม่ครบ", "กรุณาเลือก 'ประเภท' การลา")
             return
 
-        # --- 1. คำนวณจำนวนวันที่จะลา (Requested Days) ---
-        req_days = 0.0
-        if end_date: # กรณีลาเป็นช่วง
-            if end_date < start_date:
-                messagebox.showwarning("วันที่ผิดพลาด", "วันที่สิ้นสุด ต้องอยู่หลังวันที่เริ่มต้น")
-                return
-            req_days = float((end_date - start_date).days + 1) 
-        else: # กรณีลาวันเดียว
-            if duration_type == "เต็มวัน (1.0)": req_days = 1.0
-            elif duration_type == "ครึ่งวัน (0.5)": req_days = 0.5
-            elif duration_type == "ระบุเวลา (ชม.)": req_days = 1.0 
+        # --- 1. คำนวณ "จำนวนวันต่อครั้ง" (Per Day Amount) ---
+        days_per_record = 1.0
+        l_start = None
+        l_end = None
 
-        # --- 2. ตรวจสอบโควตา (Logic ใหม่) ---
+        try:
+            if duration_type == "เต็มวัน (1.0)":
+                days_per_record = 1.0
+            
+            elif duration_type == "ครึ่งวัน (0.5)":
+                days_per_record = 0.5
+            
+            elif duration_type == "ระบุเวลา (ชม.)":
+                start_str = self.att_leave_start_time.get()
+                end_str = self.att_leave_end_time.get()
+                
+                if not start_str or not end_str:
+                    messagebox.showwarning("ข้อมูลไม่ครบ", "กรุณาระบุเวลา เริ่มต้น และ สิ้นสุด")
+                    return
+                
+                l_start = datetime.strptime(start_str, '%H:%M').time()
+                l_end = datetime.strptime(end_str, '%H:%M').time()
+                
+                if l_start >= l_end:
+                    messagebox.showwarning("เวลาผิดพลาด", "เวลาสิ้นสุด ต้องมากกว่าเวลาเริ่มต้น")
+                    return
+                
+                # คำนวณสัดส่วนตาม 8 ชม. งาน
+                dummy_date = datetime.today().date()
+                duration = datetime.combine(dummy_date, l_end) - datetime.combine(dummy_date, l_start)
+                hours_total = duration.total_seconds() / 3600
+                days_per_record = round(hours_total / 8.0, 4)
+
+        except Exception as e:
+            messagebox.showerror("ข้อมูลผิดพลาด", f"รูปแบบเวลาไม่ถูกต้อง: {e}")
+            return
+
+        # --- 2. คำนวณยอดรวมทั้งหมด (Total Days) เพื่อเช็คโควตา ---
+        total_req_days = days_per_record # กรณีวันเดียว
+        
+        if end_date and end_date >= start_date:
+            day_count = (end_date - start_date).days + 1
+            total_req_days = days_per_record * day_count
+        
+        # --- 3. ตรวจสอบโควตา ---
         current_year = start_date.year
-        is_pass, msg, remaining = hr_database.check_leave_quota_status(emp_id, current_year, leave_type, req_days)
+        is_pass, msg, remaining = hr_database.check_leave_quota_status(emp_id, current_year, leave_type, total_req_days)
         
         if not is_pass:
             if not messagebox.askyesno("โควตาหมด!", 
-                                     f"{msg}\n\nคุณต้องการบันทึกเป็น 'ลาโดยไม่รับค่าจ้าง (Leave without Pay)' แทนหรือไม่?"):
+                                       f"{msg}\n\nคุณต้องการบันทึกเป็น 'ลาโดยไม่รับค่าจ้าง (Leave without Pay)' แทนหรือไม่?"):
                 return
-            leave_type = f"{leave_type} (เกินสิทธิ์)"
+            leave_type = f"{leave_type} (เกินสิทธิ์)" # หรือเปลี่ยนเป็น "ลาไม่รับค่าจ้าง" ตาม Logic บริษัท
 
-        # --- 3. เริ่มบันทึก ---
+        # --- 4. เริ่มบันทึก (วนลูปตามช่วงวันที่เลือก) ---
         try:
-            if end_date: # แบบช่วง
-                holidays_set = set() # (ละไว้ฐานที่เข้าใจ หรือใส่ logic ดึงวันหยุดเพิ่ม)
+            if end_date and end_date >= start_date: # แบบช่วง (Range)
                 current_date = start_date
+                success_count = 0
                 while current_date <= end_date:
-                    if current_date.weekday() != 6: # ข้ามแค่วันอาทิตย์ (ตัวอย่าง)
-                        hr_database.add_employee_leave(emp_id, current_date, leave_type, 1.0, reason, None, None)
+                    # ข้ามวันอาทิตย์ (ตัวอย่าง: ถ้าบริษัทหยุดวันอาทิตย์)
+                    if current_date.weekday() != 6: 
+                        # บันทึกทีละวัน ด้วยยอด days_per_record (เช่น 0.5)
+                        hr_database.add_employee_leave(
+                            emp_id, current_date, leave_type, days_per_record, reason, l_start, l_end
+                        )
+                        success_count += 1
                     current_date += timedelta(days=1)
-                messagebox.showinfo("สำเร็จ", "บันทึกการลาแบบช่วงเรียบร้อย")
-
-            else: # แบบวันเดียว
-                num_days = req_days
-                l_start, l_end = None, None
-                if duration_type == "ระบุเวลา (ชม.)":
-                    # (คำนวณเวลา...)
-                    pass 
                 
-                success = hr_database.add_employee_leave(emp_id, start_date, leave_type, num_days, reason, l_start, l_end)
+                messagebox.showinfo("สำเร็จ", f"บันทึกการลาแบบช่วงเรียบร้อย ({success_count} วันทำงาน)")
+
+            else: # แบบวันเดียว (Single Day)
+                success = hr_database.add_employee_leave(
+                    emp_id, start_date, leave_type, days_per_record, reason, l_start, l_end
+                )
                 if success: messagebox.showinfo("สำเร็จ", "บันทึกข้อมูลการลาเรียบร้อยแล้ว")
             
             self._clear_forms()

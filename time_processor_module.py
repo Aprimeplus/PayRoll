@@ -708,8 +708,12 @@ class TimeProcessorModule(ttk.Frame):
             sheet.readonly_columns(columns=[0, 4, 5, 6, 7]) 
         
         # --- Dropdowns ---
-        leave_types = ["ลาป่วย", "ลากิจ", "ลาพักร้อน", "ลาอื่นๆ"]
-        status_options_base = ["วันทำงาน", "ขาดงาน", "มาสาย"] + [f"ลา ({t})" for t in leave_types]
+        leave_types = ["ลาป่วย", "ลากิจ", "ลาพักร้อน", "ลาคลอด", "ลาบวช", "ลาอื่นๆ", "ลาไม่รับค่าจ้าง"]
+        
+        status_options_base = ["ปกติ", "ขาดงาน", "มาสาย"]
+        for lt in leave_types:
+            status_options_base.append(f"{lt} (เต็มวัน)")  # เช่น ลากิจ (เต็มวัน)
+            status_options_base.append(f"{lt} (ครึ่งวัน)") # เช่น ลากิจ (ครึ่งวัน)
         approval_options = ["✅ อนุมัติ", "❌ ไม่อนุมัติ"]
 
         total_rows = sheet.get_total_rows()
@@ -821,9 +825,9 @@ class TimeProcessorModule(ttk.Frame):
         return leave_type
 
     def _save_details_from_popup(self, sheet, original_details_list, emp_id, popup_window, is_daily_emp=False):
-        """(ฉบับแก้ไข V8 - คำนวณ OT อัตโนมัติจากเวลาที่กรอกมือ)"""
+        """(ฉบับแก้ไข V9 - รองรับการเลือก ลาครึ่งวัน/เต็มวัน และคำนวณ OT)"""
         try:
-            if not messagebox.askyesno("ยืนยันการบันทึก", "ระบบจะคำนวณชั่วโมง OT ใหม่ตามเวลาที่คุณกรอก\nต้องการบันทึกใช่หรือไม่?", parent=popup_window):
+            if not messagebox.askyesno("ยืนยันการบันทึก", "ระบบจะบันทึกสถานะการลาและคำนวณ OT ใหม่\nต้องการบันทึกใช่หรือไม่?", parent=popup_window):
                 return 
             
             # 1. ดึงข้อมูล
@@ -834,7 +838,7 @@ class TimeProcessorModule(ttk.Frame):
                 headers = [
                     "date", "status", "scan_in", "scan_out", 
                     "work_hrs", "leave_hours", "actual_late_mins", "penalty_hrs",
-                    "ot_in", "ot_out", "ot_hrs", "ot_approved" # 12 Cols
+                    "ot_in", "ot_out", "ot_hrs", "ot_approved" 
                 ]
             else:
                 headers = [
@@ -876,38 +880,31 @@ class TimeProcessorModule(ttk.Frame):
                 if val_out_new == "None": val_out_new = ""
                 scan_out_changed = (val_out_old != val_out_new)
 
-                # C. OT (เฉพาะรายวัน) - คำนวณใหม่ที่นี่!
+                # C. OT (เฉพาะรายวัน)
                 ot_changed = False
                 new_calculated_ot_hours = 0.0
-                
                 val_ot_in_new = ""
                 val_ot_out_new = ""
                 val_approved_new = False
 
                 if is_daily_emp:
-                    # รับค่าเวลา OT จากหน้าจอ (ที่ User กรอกมา)
                     val_ot_in_new = new_row.get('ot_in', '')
                     if val_ot_in_new == "None": val_ot_in_new = ""
-                    
                     val_ot_out_new = new_row.get('ot_out', '')
                     if val_ot_out_new == "None": val_ot_out_new = ""
                     
-                    # ตรวจสอบว่ามีการเปลี่ยนแปลงเวลาหรือไม่
                     val_ot_in_old = str(original_row.get('ot_in') or "").strip()
                     val_ot_out_old = str(original_row.get('ot_out') or "").strip()
                     
-                    # เช็คสถานะอนุมัติ
                     val_appr_str = new_row.get('ot_approved', '')
                     val_approved_new = (val_appr_str == "✅ อนุมัติ")
                     val_approved_old = original_row.get('is_ot_approved', False)
                     
-                    # คำนวณชั่วโมง OT ใหม่ทันที!
                     if val_ot_in_new and val_ot_out_new:
                         new_calculated_ot_hours = self._calculate_time_diff(val_ot_in_new, val_ot_out_new)
                     else:
                         new_calculated_ot_hours = 0.0
                         
-                    # เปรียบเทียบกับค่าเดิม (Hours เดิม vs Hours ใหม่)
                     old_ot_hours = float(original_row.get('ot_hrs', 0))
                     
                     if (val_ot_in_new != val_ot_in_old) or \
@@ -921,23 +918,45 @@ class TimeProcessorModule(ttk.Frame):
                 
                 changes_detected += 1
                 
-                # --- เริ่มบันทึก --- (Logic เดิม + Logic OT ใหม่)
+                # --- เริ่มบันทึก ---
                 
-                # 1. Status & Leave (เหมือนเดิม)
-                new_status_is_leave = "ลา" in val_status_new and "(" in val_status_new
-                original_status_is_leave = "ลา" in val_status_old and "(" in val_status_old
+                # 1. Status & Leave (Logic ใหม่: รองรับ เต็มวัน/ครึ่งวัน)
+                # -----------------------------------------------------
+                def is_leave_status(s):
+                    # เช็คว่าเป็นสถานะการลาหรือไม่ (ที่มีวงเล็บ)
+                    return "ลา" in s and ("(" in s or "เต็มวัน" in s or "ครึ่งวัน" in s)
 
                 if status_changed:
-                    if (not new_status_is_leave) and original_status_is_leave:
+                    # กรณี A: เปลี่ยนจาก "ลา" ไปเป็น "ปกติ/ขาด" -> ต้องลบใบลาทิ้ง
+                    if is_leave_status(val_status_old) and not is_leave_status(val_status_new):
                         hr_database.delete_leave_record_on_date(emp_id, date_obj)
-                    elif new_status_is_leave:
-                        leave_type = self._parse_leave_type(val_status_new)
+                        
+                    # กรณี B: เลือกสถานะเป็น "ลา..." -> บันทึกใบลาลง DB
+                    elif is_leave_status(val_status_new):
+                        leave_type = ""
+                        num_days = 1.0 # ค่าเริ่มต้น
+                        
+                        # แกะข้อความจาก Dropdown เช่น "ลากิจ (ครึ่งวัน)"
+                        if "(ครึ่งวัน)" in val_status_new:
+                            num_days = 0.5
+                            leave_type = val_status_new.replace(" (ครึ่งวัน)", "").strip()
+                        elif "(เต็มวัน)" in val_status_new:
+                            num_days = 1.0
+                            leave_type = val_status_new.replace(" (เต็มวัน)", "").strip()
+                        elif "(" in val_status_new:
+                            # กรณี Fallback (เช่นรูปแบบเก่า)
+                            leave_type = self._parse_leave_type(val_status_new)
+                        
                         if leave_type:
+                            # ถ้าไม่ได้แก้เวลาเข้า-ออก ให้ลบ Log สแกนทิ้ง (ระบบจะได้ยึดใบลาเป็นหลัก)
                             if not scan_in_changed and not scan_out_changed:
                                 hr_database.delete_scan_logs_on_date(emp_id, date_obj)
-                            hr_database.add_employee_leave(emp_id, date_obj, leave_type, 1.0, "แก้ไขผ่าน Pop-up")
+                                
+                            # บันทึกลงฐานข้อมูล (ส่ง 0.5 หรือ 1.0 ไป)
+                            hr_database.add_employee_leave(emp_id, date_obj, leave_type, num_days, "แก้ไขผ่าน Pop-up (Manual)")
+                # -----------------------------------------------------
 
-                # 2. Scan Time (เหมือนเดิม)
+                # 2. Scan Time
                 if scan_in_changed or scan_out_changed:
                     hr_database.delete_scan_logs_on_date(emp_id, date_obj)
                     if val_in_new:
@@ -953,19 +972,17 @@ class TimeProcessorModule(ttk.Frame):
                             hr_database.add_manual_scan_log(emp_id, dt)
                         except ValueError: pass
 
-                # 3. OT (Logic ใหม่!)
+                # 3. OT
                 if is_daily_emp and ot_changed:
-                    # บันทึกเวลา + ชั่วโมง OT ที่คำนวณใหม่ ลง DB
                     if hasattr(hr_database, 'update_employee_ot_times'):
                          hr_database.update_employee_ot_times(emp_id, date_obj, val_ot_in_new, val_ot_out_new, new_calculated_ot_hours)
-                    
                     if hasattr(hr_database, 'update_ot_approval_status'):
                          hr_database.update_ot_approval_status(emp_id, date_obj, val_approved_new)
 
             if changes_detected > 0:
-                messagebox.showinfo("สำเร็จ", f"บันทึกและคำนวณ OT ใหม่เรียบร้อย ({changes_detected} รายการ)", parent=popup_window)
+                messagebox.showinfo("สำเร็จ", f"บันทึกข้อมูลเรียบร้อย ({changes_detected} รายการ)", parent=popup_window)
                 popup_window.destroy()
-                self._run_processing() # รีเฟรชหน้าจอ
+                self._run_processing() # รีเฟรชหน้าจอหลัก
             else:
                 messagebox.showinfo("ไม่เปลี่ยนแปลง", "ไม่พบการเปลี่ยนแปลงข้อมูล", parent=popup_window)
 
