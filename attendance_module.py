@@ -32,6 +32,83 @@ class AttendanceModule(ttk.Frame):
         self._build_form_panel()
         self._load_employee_list()
 
+    def _open_history_window(self):
+        """เปิดหน้าต่างจัดการประวัติการลา พร้อมตัวกรองรายคน"""
+        win = tk.Toplevel(self)
+        win.title("📜 จัดการประวัติการลา")
+        win.geometry("1000x650")
+        win.transient(self)
+        win.grab_set()
+
+        # --- ส่วนตัวกรอง (Filter) ---
+        filter_frame = ttk.LabelFrame(win, text=" ตัวกรองข้อมูล ", padding=10)
+        filter_frame.pack(fill="x", padx=10, pady=5)
+
+        ttk.Label(filter_frame, text="เลือกพนักงาน:").pack(side="left", padx=5)
+        
+        # ดึงรายชื่อพนักงานทั้งหมด
+        emps = hr_database.load_all_employees()
+        emp_list = ["--- แสดงทั้งหมด ---"] + [f"{e['id']} - {e['fname']} {e['lname']}" for e in emps]
+        
+        self.history_emp_filter = ttk.Combobox(filter_frame, width=40, state="readonly", values=emp_list)
+        self.history_emp_filter.pack(side="left", padx=5)
+        self.history_emp_filter.set("--- แสดงทั้งหมด ---")
+
+        # --- ตารางข้อมูล ---
+        tree_frame = ttk.Frame(win, padding=10)
+        tree_frame.pack(fill="both", expand=True)
+        
+        cols = ("id", "emp_id", "name", "date", "type", "days", "reason")
+        self.history_tree = ttk.Treeview(tree_frame, columns=cols, show="headings")
+        
+        headers = ["ID", "รหัส", "ชื่อ-นามสกุล", "วันที่ลา", "ประเภท", "จำนวนวัน", "หมายเหตุ"]
+        for col, head in zip(cols, headers):
+            self.history_tree.heading(col, text=head)
+        
+        self.history_tree.column("id", width=50)
+        self.history_tree.column("emp_id", width=80)
+        self.history_tree.column("days", width=70)
+        self.history_tree.pack(side="left", fill="both", expand=True)
+
+        def load_data(event=None):
+            for i in self.history_tree.get_children(): self.history_tree.delete(i)
+            
+            selected = self.history_emp_filter.get()
+            target_id = None
+            if selected != "--- แสดงทั้งหมด ---":
+                target_id = selected.split(" - ")[0]
+            
+            # ดึงประวัติจากฐานข้อมูล
+            history = hr_database.get_employee_leave_history(target_id)
+            for item in history:
+                self.history_tree.insert("", "end", values=(
+                    item['leave_id'], item['emp_id'], f"{item['fname']} {item['lname']}",
+                    hr_database.date_to_thai_str(item['leave_date']),
+                    item['leave_type'], item['num_days'], item['reason']
+                ))
+
+        self.history_emp_filter.bind("<<ComboboxSelected>>", load_data)
+        load_data()
+
+        # --- ปุ่มควบคุมด้านล่าง ---
+        btn_frame = ttk.Frame(win, padding=10)
+        btn_frame.pack(fill="x")
+        
+        def delete_entry():
+            selected = self.history_tree.selection()
+            if not selected:
+                messagebox.showwarning("เตือน", "กรุณาเลือกรายการที่ต้องการลบ")
+                return
+            
+            vals = self.history_tree.item(selected[0])['values']
+            if messagebox.askyesno("ยืนยัน", f"ต้องการลบประวัติของ {vals[2]} วันที่ {vals[3]} ใช่หรือไม่?"):
+                if hr_database.delete_leave_record_by_id(vals[0]):
+                    messagebox.showinfo("สำเร็จ", "ลบข้อมูลเรียบร้อยแล้ว")
+                    load_data()
+
+        ttk.Button(btn_frame, text="❌ ลบรายการที่เลือก", command=delete_entry).pack(side="right", padx=10)
+        ttk.Button(btn_frame, text="🔄 รีเฟรช", command=load_data).pack(side="right")
+
     def _create_main_layout(self):
         """สร้างโครงสร้างหลักแบบ 2 คอลัมน์ (Master-Detail)"""
         
@@ -84,7 +161,7 @@ class AttendanceModule(ttk.Frame):
         self.employee_tree.bind("<<TreeviewSelect>>", self._on_employee_selected)
 
     def _build_form_panel(self):
-        """สร้าง UI ด้านขวา (ฟอร์มกรอกข้อมูล)"""
+        """สร้าง UI ด้านขวา (ฟอร์มกรอกข้อมูล) - แก้ไขปุ่มซ้ำและเพิ่มระบบจัดการประวัติ"""
         
         header_frame = ttk.Frame(self.form_panel)
         header_frame.pack(fill="x", pady=(5, 10))
@@ -103,6 +180,7 @@ class AttendanceModule(ttk.Frame):
         canvas.create_window((0, 0), window=self.scroll_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
         
+        # --- 1. กรอบสรุปประวัติประจำปี ---
         report_frame = ttk.LabelFrame(self.scroll_frame, text="  📊 สรุปประวัติ (Report)  ", padding=20)
         report_frame.pack(fill="x", pady=(0, 15))
         
@@ -141,13 +219,11 @@ class AttendanceModule(ttk.Frame):
         self.report_warn_val = ttk.Label(report_frame, text="- ครั้ง", font=("Segoe UI", 10, "bold"), width=12, anchor="w")
         self.report_warn_val.grid(row=4, column=3, sticky="w", pady=5)
         
-        
-        # --- (!!! เริ่มแก้ไข UI การลา ตรงนี้ !!!) ---
-        leave_frame = ttk.LabelFrame(self.scroll_frame, text="  📝 บันทึกการลา (ป่วย/กิจ/พักร้อน)  ", padding=20)
+        # --- 2. กรอบบันทึกการลา ---
+        leave_frame = ttk.LabelFrame(self.scroll_frame, text="  📝 บันทึกการลา  ", padding=20)
         leave_frame.pack(fill="x", pady=(10, 15))
         
         row = 0
-        # (แก้ไข Label)
         ttk.Label(leave_frame, text="ลาตั้งแต่วันที่:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=10)
         self.att_leave_date = DateDropdown(leave_frame, font=("Segoe UI", 10))
         self.att_leave_date.grid(row=row, column=1, sticky="w", pady=10)
@@ -156,26 +232,19 @@ class AttendanceModule(ttk.Frame):
         self.att_leave_date.month_var.trace_add("write", self._on_end_date_changed)
         self.att_leave_date.year_var.trace_add("write", self._on_end_date_changed)
 
-        # (เพิ่ม "ถึงวันที่")
         ttk.Label(leave_frame, text="ถึงวันที่:", font=("Segoe UI", 10)).grid(row=row, column=2, sticky="e", padx=(20, 10), pady=10)
         self.att_leave_date_end = DateDropdown(leave_frame, font=("Segoe UI", 10))
         self.att_leave_date_end.grid(row=row, column=3, sticky="w", pady=10)
         
-        # (เพิ่ม Trace เพื่อ ล็อก/ปลดล็อก ช่อง "ระยะเวลา")
         self.att_leave_date_end.day_var.trace_add("write", self._on_end_date_changed)
         self.att_leave_date_end.month_var.trace_add("write", self._on_end_date_changed)
         self.att_leave_date_end.year_var.trace_add("write", self._on_end_date_changed)
         
         row += 1
         ttk.Label(leave_frame, text="ประเภท:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=10)
-        
-        # --- [จุดแก้ไข] เพิ่ม "ลาไม่รับค่าจ้าง" ใน values ---
         self.att_leave_type = ttk.Combobox(leave_frame, width=20, font=("Segoe UI", 10),
                                            values=["ลาป่วย", "ลากิจ", "ลาพักร้อน", "ลาไม่รับค่าจ้าง", "ลาอื่นๆ"], state="readonly")
-        # --------------------------------------------------
-        
         self.att_leave_type.grid(row=row, column=1, sticky="w", pady=10)
-
         
         ttk.Label(leave_frame, text="ระยะเวลา:", font=("Segoe UI", 10)).grid(row=row, column=2, sticky="e", padx=(20, 10), pady=10)
         self.att_leave_duration_type = ttk.Combobox(leave_frame, width=18, font=("Segoe UI", 10),
@@ -185,7 +254,6 @@ class AttendanceModule(ttk.Frame):
         self.att_leave_duration_type.set("เต็มวัน (1.0)")
         self.att_leave_duration_type.bind("<<ComboboxSelected>>", self._toggle_leave_time_entries)
 
-        # (Frame ซ่อนเวลา - เหมือนเดิม)
         self.att_leave_time_frame = ttk.Frame(leave_frame)
         self.att_leave_time_frame.grid(row=row+1, column=3, sticky="w", pady=0, padx=0)
         
@@ -198,22 +266,26 @@ class AttendanceModule(ttk.Frame):
         self.att_leave_end_time = ttk.Combobox(self.att_leave_time_frame, values=self.time_options, 
                                                width=6, font=("Segoe UI", 10))
         self.att_leave_end_time.pack(side="left", padx=5)
+        self.att_leave_time_frame.grid_remove() 
         
-        self.att_leave_time_frame.grid_remove() # (ซ่อนไว้ก่อน)
-        
-        row += 2 # (ขยับลงมา 2 แถว)
+        row += 2 
         ttk.Label(leave_frame, text="เหตุผล:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="ne", padx=(0, 10), pady=10)
         self.att_leave_reason = tk.Text(leave_frame, width=50, height=3, font=("Segoe UI", 10))
         self.att_leave_reason.grid(row=row, column=1, columnspan=3, sticky="w", pady=10)
         
         row += 1
-        self.save_leave_btn = ttk.Button(leave_frame, text="💾 บันทึกการลา", command=self._save_leave_record, 
-                   width=20, style="Primary.TButton", state="disabled") 
-        self.save_leave_btn.grid(row=row, column=1, columnspan=3, sticky="e", pady=10)
-        # --- (จบส่วนแก้ไข UI การลา) ---
+        # ✅ รวมกลุ่มปุ่มจัดการการลาไว้ที่เดียว
+        leave_action_btn_frame = ttk.Frame(leave_frame)
+        leave_action_btn_frame.grid(row=row, column=1, columnspan=3, sticky="e", pady=10)
 
+        self.save_leave_btn = ttk.Button(leave_action_btn_frame, text="💾 บันทึกการลา", command=self._save_leave_record, 
+                                       width=15, style="Primary.TButton", state="disabled") 
+        self.save_leave_btn.pack(side="right", padx=5)
 
-        # --- กรอบสำหรับ "บันทึกการมาสาย" ---
+        ttk.Button(leave_action_btn_frame, text="📜 ดูประวัติ/แก้ไข/ลบ", 
+                   command=self._open_history_window, width=18).pack(side="right", padx=5)
+
+        # --- 3. กรอบบันทึกการมาสาย ---
         late_frame = ttk.LabelFrame(self.scroll_frame, text="  🏃 บันทึกการมาสาย  ", padding=20)
         late_frame.pack(fill="x", pady=(0, 15))
         
@@ -230,10 +302,10 @@ class AttendanceModule(ttk.Frame):
         self.att_late_reason.grid(row=row, column=1, columnspan=3, sticky="w", pady=10)
         row += 1
         self.save_late_btn = ttk.Button(late_frame, text="💾 บันทึกการมาสาย", command=self._save_late_record, 
-                   width=20, style="Primary.TButton", state="disabled")
+                                   width=20, style="Primary.TButton", state="disabled")
         self.save_late_btn.grid(row=row, column=1, columnspan=3, sticky="e", pady=10)
 
-        # --- กรอบสำหรับ "บันทึกใบเตือน" ---
+        # --- 4. กรอบบันทึกใบเตือน ---
         warn_frame = ttk.LabelFrame(self.scroll_frame, text="  📜 หนังสือเตือน  ", padding=20)
         warn_frame.pack(fill="x", pady=(0, 15))
         
@@ -278,7 +350,7 @@ class AttendanceModule(ttk.Frame):
         self.att_warn_delete_btn.pack(side="left", padx=5)
         row += 1
         self.save_warn_btn = ttk.Button(warn_frame, text="💾 บันทึกใบเตือน", command=self._save_warning_record, 
-                   width=20, style="Primary.TButton", state="disabled")
+                                   width=20, style="Primary.TButton", state="disabled")
         self.save_warn_btn.grid(row=row, column=1, columnspan=3, sticky="e", pady=10)
 
         canvas.pack(side="left", fill="both", expand=True, padx=(0, 5))
@@ -730,3 +802,66 @@ class AttendanceModule(ttk.Frame):
 
     def _load_employee_dropdown(self):
         self._load_employee_list()
+
+
+# เพิ่มใน attendance_module.py
+
+class AttendanceHistoryWindow(tk.Toplevel):
+    def __init__(self, parent, db_callback):
+        super().__init__(parent)
+        self.title("📜 จัดการประวัติการลา/เวลาทำงาน")
+        self.geometry("900x500")
+        self.db_callback = db_callback # สำหรับส่งค่ากลับไปแก้ไขที่หน้าหลัก
+        
+        self._create_widgets()
+        self._load_data()
+
+    def _create_widgets(self):
+        # ส่วน Filter
+        filter_frame = ttk.Frame(self, padding=10)
+        filter_frame.pack(fill="x")
+        
+        ttk.Label(filter_frame, text="ค้นหาประวัติการลาทั้งหมด").pack(side="left")
+        ttk.Button(filter_frame, text="🔄 รีเฟรช", command=self._load_data).pack(side="right")
+
+        # ตารางแสดงข้อมูล
+        columns = ("id", "emp_id", "name", "date", "type", "days", "reason")
+        self.tree = ttk.Treeview(self, columns=columns, show="headings")
+        
+        self.tree.heading("id", text="ID")
+        self.tree.heading("emp_id", text="รหัสพนักงาน")
+        self.tree.heading("name", text="ชื่อ-สกุล")
+        self.tree.heading("date", text="วันที่ลา")
+        self.tree.heading("type", text="ประเภท")
+        self.tree.heading("days", text="จำนวนวัน")
+        
+        self.tree.column("id", width=50)
+        self.tree.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # ปุ่มจัดการ
+        btn_frame = ttk.Frame(self, padding=10)
+        btn_frame.pack(fill="x")
+        
+        ttk.Button(btn_frame, text="❌ ลบรายการที่เลือก", command=self._delete_item).pack(side="right", padx=5)
+        ttk.Label(self, text="💡 ดับเบิลคลิกเพื่อแก้ไขรายการ (ฟีเจอร์นี้จะส่งข้อมูลกลับไปหน้าหลัก)", foreground="gray").pack(pady=5)
+
+    def _load_data(self):
+        # ล้างตาราง
+        for i in self.tree.get_children(): self.tree.delete(i)
+        # ดึงข้อมูลจาก DB
+        history = hr_database.get_employee_leave_history()
+        for item in history:
+            self.tree.insert("", "end", values=(
+                item['leave_id'], item['emp_id'], f"{item['fname']} {item['lname']}",
+                item['leave_date'], item['leave_type'], item['num_days'], item['reason']
+            ))
+
+    def _delete_item(self):
+        selected = self.tree.selection()
+        if not selected: return
+        
+        leave_id = self.tree.item(selected[0])['values'][0]
+        if messagebox.askyesno("ยืนยัน", "คุณต้องการลบรายการลานี้ใช่หรือไม่?"):
+            if hr_database.delete_leave_record(leave_id):
+                messagebox.showinfo("สำเร็จ", "ลบข้อมูลเรียบร้อยแล้ว")
+                self._load_data()

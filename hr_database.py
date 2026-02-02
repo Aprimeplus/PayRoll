@@ -3795,3 +3795,42 @@ def delete_scan_logs_range(start_date, end_date):
         return False
     finally:
         if conn: conn.close()
+
+def get_employee_leave_history(emp_id=None):
+    """ดึงประวัติการลา (รองรับการกรองรายคน)"""
+    conn = get_db_connection() #
+    if not conn: return []
+    try:
+        with conn.cursor(cursor_factory=extras.DictCursor) as cursor:
+            query = """
+                SELECT l.leave_id, l.emp_id, e.fname, e.lname, l.leave_date, 
+                       l.leave_type, l.num_days, l.reason
+                FROM employee_leave_records l
+                JOIN employees e ON l.emp_id = e.emp_id
+                WHERE 1=1
+            """
+            params = []
+            if emp_id:
+                query += " AND l.emp_id = %s"
+                params.append(str(emp_id))
+            
+            query += " ORDER BY l.leave_date DESC"
+            cursor.execute(query, params)
+            return [dict(row) for row in cursor.fetchall()]
+    finally:
+        conn.close()
+
+def delete_leave_record_by_id(leave_id):
+    """ลบรายการลาโดยใช้ leave_id"""
+    conn = get_db_connection()
+    if not conn: return False
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM employee_leave_records WHERE leave_id = %s", (leave_id,))
+            conn.commit()
+            return True
+    except Exception as e:
+        print(f"Error deleting leave record: {e}")
+        return False
+    finally:
+        conn.close()

@@ -2,7 +2,7 @@
 ; สร้างโดย Gemini AI
 
 #define MyAppName "APLUS Smart HR & Payroll"
-#define MyAppVersion "40.0 Beta"
+#define MyAppVersion "40.1 Beta"
 #define MyAppPublisher "APLUS Com"
 #define MyAppExeName "APLUS_HR_Payroll.exe"
 #define MyIcon "company_logo.png" 
@@ -21,7 +21,7 @@ DirExistsWarning=no
 
 ; --- การตั้งค่าไฟล์ Output (ตัวติดตั้งที่จะได้) ---
 OutputDir=C:\Users\Nitro V15\Desktop\PayRoll\Output
-OutputBaseFilename=APLUS_HR_Setup_v40.0 beta
+OutputBaseFilename=APLUS_HR_Setup_v40.1 beta
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
