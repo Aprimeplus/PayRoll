@@ -1031,10 +1031,8 @@ class PayrollModule(ttk.Frame):
 
     def _run_payroll_calculation(self):
         """
-        ฟังก์ชันหลักคำนวณเงินเดือน (Main Payroll Engine) - ฉบับแก้ไข V18.0 (Fix Deduction Calculation)
-        - แก้ไขสูตรหักเงินมาสาย/ขาดงาน ให้หาร 30 วัน เสมอ (ตามกฎหมายแรงงาน)
-        - สูตร: (เงินเดือน / 30 / 8) * ชั่วโมงที่หายไป
-        - ใช้ค่า SSO จาก Database เพื่อความถูกต้อง
+        ฟังก์ชันหลักคำนวณเงินเดือน - ฉบับแก้ไข V18.3 (Fix PDF Other Income Sum)
+        - รวมยอด สวัสดิการ + ค่าเที่ยว + อื่นๆ เข้าด้วยกันเพื่อแสดงใน PDF
         """
         # --- 1. ตรวจสอบวันที่และการตั้งค่าเบื้องต้น ---
         try:
@@ -1043,23 +1041,15 @@ class PayrollModule(ttk.Frame):
             if not start_date or not end_date: 
                 messagebox.showwarning("แจ้งเตือน", "กรุณาเลือกวันที่ให้ครบ")
                 return
-            
             current_month = start_date.month
             current_year = start_date.year 
-        except: 
-            return
+        except: return
 
-        # --- กรองรายชื่อ (ตัดเส้นแบ่งออก) ---
         all_items = self.input_tree.get_children()
-        employee_ids = []
-        
-        for item_iid in all_items:
-            tags = self.input_tree.item(item_iid, "tags")
-            if 'separator' in tags: continue
-            employee_ids.append(item_iid)
+        employee_ids = [iid for iid in all_items if 'separator' not in self.input_tree.item(iid, "tags")]
 
         if not employee_ids:
-            messagebox.showwarning("แจ้งเตือน", "ไม่พบรายชื่อพนักงานที่จะคำนวณ (กรุณาโหลดรายชื่อก่อน)")
+            messagebox.showwarning("แจ้งเตือน", "ไม่พบรายชื่อพนักงานที่จะคำนวณ")
             return
 
         # --- 2. โหลดค่า Config ---
@@ -1068,7 +1058,7 @@ class PayrollModule(ttk.Frame):
             taxable_map = { item['name']: item['is_taxable'] for item in allowance_settings }
         except: taxable_map = {} 
         
-        # --- 3. เริ่ม Loop คำนวณทีละคน ---
+        # --- 3. เริ่ม Loop คำนวณ ---
         self.last_payroll_results = []
         sheet_data = []
         
@@ -1083,58 +1073,24 @@ class PayrollModule(ttk.Frame):
 
         for emp_id in employee_ids:
             user_in = self.payroll_inputs.get(emp_id, {})
-            
-            # === เรียกคำนวณจาก Database ===
             res = hr_database.calculate_payroll_for_employee(emp_id, start_date, end_date, user_in)
             
             if res:
+                # ข้อมูลพนักงาน
                 emp_info = hr_database.load_single_employee(emp_id)
                 emp_name = self.input_tree.item(emp_id, "values")[1]
                 res['name'] = emp_name
                 
-                is_resigned = False
-                if emp_info and emp_info.get('status') in ['พ้นสภาพพนักงาน', 'ลาออก']:
-                     is_resigned = True
+                if emp_info:
+                    res['position'] = emp_info.get('position', '-')
+                    res['department'] = emp_info.get('department', '-')
+                    res['bank_account'] = emp_info.get('bank_account', '-')
+                else:
+                    res['position'] = '-'; res['department'] = '-'; res['bank_account'] = '-'
 
-                # =========================================================
-                # 🔴 แก้ไขสูตรหักเงินมาสาย/ขาดงาน (Recalculate Late Deduct)
-                # =========================================================
-                # เพื่อความชัวร์ เราจะคำนวณยอดหักใหม่ที่นี่เลย โดยใช้สูตรหาร 30
-                try:
-                    base_salary = float(res.get('base_salary', 0) or 0)
-                    
-                    # ดึงชั่วโมงที่สาย/ขาด (รวมกัน)
-                    # หมายเหตุ: ใน hr_database อาจจะส่งมาเป็น minutes หรือ amount แล้วแต่ version
-                    # แต่เพื่อให้ชัวร์ เราควรดึง "นาที" หรือ "ชั่วโมง" ที่หายไปมาคำนวณใหม่
-                    
-                    # ถ้า hr_database ส่ง total_late_mins มาให้ (ต้องดูว่า return อะไรมาบ้าง)
-                    # สมมติว่า res['late_deduct'] คือยอดเงินที่คำนวณมาผิด เราจะแก้ใหม่
-                    
-                    # 1. หา Hourly Rate ที่ถูกต้อง (หาร 30 วัน / 8 ชม.)
-                    hourly_rate = (base_salary / 30) / 8
-                    
-                    # 2. หาจำนวนชั่วโมงที่ต้องหัก (ย้อนกลับจากยอดเดิม หรือดึงใหม่ถ้ามี)
-                    # สมมติว่า hr_database คำนวณมาเป็น 225 บาท และเรารู้ว่ามันผิด
-                    # แต่เราไม่รู้จำนวนชั่วโมงที่แน่นอนจาก res ตรงนี้ (เพราะ res มีแต่ยอดเงิน)
-                    
-                    # ดังนั้น... วิธีที่ดีที่สุดคือต้องไปแก้ที่ต้นตอใน hr_database.calculate_payroll_for_employee
-                    # แต่ถ้าจะแก้ที่นี่ (ปลายเหตุ) เราต้องรู้ "จำนวนนาทีสาย"
-                    
-                    # (ถ้า hr_database ไม่ส่งนาทีสายมา เราจะแก้ไม่ได้แม่นยำครับ)
-                    # แต่สมมติว่า hr_database ฉบับล่าสุดส่ง 'total_late_mins' หรืออะไรทำนองนี้มาด้วย
-                    
-                    # *ทางแก้ที่ถูกต้องที่สุดคือไปแก้ hr_database.py ครับ*
-                    # แต่ถ้าคุณยืนยันจะแก้ตรงนี้ ผมจะใส่สูตรคำนวณทับไปเลย
-                    
-                    # สมมติว่า hr_database คำนวณโดยใช้ (salary/days_work/8) * hours
-                    # เราจะลองแปลงกลับไม่ได้ง่ายๆ ถ้า days_work ไม่คงที่
-                    
-                    pass # (ข้ามไปแก้ที่ hr_database จะดีกว่าครับ แต่เดี๋ยวผมแก้ hr_database ให้ด้วยในข้อความถัดไปถ้าต้องการ)
-                    
-                except: pass
-                # =========================================================
+                is_resigned = (emp_info and emp_info.get('status') in ['พ้นสภาพพนักงาน', 'ลาออก'])
 
-                # คำนวณสวัสดิการ
+                # คำนวณสวัสดิการ (Welfare)
                 welfare_taxable_sum = 0.0
                 welfare_nontaxable_sum = 0.0
                 if emp_info:
@@ -1147,10 +1103,8 @@ class PayrollModule(ttk.Frame):
                                 amt = float(amt_str or 0)
                                 if amt > 0:
                                     w_name = w_options[idx]
-                                    if taxable_map.get(w_name, True):
-                                        welfare_taxable_sum += amt
-                                    else:
-                                        welfare_nontaxable_sum += amt
+                                    if taxable_map.get(w_name, True): welfare_taxable_sum += amt
+                                    else: welfare_nontaxable_sum += amt
                             except: pass
 
                 # คำนวณภาษี
@@ -1163,21 +1117,12 @@ class PayrollModule(ttk.Frame):
                 ytd_income, ytd_tax, ytd_sso = hr_database.get_ytd_summary(emp_id, current_year, current_month)
                 
                 pnd1_calc = self._calculate_smart_tax(
-                    current_income=income_for_tax,
-                    current_sso=res['sso'],
-                    current_pfund=res['provident_fund'],
-                    ytd_income=ytd_income,
-                    ytd_tax_paid=ytd_tax,
-                    ytd_sso=ytd_sso,
-                    ytd_pfund=0, 
-                    month_idx=current_month,
-                    is_resigned=is_resigned,
-                    other_allowances=0 
+                    current_income=income_for_tax, current_sso=res['sso'], current_pfund=res['provident_fund'],
+                    ytd_income=ytd_income, ytd_tax_paid=ytd_tax, ytd_sso=ytd_sso, ytd_pfund=0, 
+                    month_idx=current_month, is_resigned=is_resigned, other_allowances=0 
                 )
                 pnd3_calc = res['commission'] * 0.03
-                res['pnd1'] = pnd1_calc
-                res['pnd3'] = pnd3_calc
-                res['tax'] = pnd1_calc + pnd3_calc
+                res['pnd1'] = pnd1_calc; res['pnd3'] = pnd3_calc; res['tax'] = pnd1_calc + pnd3_calc
 
                 # สรุปยอดรวม
                 res['total_income'] = (
@@ -1189,10 +1134,19 @@ class PayrollModule(ttk.Frame):
                     res['loan'] + res['late_deduct'] + res['other_deduct']
                 )
                 res['net_salary'] = res['total_income'] - res['total_deduct']
+
+                # --- [แก้ไข] รวมยอด "อื่นๆ" สำหรับแสดงใน PDF (Other + Welfare + Driving) ---
+                res['pdf_other_income'] = (
+                    res['other_income'] + 
+                    welfare_taxable_sum + 
+                    welfare_nontaxable_sum + 
+                    res.get('driving_allowance', 0)
+                )
+                # -------------------------------------------------------------------
                 
                 self.last_payroll_results.append(res)
                 
-                # สะสมยอดรวม
+                # สะสมยอดรวม (สำหรับ Sheet)
                 total_sum['base_salary'] += res['base_salary']
                 total_sum['position'] += res['position_allowance']
                 total_sum['ot'] += res['ot']
@@ -1209,28 +1163,25 @@ class PayrollModule(ttk.Frame):
                 total_sum['total_deduct'] += res['total_deduct']
                 total_sum['net_salary'] += res['net_salary']
 
-                # ข้อมูลลงตาราง
-                display_other = (
-                    res['other_income'] + welfare_taxable_sum + 
-                    welfare_nontaxable_sum + res.get('driving_allowance', 0)
-                )
+                # เตรียมข้อมูลลงตาราง
+                display_other_sheet = (res['other_income'] + welfare_taxable_sum + welfare_nontaxable_sum)
                 
                 row_data = [
                     emp_id, emp_name,
                     f"{res['base_salary']:,.2f}", f"{res['position_allowance']:,.2f}",
                     f"{res['ot']:,.2f}", f"{res['commission']:,.2f}", 
                     f"{res.get('incentive',0):,.2f}", f"{res.get('diligence',0):,.2f}",
-                    f"{res['bonus']:,.2f}", f"{display_other:,.2f}", 
-                    f"{res.get('driving_allowance',0):,.2f}",
+                    f"{res['bonus']:,.2f}", f"{display_other_sheet:,.2f}", 
+                    f"{res.get('driving_allowance',0):,.2f}", 
                     f"{res['total_income']:,.2f}", 
                     f"{res['sso']:,.2f}", f"{res['pnd1']:,.2f}", f"{res['pnd3']:,.2f}",
                     f"{res['provident_fund']:,.2f}", f"{res['loan']:,.2f}", 
                     f"{res['late_deduct']:,.2f}", f"{res['other_deduct']:,.2f}",
-                    f"{res['total_deduct']:,.2f}", f"{res['net_salary']:,.2f}"     
+                    f"{res['total_deduct']:,.2f}", f"{res['net_salary']:,.2f}"      
                 ]
                 sheet_data.append(row_data)
 
-        # --- 4. เพิ่มแถวสรุป ---
+        # แถวสรุป
         display_total_other = (total_sum['other_income'] + total_sum['welfare_taxable'] + total_sum['welfare_nontaxable'])
         summary_row = [
             "TOTAL", "รวมทั้งสิ้น",
@@ -1246,33 +1197,19 @@ class PayrollModule(ttk.Frame):
         ]
         sheet_data.append(summary_row)
 
-        # --- 5. อัปเดตหน้าจอ ---
-        headers = [
-            "รหัส", "ชื่อ-สกุล",
-            "เงินเดือน", "ค่าตำแหน่ง", "OT", "คอมมิชชั่น", "Incentive", "เบี้ยขยัน", "โบนัส", "อื่นๆ(รับ)", "ค่าเที่ยว",
-            "รวมรับ",
-            "ประกันสังคม", "ภ.ง.ด.1", "ภ.ง.ด.3", "กองทุนฯ", "เงินกู้", "มาสาย/ลา", "อื่นๆ(หัก)",
-            "รวมหัก",
-            "สุทธิ"
-        ]
+        headers = ["รหัส", "ชื่อ-สกุล", "เงินเดือน", "ค่าตำแหน่ง", "OT", "คอมมิชชั่น", "Incentive", "เบี้ยขยัน", "โบนัส", "อื่นๆ(รับ)", "ค่าเที่ยว", "รวมรับ", "ประกันสังคม", "ภ.ง.ด.1", "ภ.ง.ด.3", "กองทุนฯ", "เงินกู้", "มาสาย/ลา", "อื่นๆ(หัก)", "รวมหัก", "สุทธิ"]
         self.results_sheet.headers(headers) 
         self.results_sheet.set_sheet_data(sheet_data)
         
+        # Highlight สี
         self.results_sheet.highlight_columns(columns=list(range(2, 11)), bg="#e6f7ff", fg="black") 
         self.results_sheet.highlight_columns(columns=list(range(12, 19)), bg="#fff7e6", fg="black") 
         self.results_sheet.highlight_columns(columns=[20], bg="#ffffcc", fg="black") 
-        
-        if sheet_data:
-            last_row_idx = len(sheet_data) - 1
-            self.results_sheet.highlight_rows(rows=[last_row_idx], bg="#ccffcc", fg="black")
+        if sheet_data: self.results_sheet.highlight_rows(rows=[len(sheet_data)-1], bg="#ccffcc", fg="black")
 
-        self.export_btn.config(state="normal")
-        self.print_btn.config(state="normal")
-        self.pnd1_btn.config(state="normal")
-        self.pnd3_btn.config(state="normal")
-        self.save_db_btn.config(state="normal")
-        self.sso_btn.config(state="normal")
-        
+        self.export_btn.config(state="normal"); self.print_btn.config(state="normal"); self.pnd1_btn.config(state="normal")
+        self.pnd3_btn.config(state="normal"); self.save_db_btn.config(state="normal"); self.sso_btn.config(state="normal")
+        self.email_req_btn.config(state="normal")
         self.notebook.select(self.tab2)
         messagebox.showinfo("สำเร็จ", f"คำนวณเงินเดือนเรียบร้อยแล้ว\n(ใช้เรทประกันสังคมปี {current_year+543})")
 
@@ -1443,6 +1380,11 @@ class PayrollModule(ttk.Frame):
             messagebox.showerror("PDF Error", f"เกิดข้อผิดพลาดในการสร้าง PDF:\n{e}")
 
     def _generate_pdf(self, data_list, filepath, pay_date_str):
+        """
+        สร้างไฟล์ PDF สลิปเงินเดือน (ฉบับแก้ไข V18.4 Full Fixed)
+        - แก้ไข 1: เพิ่มการดึงข้อมูล Position/Department จาก DB หากข้อมูลขาดหาย
+        - แก้ไข 2: รวมยอด (อื่นๆ + สวัสดิการ + ค่าเที่ยว) ให้แสดงในช่อง 'เงินได้อื่นๆ' เพื่อให้ยอดรวมตรงเป๊ะ
+        """
         pdf = FPDF(orientation='P', unit='mm', format='A4')
         pdf.set_auto_page_break(auto=False)
         
@@ -1465,22 +1407,15 @@ class PayrollModule(ttk.Frame):
         if not os.path.exists(logo_path):
             logo_path = os.path.join(base_path, "company_logo.jpg")
 
-        pay_date = pay_date_str
-        try:
-            s_date = self.start_date_entry.get_date()
-            month_th = list(self.THAI_MONTHS.values())[s_date.month - 1]
-            period_str = f"{month_th} {s_date.year + 543}"
-        except:
-            period_str = "-"
-
+        # --- Helper: จัดรูปแบบเงิน ---
         def fmt_money(val):
             return f"{val:,.2f}" if isinstance(val, (int, float)) and val > 0 else "-"
 
-        # --- ฟังก์ชันวาดสลิป (Nested Function) ---
+        # --- ฟังก์ชันวาดแบบฟอร์ม (Nested Function) ---
         def draw_slip_form(current_data, start_y, copy_label):
-            # (รับ current_data เข้ามาเป็น argument เพื่อความชัวร์)
-            
-            # 1. Header Info
+            # ------------------------------------------------
+            # ส่วนหัว (Header)
+            # ------------------------------------------------
             if os.path.exists(logo_path):
                 pdf.image(logo_path, x=15, y=start_y + 5, w=20)
             
@@ -1491,7 +1426,9 @@ class PayrollModule(ttk.Frame):
             pdf.set_font("THSarabun", "B", 16)
             pdf.cell(0, 8, f"ใบจ่ายเงินเดือน (Pay Slip) {copy_label}", ln=True, align='C')
 
-            # 2. Employee Box
+            # ------------------------------------------------
+            # กรอบข้อมูลพนักงาน (Employee Box)
+            # ------------------------------------------------
             box_top = start_y + 22
             box_h = 16
             pdf.set_draw_color(0)
@@ -1503,57 +1440,80 @@ class PayrollModule(ttk.Frame):
             pdf.line(135, box_top, 135, box_top + 16)
 
             pdf.set_font("THSarabun", "", 14)
+            # แถวบน
             pdf.set_xy(10, box_top + 1); pdf.cell(30, 6, "  รหัสพนักงาน :", border=0)
             pdf.set_xy(40, box_top + 1); pdf.cell(65, 6, f"  {current_data.get('emp_id', '-')}", border=0)
+            
             pdf.set_xy(105, box_top + 1); pdf.cell(30, 6, "  ตำแหน่ง :", border=0)
+            # [FIXED] ใช้ข้อมูล Position ที่ดึงมาแล้ว
             pdf.set_xy(135, box_top + 1); pdf.cell(65, 6, f"  {current_data.get('position','-')}", border=0)
             
+            # แถวล่าง
             pdf.set_xy(10, box_top + 9); pdf.cell(30, 6, "  ชื่อ - นามสกุล :", border=0)
-            
-            # --- (จุดที่เคย Error: เรียกใช้ชื่ออย่างปลอดภัย) ---
             display_name = current_data.get('name', '')
             if not display_name:
                 display_name = f"{current_data.get('fname', '')} {current_data.get('lname', '')}".strip()
-            if not display_name: 
-                display_name = "ไม่ระบุชื่อ"
-            # --------------------------------------------------
-            
             pdf.set_xy(40, box_top + 9); pdf.cell(65, 6, f"  {display_name}", border=0)
             
             pdf.set_xy(105, box_top + 9); pdf.cell(30, 6, "  แผนก :", border=0)
+            # [FIXED] ใช้ข้อมูล Department ที่ดึงมาแล้ว
             pdf.set_xy(135, box_top + 9); pdf.cell(65, 6, f"  {current_data.get('department','-')}", border=0)
 
+            # วันที่จ่าย / งวด
+            try:
+                s_date = self.start_date_entry.get_date()
+                month_th = list(self.THAI_MONTHS.values())[s_date.month - 1]
+                period_str = f"{month_th} {s_date.year + 543}"
+            except:
+                period_str = "-"
+
             pdf.set_xy(10, box_top + 18)
-            pdf.cell(95, 6, f"วันที่จ่าย : {pay_date}")
+            pdf.cell(95, 6, f"วันที่จ่าย : {pay_date_str}")
             pdf.set_xy(105, box_top + 18)
             pdf.cell(95, 6, f"ค่าจ้างเดือน : {period_str}")
 
-            # --- 3. Table Header ---
+            # ------------------------------------------------
+            # ตารางรายการ (Table)
+            # ------------------------------------------------
             tbl_top = box_top + 28
             row_h = 7
             
-            pdf.rect(10, tbl_top, 95, 8)   # กรอบซ้าย
-            pdf.rect(105, tbl_top, 95, 8)  # กรอบขวา
-            
+            # หัวตาราง
+            pdf.rect(10, tbl_top, 95, 8)
+            pdf.rect(105, tbl_top, 95, 8)
             pdf.set_font("THSarabun", "B", 16)
-            pdf.set_xy(10, tbl_top)
-            pdf.cell(95, 8, "เงินได้ (Earnings)", border=0, align='C')
-            
-            pdf.set_xy(105, tbl_top)
-            pdf.cell(95, 8, "เงินหัก (Deductions)", border=0, align='C')
+            pdf.set_xy(10, tbl_top); pdf.cell(95, 8, "เงินได้ (Earnings)", border=0, align='C')
+            pdf.set_xy(105, tbl_top); pdf.cell(95, 8, "เงินหัก (Deductions)", border=0, align='C')
 
-            # --- 4. Data Rows ---
+            # ไส้ในตาราง
             body_top = tbl_top + 8 
             max_rows = 8
             
+            # [FIXED LOGIC] คำนวณยอด "อื่นๆ" ให้ครบถ้วน (Other + Welfare + Driving)
+            # พยายามใช้ค่า pdf_other_income ที่เตรียมไว้จากขั้นตอนคำนวณ
+            # ถ้าไม่มี (เช่นข้อมูลเก่า) ให้คำนวณสด: Total Income - (เงินเดือน+ตำแหน่ง+OT+คอม+โบนัส)
+            if 'pdf_other_income' in current_data:
+                val_other_final = current_data['pdf_other_income']
+            else:
+                # Fallback calculation (กันพลาด)
+                core_income = (
+                    current_data.get('base_salary', 0) + 
+                    current_data.get('position_allowance', 0) + 
+                    current_data.get('ot', 0) + 
+                    current_data.get('commission', 0) + 
+                    current_data.get('bonus', 0)
+                )
+                val_other_final = current_data.get('total_income', 0) - core_income
+
             incomes = [ 
                 ("เงินเดือน", current_data.get('base_salary', 0)), 
                 ("ค่าตำแหน่ง", current_data.get('position_allowance', 0)), 
                 ("ค่าล่วงเวลา", current_data.get('ot', 0)), 
                 ("คอมมิชชั่น", current_data.get('commission', 0)), 
                 ("โบนัส", current_data.get('bonus', 0)), 
-                ("เงินได้อื่นๆ", current_data.get('other_income', 0))
+                ("เงินได้อื่นๆ", val_other_final) # <--- ใช้ค่านี่ที่รวมมาแล้ว
             ]
+            
             deductions = [
                 ("ประกันสังคม", current_data.get('sso', 0)),
                 ("ภาษีเงินได้", 0),
@@ -1570,11 +1530,13 @@ class PayrollModule(ttk.Frame):
             for i in range(max_rows):
                 curr_y = body_top + (i * row_h)
                 
+                # ตีเส้นตาราง
                 pdf.rect(10, curr_y, 190, row_h)
-                pdf.line(105, curr_y, 105, curr_y + row_h)
-                pdf.line(90, curr_y, 90, curr_y + row_h)
-                pdf.line(185, curr_y, 185, curr_y + row_h)
+                pdf.line(105, curr_y, 105, curr_y + row_h) # เส้นแบ่งกลาง
+                pdf.line(90, curr_y, 90, curr_y + row_h)   # เส้นคั่นบาทซ้าย
+                pdf.line(185, curr_y, 185, curr_y + row_h)  # เส้นคั่นบาทขวา
                 
+                # ฝั่งรับ
                 if i < len(incomes):
                     label, val = incomes[i]
                     pdf.set_xy(10, curr_y)
@@ -1584,6 +1546,7 @@ class PayrollModule(ttk.Frame):
                     pdf.set_xy(90, curr_y)
                     pdf.cell(15, row_h, "บาท", border=0, align='C')
 
+                # ฝั่งหัก
                 if i < len(deductions):
                     l2, v2 = deductions[i]
                     pdf.set_xy(105, curr_y)
@@ -1596,7 +1559,9 @@ class PayrollModule(ttk.Frame):
                         pdf.set_xy(185, curr_y)
                         pdf.cell(15, row_h, "บาท", border=0, align='C')
 
-            # 5. Totals
+            # ------------------------------------------------
+            # ส่วนสรุปยอด (Totals)
+            # ------------------------------------------------
             totals_y = body_top + (max_rows * row_h)
             
             pdf.set_fill_color(240, 240, 240) 
@@ -1606,6 +1571,7 @@ class PayrollModule(ttk.Frame):
 
             pdf.set_font("THSarabun", "B", 14)
             
+            # รวมรับ
             pdf.set_xy(10, totals_y)
             pdf.cell(55, 7, "  รวมเงินได้", 0, 0, 'L')
             pdf.set_xy(65, totals_y)
@@ -1613,6 +1579,7 @@ class PayrollModule(ttk.Frame):
             pdf.set_xy(90, totals_y)
             pdf.cell(15, 7, "บาท", 0, 0, 'C')
             
+            # รวมหัก
             pdf.set_xy(105, totals_y)
             pdf.cell(55, 7, "  รวมเงินหัก", 0, 0, 'L')
             pdf.set_xy(160, totals_y)
@@ -1620,7 +1587,9 @@ class PayrollModule(ttk.Frame):
             pdf.set_xy(185, totals_y)
             pdf.cell(15, 7, "บาท", 0, 0, 'C')
 
-            # 6. Net Salary
+            # ------------------------------------------------
+            # ยอดสุทธิ (Net Salary)
+            # ------------------------------------------------
             net_y = totals_y + 7
             pdf.set_fill_color(220, 220, 220) 
             pdf.rect(105, net_y, 95, 8, 'F')
@@ -1633,7 +1602,9 @@ class PayrollModule(ttk.Frame):
             pdf.set_xy(185, net_y)
             pdf.cell(15, 8, "บาท", 0, 0, 'C')
 
-            # 7. Signature
+            # ------------------------------------------------
+            # ลายเซ็น (Signature)
+            # ------------------------------------------------
             sig_y = net_y + 15
             pdf.set_font("THSarabun", "", 12)
             pdf.set_xy(10, sig_y)
@@ -1641,41 +1612,47 @@ class PayrollModule(ttk.Frame):
             pdf.set_xy(105, sig_y)
             pdf.cell(60, 5, "ลงชื่อผู้รับเงิน ...........................................", 0, 0, 'L')
 
-        # --- Loop Generate Page ---
+        # --- Main Loop: Generate Page ---
         for data in data_list:
-            # (!!! เพิ่ม Logic กู้คืนชื่อ !!!)
-            if 'name' not in data or not data['name']:
-                # พยายามสร้างชื่อจาก fname/lname ถ้ามี
-                if 'fname' in data and 'lname' in data:
-                    data['name'] = f"{data['fname']} {data['lname']}".strip()
-                else:
-                    # ถ้าไม่มีจริงๆ ให้วิ่งไปดึงจาก DB
-                    emp_id = data.get('emp_id')
-                    if emp_id:
-                        info = hr_database.load_single_employee(emp_id)
-                        if info:
-                            data['name'] = f"{info.get('fname','')} {info.get('lname','')}".strip()
-                            data['position'] = info.get('position', '-')
-                            data['department'] = info.get('department', '-')
+            
+            # --- [FIXED LOGIC 1] ตรวจสอบข้อมูลขาดหาย แล้วดึงใหม่ ---
+            # หาก Position หรือ Department เป็นว่าง หรือไม่มี key ให้ดึงจาก DB
+            if 'position' not in data or 'department' not in data or not data.get('position') or data.get('position') == '-':
+                emp_id = data.get('emp_id')
+                if emp_id:
+                    # ดึงข้อมูลล่าสุดจาก DB
+                    info = hr_database.load_single_employee(emp_id)
+                    if info:
+                        data['position'] = info.get('position', '-')
+                        data['department'] = info.get('department', '-')
+                        data['bank_account'] = info.get('bank_account', '-')
+                        
+                        # กันเหนียวเรื่องชื่อหาย
+                        if 'name' not in data or not data['name']:
+                             data['name'] = f"{info.get('fname','')} {info.get('lname','')}".strip()
 
             pdf.add_page()
             
-            # ส่ง data เข้าไปวาด (แทนที่จะใช้ตัวแปร global loop)
+            # วาดต้นฉบับ
             draw_slip_form(data, 5, "(ต้นฉบับ)")
             
+            # เส้นประตัดกระดาษ
             pdf.set_draw_color(100)
             pdf.dashed_line(5, 148, 205, 148, dash_length=2, space_length=2)
             pdf.set_font("THSarabun", "", 10)
             pdf.text(185, 147, "ตัดตามรอยประ")
             
+            # วาดสำเนา
             draw_slip_form(data, 153, "(สำเนา)")
             
+            # Timestamp ท้ายกระดาษ
             pdf.set_xy(10, 290)
             pdf.set_font("THSarabun", "", 10)
             pdf.cell(0, 5, f"พิมพ์เมื่อ: {datetime.now().strftime('%d/%m/%Y %H:%M')}", align='R')
 
+        # Save File
         pdf.output(filepath)
-            
+
     # (ฟังก์ชัน Helper เดิม)
     # (ใน payroll_module.py) -> แทนที่ฟังก์ชันนี้ได้เลยครับ
 

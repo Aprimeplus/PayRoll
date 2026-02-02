@@ -517,11 +517,12 @@ class TimeProcessorModule(ttk.Frame):
 
     def _show_attendance_details(self, event):
         """
-        (ฉบับแก้ไข V70.0 - Fix Missing Info)
-        - ดึงค่า 'สาย(นาที)' และ 'หัก(ชม.)' กลับมาแสดงผล
-        - ผสมผสานข้อมูลจาก DB (เพื่อความสดใหม่) และจาก Report (ที่มีการคำนวณแล้ว)
+        (ฉบับแก้ไข V76.0 - Fix Penalty Display Bug)
+        - แก้ไขปัญหา: ช่อง 'สาย(นาที)' และ 'หัก(ชม.)' ไม่แสดงค่า
+        - สาเหตุ: Date Key ไม่ตรงกัน (Object vs Thai String) -> แก้ให้แปลงเป็น String พ.ศ. ก่อน Map
         """
-        
+        from datetime import date, datetime # Import เพิ่มกันเหนียว
+
         selection = self.result_tree.selection()
         if not selection: return
         
@@ -542,18 +543,31 @@ class TimeProcessorModule(ttk.Frame):
         
         # ข้อมูลที่คำนวณเสร็จแล้ว (มี Late/Penalty ครบ)
         details_list_calculated = emp_data.get('details', [])
-        # สร้าง Map เพื่อดึงข้อมูลง่ายๆ ด้วยวันที่
-        calculated_map = {row['date']: row for row in details_list_calculated}
+        
+        # --- [FIX START] สร้าง Map โดยแปลง Date Object เป็น String (dd/mm/yyyy พ.ศ.) ---
+        calculated_map = {}
+        for row in details_list_calculated:
+            d = row.get('date')
+            if d:
+                key_str = ""
+                # ถ้าเป็น Date Object (ปกติจะเป็นตัวนี้)
+                if hasattr(d, 'day'):
+                    key_str = f"{d.day:02d}/{d.month:02d}/{d.year + 543}"
+                else:
+                    # เผื่อเป็น String
+                    key_str = str(d)
+                
+                calculated_map[key_str] = row
+        # --- [FIX END] ---
 
         try:
             start_date = self.start_date_entry.get_date()
             end_date = self.end_date_entry.get_date()
         except: return
 
-        # ดึงข้อมูลสดจาก DB (เพื่อดูสถานะล่าสุดที่เพิ่ง Save)
+        # ดึงข้อมูลสดจาก DB
         daily_records = hr_database.get_daily_records_range(emp_id, start_date, end_date)
 
-        # --- ตรวจสอบว่าเป็นพนักงานรายวันหรือไม่ ---
         is_daily_emp = "รายวัน" in str(emp_type) or "Daily" in str(emp_type)
         
         win = tk.Toplevel(self)
@@ -570,7 +584,7 @@ class TimeProcessorModule(ttk.Frame):
                       show_header=True, expand="both")
         sheet.pack(fill="both", expand=True) 
 
-        # --- 1. กำหนด Headers ---
+        # --- Headers ---
         if is_daily_emp:
             headers = ["วันที่", "สถานะการทำงาน", "เวลาเข้า", "เวลาออก", 
                        "ชม.ทำงาน", "ชม.ลา", "สาย(นาที)", "หัก(ชม.)",
@@ -592,7 +606,7 @@ class TimeProcessorModule(ttk.Frame):
             sheet.column_width(column=8, width=70); sheet.column_width(column=9, width=70)
             sheet.column_width(column=10, width=70); sheet.column_width(column=11, width=100)
         
-        # --- 2. เตรียมข้อมูล ---
+        # --- Prepare Data ---
         sheet_data = []
         is_diligence_failed = False
         fail_reasons = [] 
@@ -603,18 +617,18 @@ class TimeProcessorModule(ttk.Frame):
             sheet_data.append(empty_row)
         else:
             for item in daily_records:
+                # สร้าง Key String ให้ตรงกับ Map ที่ทำไว้ด้านบน
                 d_str = item['work_date'].strftime("%d/%m/%Y")
                 d_str_thai = f"{item['work_date'].day:02d}/{item['work_date'].month:02d}/{item['work_date'].year + 543}"
                 
-                # ข้อมูลจาก DB (สด)
                 status_text = item.get('status', 'ปกติ')
                 scan_in = item.get('work_in_time') or "-"
                 scan_out = item.get('work_out_time') or "-"
                 
-                # ข้อมูลที่คำนวณแล้ว (เพื่อเอาค่าสาย/หักเงิน)
+                # [LOOKUP CORRECTLY NOW]
                 calc_row = calculated_map.get(d_str_thai, {})
                 
-                # --- A. Logic เช็คเบี้ยขยัน (8 โมง) ---
+                # --- Diligence Logic ---
                 if "สาย" in status_text or "ขาด" in status_text or "ลา" in status_text or "ไม่ครบ" in status_text:
                     is_diligence_failed = True
                     reason = status_text.split('(')[0].strip()
@@ -636,7 +650,7 @@ class TimeProcessorModule(ttk.Frame):
                             if not is_duplicate: fail_reasons.append(reason)
                     except: pass
 
-                # --- B. เตรียมข้อมูลลงตาราง ---
+                # --- Work Hours ---
                 work_hrs_str = "-"
                 if scan_in != "-" and scan_out != "-":
                     try:
@@ -661,22 +675,29 @@ class TimeProcessorModule(ttk.Frame):
                      if "0.5" in status_text: leave_hrs_str = "4 ชม."
                      elif "1.0" in status_text: leave_hrs_str = "8 ชม."
 
-                # [KEY FIX] ดึงค่า สาย/หัก จาก calculated_map (ถ้ามี)
-                # ถ้าเป็น "ลา" (โดยเฉพาะลาชั่วโมง) อาจจะไม่มีค่าปรับแล้ว (ซึ่งถูกต้อง)
-                # แต่ถ้าเป็น "สาย" ควรจะมี
+                # --- Penalty Columns ---
                 
                 # 1. สาย (นาที)
                 actual_late_val = calc_row.get('actual_late_mins', 0)
-                # ถ้าสถานะเปลี่ยนเป็นลาแล้ว ไม่ควรโชว์สาย (เว้นแต่จะลามาสาย)
+                # ถ้าลาแล้ว (ที่ไม่ใช่ลาแล้วมาสาย) ไม่โชว์นาทีสาย
                 if status_text.startswith("ลา") and "มาสาย" not in status_text:
                     actual_late_val = 0
                 actual_late_str = f"{actual_late_val}" if actual_late_val > 0 else ""
                 
                 # 2. หัก (ชม.)
                 penalty_val = calc_row.get('penalty_hrs', 0)
-                # ถ้าลาแล้ว (ที่ไม่ใช่ลาไม่รับค่าจ้างแบบหัก) อาจจะไม่โชว์ penalty
-                if status_text.startswith("ลา"):
-                     penalty_val = 0 # (เบื้องต้นให้ 0 ไว้ก่อน เพราะถือว่าลา)
+                # ถ้าลาป่วย/ลากิจ ไม่โชว์ยอดหักเงิน (เพราะหักวันลา) แต่ถ้า ลาไม่รับค่าจ้าง/สาย/ออกก่อน ต้องโชว์
+                if status_text.startswith("ลา") and "ลาไม่รับค่าจ้าง" not in status_text:
+                     penalty_val = 0
+                
+                # กรณีพิเศษ: ดึงยอดหักจาก Text (เช่น "ลาไม่รับค่าจ้าง (หัก 2 ชม.)") ถ้าใน calc_row ไม่มี
+                if penalty_val == 0 and "หัก" in status_text and "ชม." in status_text:
+                    import re
+                    match = re.search(r"หัก\s*([\d\.]+)\s*ชม", status_text)
+                    if match:
+                        try: penalty_val = float(match.group(1))
+                        except: pass
+
                 penalty_str = f"{penalty_val:.2f}" if penalty_val > 0 else ""
 
                 row_vals = [
@@ -721,6 +742,7 @@ class TimeProcessorModule(ttk.Frame):
             elif is_daily_emp and len(row_vals) > 10 and row_vals[10] != "": bg = '#f0fff0' 
             elif i % 2 == 1: bg = '#f0f0f0'
             
+            # Highlight เวลาสาย (08:00)
             if t_in_chk != "-" and t_in_chk:
                 try:
                     if datetime.strptime(t_in_chk[:5], "%H:%M").time() > datetime.strptime("08:00", "%H:%M").time():
@@ -729,7 +751,6 @@ class TimeProcessorModule(ttk.Frame):
 
             sheet.highlight_rows(rows=[i], bg=bg, fg=fg)
             
-        # Config Read-only
         if is_daily_emp:
             sheet.readonly_columns(columns=[0, 4, 5, 6, 7, 10]) 
         else:
@@ -761,8 +782,7 @@ class TimeProcessorModule(ttk.Frame):
 
         sheet.enable_bindings("single", "drag_select", "row_select", "column_width_resize", "arrowkeys", "edit_cell")
 
-        # ... (ส่วน Diligence เหมือนเดิม) ...
-        # (Copy ส่วนเดิมมาวางต่อได้เลยครับ ไม่ได้แก้ไขส่วนนี้)
+        # --- Diligence Summary (Copy ส่วนเดิมมาวางต่อได้เลย) ---
         diligence_frame = ttk.LabelFrame(win, text="  🏆 สรุปเบี้ยขยัน (Diligence Allowance)  ", padding=10)
         diligence_frame.pack(fill="x", padx=15, pady=5)
         
