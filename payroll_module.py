@@ -188,7 +188,7 @@ class PayrollModule(ttk.Frame):
 
             # [HARDCODE MODE] สำหรับทดสอบ
             sender_email = "pakawantomdee@gmail.com"       # <---  แก้เป็น Gmail 
-            sender_password = "utak iewz bejb qvnm"   # <---  แก้เป็นรหัส App 16 หลัก
+            sender_password = "error"   # <---  แก้เป็นรหัส App 16 หลัก
             
             sent_count = 0
             error_count = 0
