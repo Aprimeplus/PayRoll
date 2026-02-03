@@ -32,15 +32,45 @@ class EmployeeModule(ttk.Frame):
         self.controller = controller
         self.current_user = current_user 
 
+        # --- [จุดแก้ไขสำคัญ !!!] ประกาศตัวแปรเก็บข้อมูล ก่อนสร้างหน้าจอ ---
+        self.current_emp_data = {
+            'id': tk.StringVar(),
+            'prefix': tk.StringVar(),
+            'fname': tk.StringVar(),
+            'lname': tk.StringVar(),
+            'nickname': tk.StringVar(),
+            'id_card': tk.StringVar(),
+            'birth_date': tk.StringVar(),  
+            'gender': tk.StringVar(),
+            'address': tk.StringVar(),
+            'phone': tk.StringVar(),
+            'email': tk.StringVar(),
+            'position': tk.StringVar(),
+            'department': tk.StringVar(),
+            'emp_type': tk.StringVar(value="รายเดือน"), # <--- ตัวสำคัญที่ทำให้เกิด Error
+            'start_date': tk.StringVar(),
+            'probation_date': tk.StringVar(),
+            'bank_name': tk.StringVar(),
+            'bank_account': tk.StringVar(),
+            'salary': tk.DoubleVar(value=0.0),
+            'welfare': [],         # สำหรับ Checkbox (BooleanVar)
+            'welfare_amounts': []  # สำหรับ Entry จำนวนเงิน (DoubleVar)
+        }
+        # -----------------------------------------------------------
+
+        # โหลดการตั้งค่าสวัสดิการ
         loaded_settings = hr_database.load_allowance_settings()
         self.welfare_options = [item['name'] for item in loaded_settings]
         
-        # (สร้าง List เวลา 00:00 - 23:45)
+        # เตรียมตัวแปรสำหรับ Welfare (ต้องทำหลังจากโหลด options แล้ว)
+        for _ in self.welfare_options:
+            self.current_emp_data['welfare'].append(tk.BooleanVar())
+            self.current_emp_data['welfare_amounts'].append(tk.DoubleVar(value=0.0))
+
+        # สร้าง List เวลา 00:00 - 23:45
         self.time_options = [f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 15, 30, 45)]
 
-        # (เราลบ _configure_styles() ออกไปแล้ว)
-        
-        # (ย้าย score_validator มาไว้ที่นี่)
+        # Register Validator
         self.score_validator = (self.register(self._validate_score), '%P')
 
         # === พื้นที่เนื้อหา ===
@@ -49,7 +79,7 @@ class EmployeeModule(ttk.Frame):
         self.content_area = ttk.Frame(self)
         self.content_area.pack(fill="both", expand=True)
 
-        # --- (นี่คือส่วนที่ขาดหายไปในโค้ดของคุณ) ---
+        # สร้าง Frame หลักสำหรับแต่ละหน้า
         self.list_page = ttk.Frame(self.content_area)
         self.list_page.grid(row=0, column=0, sticky="nsew")
 
@@ -62,6 +92,7 @@ class EmployeeModule(ttk.Frame):
         self.content_area.grid_rowconfigure(0, weight=1)
         self.content_area.grid_columnconfigure(0, weight=1)
 
+        # สร้าง UI (ตอนนี้เรียกใช้ได้แล้ว เพราะมี current_emp_data แล้ว)
         self._build_list_page()
         self._build_form_page_with_tabs()
         
@@ -495,15 +526,26 @@ class EmployeeModule(ttk.Frame):
         employ_frame = ttk.LabelFrame(scroll_frame, text="  รายละเอียดการจ้างงาน  ", padding=20)
         employ_frame.pack(fill="x", pady=(0, 15))
 
-        row = 0
-        ttk.Label(employ_frame, text="ประเภทการจ้าง:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=10)
-        self.emp_type = ttk.Combobox(employ_frame, width=35, font=("Segoe UI", 10), values=[
-            "พนักงานประจำ", "พนักงานสัญญาจ้างรายปี",
-            "สัญญาจ้างเหมารายเดือน", "สัญญาจ้างเหมารายวัน", "สัญญาจ้างเหมารายปี",
-            "ที่ปรึกษา"  
-        ], state="readonly")
-        self.emp_type.grid(row=row, column=1, columnspan=3, sticky="w", pady=10)
+        row = 0 # หรือตัวเลข row ปัจจุบัน
         
+        # 1. Label
+        ttk.Label(employ_frame, text="ประเภทการจ้าง:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=10)
+        
+        # 2. ComboBox
+        self.emp_type = ttk.Combobox(employ_frame, width=35, font=("Segoe UI", 10), 
+            values=[
+                "พนักงานประจำ", "พนักงานสัญญาจ้างรายปี",
+                "สัญญาจ้างเหมารายเดือน", "สัญญาจ้างเหมา", "สัญญาจ้างเหมารายวัน", "สัญญาจ้างเหมารายปี",
+                "ที่ปรึกษา"  
+            ], 
+            state="readonly",
+            # !!! ตรวจสอบบรรทัดนี้ !!!
+            textvariable=self.current_emp_data['emp_type'] 
+        )
+        
+        # 3. Grid (สำคัญมาก ถ้าไม่มีบรรทัดนี้ ช่องจะหาย)
+        self.emp_type.grid(row=row, column=1, columnspan=3, sticky="w", pady=10)
+                
         row += 1
         ttk.Label(employ_frame, text="วันที่เริ่มงาน:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=10)
         start_frame = ttk.Frame(employ_frame)
