@@ -451,6 +451,15 @@ class EmployeeModule(ttk.Frame):
         self.id_card_entry = ttk.Entry(basic_frame, width=30, font=("Segoe UI", 10))
         self.id_card_entry.grid(row=row, column=1, columnspan=2, sticky="w", pady=8)
 
+        ttk.Label(basic_frame, text="วันหมดอายุบัตร:", font=("Segoe UI", 10)).grid(row=row, column=2, sticky="e", padx=(10, 5))
+        
+        # สร้าง Frame ย่อยเพื่อให้ DateDropdown อยู่ในช่องเดียวกัน
+        expiry_frame = ttk.Frame(basic_frame)
+        expiry_frame.grid(row=row, column=3, sticky="w", pady=8)
+        
+        self.id_card_expiry_entry = DateDropdown(expiry_frame, font=("Segoe UI", 10))
+        self.id_card_expiry_entry.pack(side="left")
+
         row += 1
         ttk.Label(basic_frame, text="เบอร์โทรศัพท์:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=8)
         self.phone_entry = ttk.Entry(basic_frame, width=25, font=("Segoe UI", 10))
@@ -1823,6 +1832,7 @@ class EmployeeModule(ttk.Frame):
             "birth": self.birth_entry.get(),
             "age": self.age_label.cget("text"),
             "id_card": self.id_card_entry.get(),
+            "id_card_expiry": self.id_card_expiry_entry.get(),
             "phone": self.phone_entry.get(),
             "address": self.address_text.get("1.0", "end-1c"),
             "current_address": self.current_address_text.get("1.0", "end-1c"),
@@ -2185,6 +2195,8 @@ class EmployeeModule(ttk.Frame):
         self.birth_entry.set_date_from_str(str(employee.get("birth", "") or ""))
         self.age_label.config(text=str(employee.get("age", "-")))
         self.id_card_entry.insert(0, str(employee.get("id_card", "") or ""))
+        expiry_date_str = str(employee.get("id_card_expiry", "") or "")
+        self.id_card_expiry_entry.set_date_from_str(expiry_date_str)
         self.phone_entry.insert(0, str(employee.get("phone", "") or ""))
         
         # --- 2. บุคคลติดต่อฉุกเฉิน & อ้างอิง ---
@@ -2350,49 +2362,87 @@ class EmployeeModule(ttk.Frame):
                 self.clear_form()
 
     def clear_form(self):
+        """ล้างข้อมูลทั้งหมดในฟอร์ม (รวมถึงฟิลด์ใหม่ๆ)"""
+        
+        # 1. ข้อมูลส่วนตัว & คำนำหน้า
         self.combo_prefix.set("")
         self.entry_prefix_other.delete(0, tk.END)
         self.entry_prefix_other.pack_forget()
+        
         self.emergency_name.delete(0, tk.END)
         self.emergency_phone.delete(0, tk.END)
         self.emergency_relation.delete(0, tk.END)
         self.ref_name.delete(0, tk.END)
         self.ref_phone.delete(0, tk.END)
         self.ref_relation.delete(0, tk.END)
+
         self.emp_id_entry.delete(0, tk.END)
         self.fname_entry.delete(0, tk.END)
         self.nickname_entry.delete(0, tk.END)
         self.lname_entry.delete(0, tk.END)
-        self.birth_entry.delete(0, tk.END)
+        
+        # วันเกิด (DateDropdown)
+        try: self.birth_entry.clear()
+        except: pass
+        
         self.age_label.config(text="-")
         self.id_card_entry.delete(0, tk.END)
+
+        # --- [✅ เพิ่มใหม่] ล้างวันหมดอายุบัตร ---
+        try: 
+            self.id_card_expiry_entry.clear()
+        except AttributeError: 
+            pass # ป้องกัน Error กรณี UI ยังสร้างไม่เสร็จ
+        # -------------------------------------
+
         self.phone_entry.delete(0, tk.END)
         self.address_text.delete("1.0", tk.END)
         self.current_address_text.delete("1.0", tk.END)
+
+        # 2. ข้อมูลการจ้าง
         self.emp_type.set("")
-        self.start_entry.delete(0, tk.END)
+        try: self.start_entry.clear()
+        except: pass
+        
         self.exp_label.config(text="-")
         self.position_entry.delete(0, tk.END)
         self.department_entry.delete(0, tk.END)
         self.work_location_combo.set("")
         self.status_combo.set("")
-        self._toggle_termination_fields()
+        self._toggle_termination_fields() # รีเซ็ตการแสดงผลวันพ้นสภาพ
+        try: self.term_date_entry.clear()
+        except: pass
+        self.term_reason_entry.delete(0, tk.END)
+
+        # 3. เงินเดือน & สวัสดิการ
         self.salary_entry.delete(0, tk.END)
+        self.is_sales_var.set(False)     # Reset Sale
+        self._toggle_sales_options()
+        
+        # ล้างตารางอบรม
         for item in self.training_tree.get_children():
             self.training_tree.delete(item)
-        self.train_date_input.clear()
+        try:
+            self.train_date_input.clear()
+        except: pass
         self.train_name_input.delete(0, tk.END)
         self.train_cost_input.delete(0, tk.END)
+
+        # ล้าง Checkbox สวัสดิการ
         for var in self.welfare_vars:
             var.set(False)
         for entry in self.welfare_amount_entries:
             entry.delete(0, tk.END)
+
+        # ล้างประวัติเงินเดือน
         for hist in self.salary_history:
             hist["year"].set("")
             hist["salary"].delete(0, tk.END)
             hist["position_allowance"].delete(0, tk.END)
             hist["new_position"].delete(0, tk.END)      
             hist["assessment_score"].delete(0, tk.END)
+
+        # 4. ข้อมูลสุขภาพ & บัญชี
         self.health_combo.set("ไม่มี")
         self.toggle_health_detail()
         self.account_entry.delete(0, tk.END)
@@ -2400,20 +2450,29 @@ class EmployeeModule(ttk.Frame):
         self.branch_entry.delete(0, tk.END)
         self.account_name_entry.delete(0, tk.END)
         self.account_type_var.set("")
-        self.sso_start_entry.delete(0, tk.END)
-        self.sso_end_entry.delete(0, tk.END)
-        self.sso_start_action_entry.delete(0, tk.END)
-        self.sso_end_action_entry.delete(0, tk.END)
+
+        # 5. ประกันสังคม (DateDropdowns)
+        try:
+            self.sso_start_entry.clear()
+            self.sso_end_entry.clear()
+            self.sso_start_action_entry.clear()
+            self.sso_end_action_entry.clear()
+        except: pass
         self.sso_hospital_entry.delete(0, tk.END)
+
+        # 6. สิทธิ์วันลา
         self.leave_annual_entry.delete(0, tk.END)
         self.leave_sick_entry.delete(0, tk.END)
         self.leave_ordination_entry.delete(0, tk.END)
         self.leave_maternity_entry.delete(0, tk.END)
         self.leave_personal_entry.delete(0, tk.END)
+
+        # 7. ค้ำประกัน & ทดลองงาน
         self.guarantee_var.set(False)
         self._toggle_guarantee_fields() 
         self._load_warning_doc_status()
         self._load_guarantee_doc_status()
+
         self.probation_days_combo.set("90") 
         self.probation_end_date_label.config(text="-")
         self.probation_score_entry.delete(0, tk.END)
@@ -2422,7 +2481,23 @@ class EmployeeModule(ttk.Frame):
         self.probation_status_2_label.config(text="")
         self._toggle_probation_scores()
         
-        # (ล้างฟอร์มย่อยในแท็บ 5)
+        # 8. ทรัพย์สิน (Assets)
+        try:
+            self.asset_computer.delete(0, tk.END)
+            self.asset_phone.delete(0, tk.END)
+            self.asset_number.delete(0, tk.END)
+            self.asset_carrier.set("")
+            self.asset_sim.set("")
+            self.asset_email.delete(0, tk.END)
+            self.asset_line.delete(0, tk.END)
+            self.asset_line_phone.delete(0, tk.END)
+            self.asset_facebook.delete(0, tk.END)
+            self.asset_card_id.delete(0, tk.END)
+            self.asset_others.delete("1.0", tk.END)
+        except AttributeError:
+            pass 
+        
+        # 9. ล้างฟอร์มย่อยในแท็บ 5 (บันทึกการลา/สาย/เตือน)
         try:
             self.att_leave_date.clear()
             self.att_leave_type.set("")
@@ -2439,22 +2514,7 @@ class EmployeeModule(ttk.Frame):
             self.att_warn_reason.delete("1.0", tk.END)
         
         except AttributeError:
-            pass # (ถ้า UI ยังไม่ถูกสร้าง)
-            
-        try:
-            self.asset_computer.delete(0, tk.END)
-            self.asset_phone.delete(0, tk.END)
-            self.asset_number.delete(0, tk.END)
-            self.asset_carrier.set("")
-            self.asset_sim.set("")
-            self.asset_email.delete(0, tk.END)
-            self.asset_line.delete(0, tk.END)
-            self.asset_line_phone.delete(0, tk.END)
-            self.asset_facebook.delete(0, tk.END)
-            self.asset_card_id.delete(0, tk.END)
-            self.asset_others.delete("1.0", tk.END)
-        except AttributeError:
-            pass    
+            pass
         
     def update_employee_list(self, employees):
         for item in self.employee_tree.get_children():

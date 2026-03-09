@@ -18,6 +18,13 @@ class AttendanceModule(ttk.Frame):
         self.controller = controller
         self.current_user = current_user
 
+        self.THAI_MONTHS = {
+            1: 'มกราคม', 2: 'กุมภาพันธ์', 3: 'มีนาคม', 4: 'เมษายน',
+            5: 'พฤษภาคม', 6: 'มิถุนายน', 7: 'กรกฎาคม', 8: 'สิงหาคม',
+            9: 'กันยายน', 10: 'ตุลาคม', 11: 'พฤศจิกายน', 12: 'ธันวาคม'
+        }
+        self.MONTH_TO_INT = {v: k for k, v in self.THAI_MONTHS.items()}
+
         self.selected_emp_id = tk.StringVar()
         self.selected_emp_name = tk.StringVar()
 
@@ -33,10 +40,10 @@ class AttendanceModule(ttk.Frame):
         self._load_employee_list()
 
     def _open_history_window(self):
-        """เปิดหน้าต่างจัดการประวัติการลา พร้อมตัวกรองรายคน"""
+        """เปิดหน้าต่างจัดการประวัติการลา พร้อมตัวกรอง เดือน/ปี และฟังก์ชันแก้ไข"""
         win = tk.Toplevel(self)
         win.title("📜 จัดการประวัติการลา")
-        win.geometry("1000x650")
+        win.geometry("1100x700") # ขยายขนาดนิดหน่อย
         win.transient(self)
         win.grab_set()
 
@@ -44,15 +51,31 @@ class AttendanceModule(ttk.Frame):
         filter_frame = ttk.LabelFrame(win, text=" ตัวกรองข้อมูล ", padding=10)
         filter_frame.pack(fill="x", padx=10, pady=5)
 
-        ttk.Label(filter_frame, text="เลือกพนักงาน:").pack(side="left", padx=5)
-        
-        # ดึงรายชื่อพนักงานทั้งหมด
+        # 1. เลือกพนักงาน
+        ttk.Label(filter_frame, text="พนักงาน:").pack(side="left", padx=5)
         emps = hr_database.load_all_employees()
         emp_list = ["--- แสดงทั้งหมด ---"] + [f"{e['id']} - {e['fname']} {e['lname']}" for e in emps]
-        
-        self.history_emp_filter = ttk.Combobox(filter_frame, width=40, state="readonly", values=emp_list)
+        self.history_emp_filter = ttk.Combobox(filter_frame, width=30, state="readonly", values=emp_list)
         self.history_emp_filter.pack(side="left", padx=5)
         self.history_emp_filter.set("--- แสดงทั้งหมด ---")
+
+        # 2. เลือกเดือน (เพิ่มใหม่)
+        ttk.Label(filter_frame, text="เดือน:").pack(side="left", padx=(15, 5))
+        months = list(self.THAI_MONTHS.values())
+        self.filter_month = ttk.Combobox(filter_frame, values=["ทุกเดือน"] + months, width=12, state="readonly")
+        self.filter_month.set(self.THAI_MONTHS[datetime.now().month]) # Default เดือนปัจจุบัน
+        self.filter_month.pack(side="left", padx=5)
+
+        # 3. เลือกปี (เพิ่มใหม่)
+        ttk.Label(filter_frame, text="ปี:").pack(side="left", padx=(15, 5))
+        current_year = datetime.now().year + 543
+        years = [str(y) for y in range(current_year, current_year - 10, -1)]
+        self.filter_year = ttk.Combobox(filter_frame, values=years, width=8, state="readonly")
+        self.filter_year.set(str(current_year))
+        self.filter_year.pack(side="left", padx=5)
+
+        # ปุ่มค้นหา
+        ttk.Button(filter_frame, text="🔍 ค้นหา", command=lambda: load_data()).pack(side="left", padx=15)
 
         # --- ตารางข้อมูล ---
         tree_frame = ttk.Frame(win, padding=10)
@@ -62,33 +85,57 @@ class AttendanceModule(ttk.Frame):
         self.history_tree = ttk.Treeview(tree_frame, columns=cols, show="headings")
         
         headers = ["ID", "รหัส", "ชื่อ-นามสกุล", "วันที่ลา", "ประเภท", "จำนวนวัน", "หมายเหตุ"]
-        for col, head in zip(cols, headers):
-            self.history_tree.heading(col, text=head)
+        widths = [50, 80, 200, 100, 100, 80, 250]
         
-        self.history_tree.column("id", width=50)
-        self.history_tree.column("emp_id", width=80)
-        self.history_tree.column("days", width=70)
+        for col, head, w in zip(cols, headers, widths):
+            self.history_tree.heading(col, text=head)
+            self.history_tree.column(col, width=w)
+        
+        # Scrollbar
+        vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.history_tree.yview)
+        self.history_tree.configure(yscrollcommand=vsb.set)
         self.history_tree.pack(side="left", fill="both", expand=True)
+        vsb.pack(side="right", fill="y")
 
         def load_data(event=None):
             for i in self.history_tree.get_children(): self.history_tree.delete(i)
             
-            selected = self.history_emp_filter.get()
-            target_id = None
-            if selected != "--- แสดงทั้งหมด ---":
-                target_id = selected.split(" - ")[0]
+            # รับค่าจาก Filter
+            selected_emp = self.history_emp_filter.get()
+            target_id = selected_emp.split(" - ")[0] if selected_emp != "--- แสดงทั้งหมด ---" else None
             
-            # ดึงประวัติจากฐานข้อมูล
-            history = hr_database.get_employee_leave_history(target_id)
-            for item in history:
+            # แปลงเดือนไทยเป็นเลข (ถ้าเลือก "ทุกเดือน" ให้เป็น None)
+            selected_month_str = self.filter_month.get()
+            target_month = self.MONTH_TO_INT.get(selected_month_str) if selected_month_str != "ทุกเดือน" else None
+            
+            # แปลงปี พ.ศ. เป็น ค.ศ.
+            target_year = int(self.filter_year.get()) - 543
+            
+            # เรียกฟังก์ชันใหม่ใน Database (ต้องไปเพิ่มฟังก์ชันนี้ใน hr_database.py ด้วยนะครับ)
+            # ถ้ายังไม่ได้ทำ ให้ใช้ของเดิมไปก่อน แล้วค่อยไปแก้ทีหลัง
+            # history = hr_database.get_leave_history_filtered(target_id, target_month, target_year) 
+            
+            # *ชั่วคราว: ใช้ฟังก์ชันเดิมแล้วกรองด้วย Python (ถ้าข้อมูลไม่เยอะมาก)*
+            all_history = hr_database.get_employee_leave_history(target_id) # ฟังก์ชันเดิมดึงมาหมด
+            
+            for item in all_history:
+                # กรองเดือน/ปี
+                l_date = item['leave_date'] # เป็น datetime object
+                if target_year and l_date.year != target_year: continue
+                if target_month and l_date.month != target_month: continue
+                
                 self.history_tree.insert("", "end", values=(
                     item['leave_id'], item['emp_id'], f"{item['fname']} {item['lname']}",
                     hr_database.date_to_thai_str(item['leave_date']),
                     item['leave_type'], item['num_days'], item['reason']
                 ))
 
+        # Bind Events (กดเลือกแล้วโหลดเลย)
         self.history_emp_filter.bind("<<ComboboxSelected>>", load_data)
-        load_data()
+        self.filter_month.bind("<<ComboboxSelected>>", load_data)
+        self.filter_year.bind("<<ComboboxSelected>>", load_data)
+        
+        load_data() # โหลดครั้งแรก
 
         # --- ปุ่มควบคุมด้านล่าง ---
         btn_frame = ttk.Frame(win, padding=10)
@@ -106,8 +153,100 @@ class AttendanceModule(ttk.Frame):
                     messagebox.showinfo("สำเร็จ", "ลบข้อมูลเรียบร้อยแล้ว")
                     load_data()
 
-        ttk.Button(btn_frame, text="❌ ลบรายการที่เลือก", command=delete_entry).pack(side="right", padx=10)
-        ttk.Button(btn_frame, text="🔄 รีเฟรช", command=load_data).pack(side="right")
+        def edit_entry():
+            """ฟังก์ชันแก้ไขรายการที่เลือก"""
+            selected = self.history_tree.selection()
+            if not selected:
+                messagebox.showwarning("เตือน", "กรุณาเลือกรายการที่ต้องการแก้ไข")
+                return
+            
+            # ดึงข้อมูลจาก Treeview
+            vals = self.history_tree.item(selected[0])['values']
+            item_id = vals[0] # คอลัมน์แรกคือ ID (ตรวจสอบว่าใช่ ID ของตาราง leave_records จริงไหม)
+
+            print(f"DEBUG: เลือกรายการ ID จาก Treeview = {item_id}") # <--- เช็คว่าได้ ID ถูกไหม
+            
+            self._open_edit_leave_popup(item_id, win, load_data)
+        ttk.Button(btn_frame, text="❌ ลบรายการ", command=delete_entry).pack(side="right", padx=5)
+        ttk.Button(btn_frame, text="✏️ แก้ไข", command=edit_entry).pack(side="right", padx=5) # ปุ่มใหม่
+        ttk.Button(btn_frame, text="🔄 รีเฟรช", command=load_data).pack(side="right", padx=5)
+
+    def _open_edit_leave_popup(self, leave_id, parent_win, refresh_callback):
+        """(ฉบับแก้ไข) หน้าต่าง Popup สำหรับแก้ไขข้อมูลการลา"""
+        
+        # 1. ดึงข้อมูลเก่าจาก DB
+        print(f"DEBUG: กำลังดึงข้อมูล leave_id = {leave_id}") # Debug
+        record = hr_database.get_leave_record_by_id(leave_id)
+        
+        # ถ้าไม่เจอข้อมูล (record เป็น None) ให้แจ้งเตือนและจบการทำงาน
+        if not record:
+            messagebox.showerror("Error", f"ไม่พบข้อมูลรหัส: {leave_id}\n(อาจถูกลบไปแล้ว หรือชื่อตาราง DB ไม่ถูกต้อง)")
+            return
+
+        # 2. สร้างหน้าต่าง Popup
+        edit_win = tk.Toplevel(parent_win)
+        edit_win.title(f"✏️ แก้ไขรายการ ID: {leave_id}")
+        edit_win.geometry("450x400")
+        edit_win.transient(parent_win)
+        edit_win.grab_set() # ล็อคหน้าต่างแม่
+        
+        # จัดกึ่งกลางจอ
+        try:
+            edit_win.update_idletasks()
+            x = parent_win.winfo_rootx() + (parent_win.winfo_width() // 2) - (edit_win.winfo_width() // 2)
+            y = parent_win.winfo_rooty() + (parent_win.winfo_height() // 2) - (edit_win.winfo_height() // 2)
+            edit_win.geometry(f"+{x}+{y}")
+        except: pass
+        
+        form_frame = ttk.Frame(edit_win, padding=20)
+        form_frame.pack(fill="both", expand=True)
+        
+        # --- สร้าง Form ---
+        
+        # 3. ประเภทการลา
+        ttk.Label(form_frame, text="ประเภทการลา:", font=("", 10, "bold")).pack(anchor="w", pady=(0, 5))
+        cb_type = ttk.Combobox(form_frame, values=["ลาป่วย", "ลากิจ", "ลาพักร้อน", "ลาไม่รับค่าจ้าง", "อื่นๆ"], state="readonly", font=("", 10))
+        cb_type.set(record.get('leave_type', ''))
+        cb_type.pack(fill="x", pady=5)
+        
+        # 4. จำนวนวัน
+        ttk.Label(form_frame, text="จำนวนวัน:", font=("", 10, "bold")).pack(anchor="w", pady=(10, 5))
+        ent_days = ttk.Entry(form_frame, font=("", 10))
+        ent_days.insert(0, str(record.get('num_days', 0)))
+        ent_days.pack(fill="x", pady=5)
+        
+        # 5. หมายเหตุ
+        ttk.Label(form_frame, text="สาเหตุ/หมายเหตุ:", font=("", 10, "bold")).pack(anchor="w", pady=(10, 5))
+        ent_reason = ttk.Entry(form_frame, font=("", 10))
+        ent_reason.insert(0, record.get('reason', ''))
+        ent_reason.pack(fill="x", pady=5)
+        
+        # --- ฟังก์ชันบันทึก ---
+        def save_edit():
+            new_type = cb_type.get()
+            new_reason = ent_reason.get()
+            
+            # เช็คค่าตัวเลข
+            try:
+                new_days = float(ent_days.get())
+                if new_days <= 0: raise ValueError
+            except:
+                messagebox.showerror("ข้อผิดพลาด", "กรุณากรอก 'จำนวนวัน' เป็นตัวเลขที่มากกว่า 0")
+                return
+            
+            # สั่ง update ลง Database
+            # (ต้องมีฟังก์ชัน update_leave_record ใน hr_database.py ด้วย)
+            success = hr_database.update_leave_record(leave_id, new_type, new_days, new_reason)
+            
+            if success:
+                messagebox.showinfo("สำเร็จ", "บันทึกการแก้ไขเรียบร้อยแล้ว ✅")
+                edit_win.destroy()     # ปิด Popup
+                refresh_callback()     # รีโหลดตารางหลักใหม่
+            else:
+                messagebox.showerror("ล้มเหลว", "ไม่สามารถบันทึกข้อมูลได้\n(กรุณาตรวจสอบการเชื่อมต่อ Database)")
+
+        # ปุ่มบันทึก
+        ttk.Button(form_frame, text="💾 บันทึกการแก้ไข", command=save_edit, style="Success.TButton").pack(pady=30, fill="x", ipady=5)
 
     def _create_main_layout(self):
         """สร้างโครงสร้างหลักแบบ 2 คอลัมน์ (Master-Detail)"""
