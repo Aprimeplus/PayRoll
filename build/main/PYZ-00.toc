@@ -107,6 +107,14 @@
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PIL\\ImageColor.py',
    'PYMODULE'),
+  ('PIL.ImageDraw',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PIL\\ImageDraw.py',
+   'PYMODULE'),
+  ('PIL.ImageDraw2',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PIL\\ImageDraw2.py',
+   'PYMODULE'),
   ('PIL.ImageFile',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PIL\\ImageFile.py',
@@ -114,6 +122,10 @@
   ('PIL.ImageFilter',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PIL\\ImageFilter.py',
+   'PYMODULE'),
+  ('PIL.ImageFont',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PIL\\ImageFont.py',
    'PYMODULE'),
   ('PIL.ImageMath',
    'C:\\Users\\Nitro '
@@ -130,6 +142,10 @@
   ('PIL.ImagePalette',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PIL\\ImagePalette.py',
+   'PYMODULE'),
+  ('PIL.ImagePath',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PIL\\ImagePath.py',
    'PYMODULE'),
   ('PIL.ImageQt',
    'C:\\Users\\Nitro '
@@ -670,6 +686,10 @@
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\base64.py',
    'PYMODULE'),
+  ('bcrypt',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\bcrypt\\__init__.py',
+   'PYMODULE'),
   ('bdb',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\bdb.py',
@@ -682,9 +702,257 @@
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\bz2.py',
    'PYMODULE'),
+  ('cProfile',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\cProfile.py',
+   'PYMODULE'),
   ('calendar',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\calendar.py',
+   'PYMODULE'),
+  ('certifi',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\certifi\\__init__.py',
+   'PYMODULE'),
+  ('certifi.core',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\certifi\\core.py',
+   'PYMODULE'),
+  ('cffi',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\__init__.py',
+   'PYMODULE'),
+  ('cffi._imp_emulation',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\_imp_emulation.py',
+   'PYMODULE'),
+  ('cffi._shimmed_dist_utils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\_shimmed_dist_utils.py',
+   'PYMODULE'),
+  ('cffi.api',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\api.py',
+   'PYMODULE'),
+  ('cffi.cffi_opcode',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\cffi_opcode.py',
+   'PYMODULE'),
+  ('cffi.commontypes',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\commontypes.py',
+   'PYMODULE'),
+  ('cffi.cparser',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\cparser.py',
+   'PYMODULE'),
+  ('cffi.error',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\error.py',
+   'PYMODULE'),
+  ('cffi.ffiplatform',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\ffiplatform.py',
+   'PYMODULE'),
+  ('cffi.lock',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\lock.py',
+   'PYMODULE'),
+  ('cffi.model',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\model.py',
+   'PYMODULE'),
+  ('cffi.pkgconfig',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\pkgconfig.py',
+   'PYMODULE'),
+  ('cffi.recompiler',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\recompiler.py',
+   'PYMODULE'),
+  ('cffi.vengine_cpy',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\vengine_cpy.py',
+   'PYMODULE'),
+  ('cffi.vengine_gen',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\vengine_gen.py',
+   'PYMODULE'),
+  ('cffi.verifier',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cffi\\verifier.py',
+   'PYMODULE'),
+  ('chardet',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\__init__.py',
+   'PYMODULE'),
+  ('chardet.big5freq',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\big5freq.py',
+   'PYMODULE'),
+  ('chardet.big5prober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\big5prober.py',
+   'PYMODULE'),
+  ('chardet.chardistribution',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\chardistribution.py',
+   'PYMODULE'),
+  ('chardet.charsetgroupprober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\charsetgroupprober.py',
+   'PYMODULE'),
+  ('chardet.charsetprober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\charsetprober.py',
+   'PYMODULE'),
+  ('chardet.codingstatemachine',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\codingstatemachine.py',
+   'PYMODULE'),
+  ('chardet.codingstatemachinedict',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\codingstatemachinedict.py',
+   'PYMODULE'),
+  ('chardet.cp949prober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\cp949prober.py',
+   'PYMODULE'),
+  ('chardet.enums',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\enums.py',
+   'PYMODULE'),
+  ('chardet.escprober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\escprober.py',
+   'PYMODULE'),
+  ('chardet.escsm',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\escsm.py',
+   'PYMODULE'),
+  ('chardet.eucjpprober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\eucjpprober.py',
+   'PYMODULE'),
+  ('chardet.euckrfreq',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\euckrfreq.py',
+   'PYMODULE'),
+  ('chardet.euckrprober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\euckrprober.py',
+   'PYMODULE'),
+  ('chardet.euctwfreq',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\euctwfreq.py',
+   'PYMODULE'),
+  ('chardet.euctwprober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\euctwprober.py',
+   'PYMODULE'),
+  ('chardet.gb2312freq',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\gb2312freq.py',
+   'PYMODULE'),
+  ('chardet.gb2312prober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\gb2312prober.py',
+   'PYMODULE'),
+  ('chardet.hebrewprober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\hebrewprober.py',
+   'PYMODULE'),
+  ('chardet.jisfreq',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\jisfreq.py',
+   'PYMODULE'),
+  ('chardet.johabfreq',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\johabfreq.py',
+   'PYMODULE'),
+  ('chardet.johabprober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\johabprober.py',
+   'PYMODULE'),
+  ('chardet.jpcntx',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\jpcntx.py',
+   'PYMODULE'),
+  ('chardet.langbulgarianmodel',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\langbulgarianmodel.py',
+   'PYMODULE'),
+  ('chardet.langgreekmodel',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\langgreekmodel.py',
+   'PYMODULE'),
+  ('chardet.langhebrewmodel',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\langhebrewmodel.py',
+   'PYMODULE'),
+  ('chardet.langrussianmodel',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\langrussianmodel.py',
+   'PYMODULE'),
+  ('chardet.langthaimodel',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\langthaimodel.py',
+   'PYMODULE'),
+  ('chardet.langturkishmodel',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\langturkishmodel.py',
+   'PYMODULE'),
+  ('chardet.latin1prober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\latin1prober.py',
+   'PYMODULE'),
+  ('chardet.macromanprober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\macromanprober.py',
+   'PYMODULE'),
+  ('chardet.mbcharsetprober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\mbcharsetprober.py',
+   'PYMODULE'),
+  ('chardet.mbcsgroupprober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\mbcsgroupprober.py',
+   'PYMODULE'),
+  ('chardet.mbcssm',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\mbcssm.py',
+   'PYMODULE'),
+  ('chardet.resultdict',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\resultdict.py',
+   'PYMODULE'),
+  ('chardet.sbcharsetprober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\sbcharsetprober.py',
+   'PYMODULE'),
+  ('chardet.sbcsgroupprober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\sbcsgroupprober.py',
+   'PYMODULE'),
+  ('chardet.sjisprober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\sjisprober.py',
+   'PYMODULE'),
+  ('chardet.universaldetector',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\universaldetector.py',
+   'PYMODULE'),
+  ('chardet.utf1632prober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\utf1632prober.py',
+   'PYMODULE'),
+  ('chardet.utf8prober',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\utf8prober.py',
+   'PYMODULE'),
+  ('chardet.version',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\chardet\\version.py',
    'PYMODULE'),
   ('charset_normalizer',
    'C:\\Users\\Nitro '
@@ -729,6 +997,30 @@
   ('codeop',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\codeop.py',
+   'PYMODULE'),
+  ('colorama',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\colorama\\__init__.py',
+   'PYMODULE'),
+  ('colorama.ansi',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\colorama\\ansi.py',
+   'PYMODULE'),
+  ('colorama.ansitowin32',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\colorama\\ansitowin32.py',
+   'PYMODULE'),
+  ('colorama.initialise',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\colorama\\initialise.py',
+   'PYMODULE'),
+  ('colorama.win32',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\colorama\\win32.py',
+   'PYMODULE'),
+  ('colorama.winterm',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\colorama\\winterm.py',
    'PYMODULE'),
   ('colorsys',
    'C:\\Users\\Nitro '
@@ -808,6 +1100,210 @@
   ('copy',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\copy.py',
+   'PYMODULE'),
+  ('cryptography',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\__init__.py',
+   'PYMODULE'),
+  ('cryptography.__about__',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\__about__.py',
+   'PYMODULE'),
+  ('cryptography.exceptions',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\exceptions.py',
+   'PYMODULE'),
+  ('cryptography.hazmat',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\__init__.py',
+   'PYMODULE'),
+  ('cryptography.hazmat._oid',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\_oid.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.backends',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\backends\\__init__.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.backends.openssl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\backends\\openssl\\__init__.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.backends.openssl.backend',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\backends\\openssl\\backend.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.bindings',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\bindings\\__init__.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.bindings.openssl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\bindings\\openssl\\__init__.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.bindings.openssl._conditional',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\bindings\\openssl\\_conditional.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.bindings.openssl.binding',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\bindings\\openssl\\binding.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.decrepit',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\decrepit\\__init__.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.decrepit.ciphers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\decrepit\\ciphers\\__init__.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.decrepit.ciphers.algorithms',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\decrepit\\ciphers\\algorithms.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\__init__.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives._asymmetric',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\_asymmetric.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives._cipheralgorithm',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\_cipheralgorithm.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives._serialization',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\_serialization.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.asymmetric',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\asymmetric\\__init__.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.asymmetric.dh',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\asymmetric\\dh.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.asymmetric.dsa',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\asymmetric\\dsa.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.asymmetric.ec',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\asymmetric\\ec.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.asymmetric.ed25519',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\asymmetric\\ed25519.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.asymmetric.ed448',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\asymmetric\\ed448.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.asymmetric.padding',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\asymmetric\\padding.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.asymmetric.rsa',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\asymmetric\\rsa.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.asymmetric.types',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\asymmetric\\types.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.asymmetric.utils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\asymmetric\\utils.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.asymmetric.x25519',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\asymmetric\\x25519.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.asymmetric.x448',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\asymmetric\\x448.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.ciphers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\ciphers\\__init__.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.ciphers.algorithms',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\ciphers\\algorithms.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.ciphers.base',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\ciphers\\base.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.ciphers.modes',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\ciphers\\modes.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.constant_time',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\constant_time.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.hashes',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\hashes.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.padding',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\padding.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.serialization',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\serialization\\__init__.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.serialization.base',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\serialization\\base.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.serialization.pkcs12',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\serialization\\pkcs12.py',
+   'PYMODULE'),
+  ('cryptography.hazmat.primitives.serialization.ssh',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\hazmat\\primitives\\serialization\\ssh.py',
+   'PYMODULE'),
+  ('cryptography.utils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\utils.py',
+   'PYMODULE'),
+  ('cryptography.x509',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\x509\\__init__.py',
+   'PYMODULE'),
+  ('cryptography.x509.base',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\x509\\base.py',
+   'PYMODULE'),
+  ('cryptography.x509.certificate_transparency',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\x509\\certificate_transparency.py',
+   'PYMODULE'),
+  ('cryptography.x509.extensions',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\x509\\extensions.py',
+   'PYMODULE'),
+  ('cryptography.x509.general_name',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\x509\\general_name.py',
+   'PYMODULE'),
+  ('cryptography.x509.name',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\x509\\name.py',
+   'PYMODULE'),
+  ('cryptography.x509.oid',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\x509\\oid.py',
+   'PYMODULE'),
+  ('cryptography.x509.verification',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\cryptography\\x509\\verification.py',
    'PYMODULE'),
   ('csv',
    'C:\\Users\\Nitro '
@@ -2249,6 +2745,130 @@
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\kiwisolver\\exceptions.py',
    'PYMODULE'),
+  ('llvmlite',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\__init__.py',
+   'PYMODULE'),
+  ('llvmlite._version',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\_version.py',
+   'PYMODULE'),
+  ('llvmlite.binding',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\__init__.py',
+   'PYMODULE'),
+  ('llvmlite.binding.analysis',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\analysis.py',
+   'PYMODULE'),
+  ('llvmlite.binding.common',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\common.py',
+   'PYMODULE'),
+  ('llvmlite.binding.context',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\context.py',
+   'PYMODULE'),
+  ('llvmlite.binding.dylib',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\dylib.py',
+   'PYMODULE'),
+  ('llvmlite.binding.executionengine',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\executionengine.py',
+   'PYMODULE'),
+  ('llvmlite.binding.ffi',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\ffi.py',
+   'PYMODULE'),
+  ('llvmlite.binding.initfini',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\initfini.py',
+   'PYMODULE'),
+  ('llvmlite.binding.linker',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\linker.py',
+   'PYMODULE'),
+  ('llvmlite.binding.module',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\module.py',
+   'PYMODULE'),
+  ('llvmlite.binding.newpassmanagers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\newpassmanagers.py',
+   'PYMODULE'),
+  ('llvmlite.binding.object_file',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\object_file.py',
+   'PYMODULE'),
+  ('llvmlite.binding.options',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\options.py',
+   'PYMODULE'),
+  ('llvmlite.binding.orcjit',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\orcjit.py',
+   'PYMODULE'),
+  ('llvmlite.binding.passmanagers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\passmanagers.py',
+   'PYMODULE'),
+  ('llvmlite.binding.targets',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\targets.py',
+   'PYMODULE'),
+  ('llvmlite.binding.transforms',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\transforms.py',
+   'PYMODULE'),
+  ('llvmlite.binding.typeref',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\typeref.py',
+   'PYMODULE'),
+  ('llvmlite.binding.value',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\binding\\value.py',
+   'PYMODULE'),
+  ('llvmlite.ir',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\ir\\__init__.py',
+   'PYMODULE'),
+  ('llvmlite.ir._utils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\ir\\_utils.py',
+   'PYMODULE'),
+  ('llvmlite.ir.builder',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\ir\\builder.py',
+   'PYMODULE'),
+  ('llvmlite.ir.context',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\ir\\context.py',
+   'PYMODULE'),
+  ('llvmlite.ir.instructions',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\ir\\instructions.py',
+   'PYMODULE'),
+  ('llvmlite.ir.module',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\ir\\module.py',
+   'PYMODULE'),
+  ('llvmlite.ir.transforms',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\ir\\transforms.py',
+   'PYMODULE'),
+  ('llvmlite.ir.types',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\ir\\types.py',
+   'PYMODULE'),
+  ('llvmlite.ir.values',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\ir\\values.py',
+   'PYMODULE'),
+  ('llvmlite.utils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\llvmlite\\utils.py',
+   'PYMODULE'),
   ('logging',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\logging\\__init__.py',
@@ -2636,10 +3256,6 @@
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\matplotlib\\projections\\polar.py',
    'PYMODULE'),
-  ('matplotlib.pylab',
-   'C:\\Users\\Nitro '
-   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\matplotlib\\pylab.py',
-   'PYMODULE'),
   ('matplotlib.pyplot',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\matplotlib\\pyplot.py',
@@ -2873,6 +3489,1334 @@
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\nturl2path.py',
    'PYMODULE'),
+  ('numba',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\__init__.py',
+   'PYMODULE'),
+  ('numba._version',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\_version.py',
+   'PYMODULE'),
+  ('numba.cext',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cext\\__init__.py',
+   'PYMODULE'),
+  ('numba.cloudpickle',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cloudpickle\\__init__.py',
+   'PYMODULE'),
+  ('numba.cloudpickle.cloudpickle',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cloudpickle\\cloudpickle.py',
+   'PYMODULE'),
+  ('numba.cloudpickle.cloudpickle_fast',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cloudpickle\\cloudpickle_fast.py',
+   'PYMODULE'),
+  ('numba.core',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\__init__.py',
+   'PYMODULE'),
+  ('numba.core.analysis',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\analysis.py',
+   'PYMODULE'),
+  ('numba.core.annotations',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\annotations\\__init__.py',
+   'PYMODULE'),
+  ('numba.core.annotations.pretty_annotate',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\annotations\\pretty_annotate.py',
+   'PYMODULE'),
+  ('numba.core.annotations.type_annotations',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\annotations\\type_annotations.py',
+   'PYMODULE'),
+  ('numba.core.base',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\base.py',
+   'PYMODULE'),
+  ('numba.core.boxing',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\boxing.py',
+   'PYMODULE'),
+  ('numba.core.bytecode',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\bytecode.py',
+   'PYMODULE'),
+  ('numba.core.byteflow',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\byteflow.py',
+   'PYMODULE'),
+  ('numba.core.caching',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\caching.py',
+   'PYMODULE'),
+  ('numba.core.callconv',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\callconv.py',
+   'PYMODULE'),
+  ('numba.core.callwrapper',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\callwrapper.py',
+   'PYMODULE'),
+  ('numba.core.ccallback',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\ccallback.py',
+   'PYMODULE'),
+  ('numba.core.cgutils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\cgutils.py',
+   'PYMODULE'),
+  ('numba.core.codegen',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\codegen.py',
+   'PYMODULE'),
+  ('numba.core.compiler',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\compiler.py',
+   'PYMODULE'),
+  ('numba.core.compiler_lock',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\compiler_lock.py',
+   'PYMODULE'),
+  ('numba.core.compiler_machinery',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\compiler_machinery.py',
+   'PYMODULE'),
+  ('numba.core.config',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\config.py',
+   'PYMODULE'),
+  ('numba.core.consts',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\consts.py',
+   'PYMODULE'),
+  ('numba.core.controlflow',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\controlflow.py',
+   'PYMODULE'),
+  ('numba.core.cpu',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\cpu.py',
+   'PYMODULE'),
+  ('numba.core.cpu_options',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\cpu_options.py',
+   'PYMODULE'),
+  ('numba.core.datamodel',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\datamodel\\__init__.py',
+   'PYMODULE'),
+  ('numba.core.datamodel.manager',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\datamodel\\manager.py',
+   'PYMODULE'),
+  ('numba.core.datamodel.models',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\datamodel\\models.py',
+   'PYMODULE'),
+  ('numba.core.datamodel.new_models',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\datamodel\\new_models.py',
+   'PYMODULE'),
+  ('numba.core.datamodel.old_models',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\datamodel\\old_models.py',
+   'PYMODULE'),
+  ('numba.core.datamodel.packer',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\datamodel\\packer.py',
+   'PYMODULE'),
+  ('numba.core.datamodel.registry',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\datamodel\\registry.py',
+   'PYMODULE'),
+  ('numba.core.debuginfo',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\debuginfo.py',
+   'PYMODULE'),
+  ('numba.core.decorators',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\decorators.py',
+   'PYMODULE'),
+  ('numba.core.descriptors',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\descriptors.py',
+   'PYMODULE'),
+  ('numba.core.dispatcher',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\dispatcher.py',
+   'PYMODULE'),
+  ('numba.core.entrypoints',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\entrypoints.py',
+   'PYMODULE'),
+  ('numba.core.environment',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\environment.py',
+   'PYMODULE'),
+  ('numba.core.errors',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\errors.py',
+   'PYMODULE'),
+  ('numba.core.event',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\event.py',
+   'PYMODULE'),
+  ('numba.core.extending',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\extending.py',
+   'PYMODULE'),
+  ('numba.core.externals',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\externals.py',
+   'PYMODULE'),
+  ('numba.core.fastmathpass',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\fastmathpass.py',
+   'PYMODULE'),
+  ('numba.core.funcdesc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\funcdesc.py',
+   'PYMODULE'),
+  ('numba.core.generators',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\generators.py',
+   'PYMODULE'),
+  ('numba.core.imputils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\imputils.py',
+   'PYMODULE'),
+  ('numba.core.inline_closurecall',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\inline_closurecall.py',
+   'PYMODULE'),
+  ('numba.core.interpreter',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\interpreter.py',
+   'PYMODULE'),
+  ('numba.core.intrinsics',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\intrinsics.py',
+   'PYMODULE'),
+  ('numba.core.ir',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\ir.py',
+   'PYMODULE'),
+  ('numba.core.ir_utils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\ir_utils.py',
+   'PYMODULE'),
+  ('numba.core.itanium_mangler',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\itanium_mangler.py',
+   'PYMODULE'),
+  ('numba.core.llvm_bindings',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\llvm_bindings.py',
+   'PYMODULE'),
+  ('numba.core.lowering',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\lowering.py',
+   'PYMODULE'),
+  ('numba.core.new_boxing',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\new_boxing.py',
+   'PYMODULE'),
+  ('numba.core.object_mode_passes',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\object_mode_passes.py',
+   'PYMODULE'),
+  ('numba.core.old_boxing',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\old_boxing.py',
+   'PYMODULE'),
+  ('numba.core.optional',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\optional.py',
+   'PYMODULE'),
+  ('numba.core.options',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\options.py',
+   'PYMODULE'),
+  ('numba.core.postproc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\postproc.py',
+   'PYMODULE'),
+  ('numba.core.pylowering',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\pylowering.py',
+   'PYMODULE'),
+  ('numba.core.pythonapi',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\pythonapi.py',
+   'PYMODULE'),
+  ('numba.core.registry',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\registry.py',
+   'PYMODULE'),
+  ('numba.core.removerefctpass',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\removerefctpass.py',
+   'PYMODULE'),
+  ('numba.core.rewrites',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\rewrites\\__init__.py',
+   'PYMODULE'),
+  ('numba.core.rewrites.ir_print',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\rewrites\\ir_print.py',
+   'PYMODULE'),
+  ('numba.core.rewrites.registry',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\rewrites\\registry.py',
+   'PYMODULE'),
+  ('numba.core.rewrites.static_binop',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\rewrites\\static_binop.py',
+   'PYMODULE'),
+  ('numba.core.rewrites.static_getitem',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\rewrites\\static_getitem.py',
+   'PYMODULE'),
+  ('numba.core.rewrites.static_raise',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\rewrites\\static_raise.py',
+   'PYMODULE'),
+  ('numba.core.runtime',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\runtime\\__init__.py',
+   'PYMODULE'),
+  ('numba.core.runtime.context',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\runtime\\context.py',
+   'PYMODULE'),
+  ('numba.core.runtime.nrt',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\runtime\\nrt.py',
+   'PYMODULE'),
+  ('numba.core.runtime.nrtdynmod',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\runtime\\nrtdynmod.py',
+   'PYMODULE'),
+  ('numba.core.runtime.nrtopt',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\runtime\\nrtopt.py',
+   'PYMODULE'),
+  ('numba.core.serialize',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\serialize.py',
+   'PYMODULE'),
+  ('numba.core.sigutils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\sigutils.py',
+   'PYMODULE'),
+  ('numba.core.ssa',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\ssa.py',
+   'PYMODULE'),
+  ('numba.core.target_extension',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\target_extension.py',
+   'PYMODULE'),
+  ('numba.core.targetconfig',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\targetconfig.py',
+   'PYMODULE'),
+  ('numba.core.tracing',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\tracing.py',
+   'PYMODULE'),
+  ('numba.core.transforms',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\transforms.py',
+   'PYMODULE'),
+  ('numba.core.typeconv',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typeconv\\__init__.py',
+   'PYMODULE'),
+  ('numba.core.typeconv.castgraph',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typeconv\\castgraph.py',
+   'PYMODULE'),
+  ('numba.core.typeconv.rules',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typeconv\\rules.py',
+   'PYMODULE'),
+  ('numba.core.typeconv.typeconv',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typeconv\\typeconv.py',
+   'PYMODULE'),
+  ('numba.core.typed_passes',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typed_passes.py',
+   'PYMODULE'),
+  ('numba.core.typeinfer',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typeinfer.py',
+   'PYMODULE'),
+  ('numba.core.types',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\__init__.py',
+   'PYMODULE'),
+  ('numba.core.types.abstract',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\abstract.py',
+   'PYMODULE'),
+  ('numba.core.types.common',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\common.py',
+   'PYMODULE'),
+  ('numba.core.types.containers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\containers.py',
+   'PYMODULE'),
+  ('numba.core.types.function_type',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\function_type.py',
+   'PYMODULE'),
+  ('numba.core.types.functions',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\functions.py',
+   'PYMODULE'),
+  ('numba.core.types.iterators',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\iterators.py',
+   'PYMODULE'),
+  ('numba.core.types.misc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\misc.py',
+   'PYMODULE'),
+  ('numba.core.types.new_scalars',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\new_scalars\\__init__.py',
+   'PYMODULE'),
+  ('numba.core.types.new_scalars.machine_types',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\new_scalars\\machine_types.py',
+   'PYMODULE'),
+  ('numba.core.types.new_scalars.numpy_types',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\new_scalars\\numpy_types.py',
+   'PYMODULE'),
+  ('numba.core.types.new_scalars.python_types',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\new_scalars\\python_types.py',
+   'PYMODULE'),
+  ('numba.core.types.new_scalars.scalars',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\new_scalars\\scalars.py',
+   'PYMODULE'),
+  ('numba.core.types.npytypes',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\npytypes.py',
+   'PYMODULE'),
+  ('numba.core.types.old_scalars',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\old_scalars.py',
+   'PYMODULE'),
+  ('numba.core.types.scalars',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\types\\scalars.py',
+   'PYMODULE'),
+  ('numba.core.typing',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\__init__.py',
+   'PYMODULE'),
+  ('numba.core.typing.arraydecl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\arraydecl.py',
+   'PYMODULE'),
+  ('numba.core.typing.asnumbatype',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\asnumbatype.py',
+   'PYMODULE'),
+  ('numba.core.typing.bufproto',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\bufproto.py',
+   'PYMODULE'),
+  ('numba.core.typing.builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\builtins.py',
+   'PYMODULE'),
+  ('numba.core.typing.cffi_utils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\cffi_utils.py',
+   'PYMODULE'),
+  ('numba.core.typing.cmathdecl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\cmathdecl.py',
+   'PYMODULE'),
+  ('numba.core.typing.collections',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\collections.py',
+   'PYMODULE'),
+  ('numba.core.typing.context',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\context.py',
+   'PYMODULE'),
+  ('numba.core.typing.ctypes_utils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\ctypes_utils.py',
+   'PYMODULE'),
+  ('numba.core.typing.dictdecl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\dictdecl.py',
+   'PYMODULE'),
+  ('numba.core.typing.enumdecl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\enumdecl.py',
+   'PYMODULE'),
+  ('numba.core.typing.listdecl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\listdecl.py',
+   'PYMODULE'),
+  ('numba.core.typing.mathdecl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\mathdecl.py',
+   'PYMODULE'),
+  ('numba.core.typing.new_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\new_builtins.py',
+   'PYMODULE'),
+  ('numba.core.typing.new_cmathdecl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\new_cmathdecl.py',
+   'PYMODULE'),
+  ('numba.core.typing.new_mathdecl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\new_mathdecl.py',
+   'PYMODULE'),
+  ('numba.core.typing.npdatetime',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\npdatetime.py',
+   'PYMODULE'),
+  ('numba.core.typing.npydecl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\npydecl.py',
+   'PYMODULE'),
+  ('numba.core.typing.old_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\old_builtins.py',
+   'PYMODULE'),
+  ('numba.core.typing.old_cmathdecl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\old_cmathdecl.py',
+   'PYMODULE'),
+  ('numba.core.typing.old_mathdecl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\old_mathdecl.py',
+   'PYMODULE'),
+  ('numba.core.typing.setdecl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\setdecl.py',
+   'PYMODULE'),
+  ('numba.core.typing.templates',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\templates.py',
+   'PYMODULE'),
+  ('numba.core.typing.typeof',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\typing\\typeof.py',
+   'PYMODULE'),
+  ('numba.core.unsafe',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\unsafe\\__init__.py',
+   'PYMODULE'),
+  ('numba.core.unsafe.bytes',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\unsafe\\bytes.py',
+   'PYMODULE'),
+  ('numba.core.unsafe.eh',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\unsafe\\eh.py',
+   'PYMODULE'),
+  ('numba.core.untyped_passes',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\untyped_passes.py',
+   'PYMODULE'),
+  ('numba.core.utils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\utils.py',
+   'PYMODULE'),
+  ('numba.core.withcontexts',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\core\\withcontexts.py',
+   'PYMODULE'),
+  ('numba.cpython',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\__init__.py',
+   'PYMODULE'),
+  ('numba.cpython.builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\builtins.py',
+   'PYMODULE'),
+  ('numba.cpython.charseq',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\charseq.py',
+   'PYMODULE'),
+  ('numba.cpython.cmathimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\cmathimpl.py',
+   'PYMODULE'),
+  ('numba.cpython.enumimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\enumimpl.py',
+   'PYMODULE'),
+  ('numba.cpython.hashing',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\hashing.py',
+   'PYMODULE'),
+  ('numba.cpython.heapq',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\heapq.py',
+   'PYMODULE'),
+  ('numba.cpython.iterators',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\iterators.py',
+   'PYMODULE'),
+  ('numba.cpython.listobj',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\listobj.py',
+   'PYMODULE'),
+  ('numba.cpython.mathimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\mathimpl.py',
+   'PYMODULE'),
+  ('numba.cpython.new_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\new_builtins.py',
+   'PYMODULE'),
+  ('numba.cpython.new_hashing',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\new_hashing.py',
+   'PYMODULE'),
+  ('numba.cpython.new_mathimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\new_mathimpl.py',
+   'PYMODULE'),
+  ('numba.cpython.new_numbers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\new_numbers.py',
+   'PYMODULE'),
+  ('numba.cpython.new_tupleobj',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\new_tupleobj.py',
+   'PYMODULE'),
+  ('numba.cpython.numbers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\numbers.py',
+   'PYMODULE'),
+  ('numba.cpython.old_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\old_builtins.py',
+   'PYMODULE'),
+  ('numba.cpython.old_hashing',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\old_hashing.py',
+   'PYMODULE'),
+  ('numba.cpython.old_mathimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\old_mathimpl.py',
+   'PYMODULE'),
+  ('numba.cpython.old_numbers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\old_numbers.py',
+   'PYMODULE'),
+  ('numba.cpython.old_tupleobj',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\old_tupleobj.py',
+   'PYMODULE'),
+  ('numba.cpython.printimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\printimpl.py',
+   'PYMODULE'),
+  ('numba.cpython.randomimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\randomimpl.py',
+   'PYMODULE'),
+  ('numba.cpython.rangeobj',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\rangeobj.py',
+   'PYMODULE'),
+  ('numba.cpython.setobj',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\setobj.py',
+   'PYMODULE'),
+  ('numba.cpython.slicing',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\slicing.py',
+   'PYMODULE'),
+  ('numba.cpython.tupleobj',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\tupleobj.py',
+   'PYMODULE'),
+  ('numba.cpython.unicode',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\unicode.py',
+   'PYMODULE'),
+  ('numba.cpython.unicode_support',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\unicode_support.py',
+   'PYMODULE'),
+  ('numba.cpython.unsafe',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\unsafe\\__init__.py',
+   'PYMODULE'),
+  ('numba.cpython.unsafe.numbers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\unsafe\\numbers.py',
+   'PYMODULE'),
+  ('numba.cpython.unsafe.tuple',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cpython\\unsafe\\tuple.py',
+   'PYMODULE'),
+  ('numba.cuda',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\__init__.py',
+   'PYMODULE'),
+  ('numba.cuda.api',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\api.py',
+   'PYMODULE'),
+  ('numba.cuda.api_util',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\api_util.py',
+   'PYMODULE'),
+  ('numba.cuda.args',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\args.py',
+   'PYMODULE'),
+  ('numba.cuda.cg',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cg.py',
+   'PYMODULE'),
+  ('numba.cuda.codegen',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\codegen.py',
+   'PYMODULE'),
+  ('numba.cuda.compiler',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\compiler.py',
+   'PYMODULE'),
+  ('numba.cuda.cuda_paths',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cuda_paths.py',
+   'PYMODULE'),
+  ('numba.cuda.cudadecl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudadecl.py',
+   'PYMODULE'),
+  ('numba.cuda.cudadrv',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudadrv\\__init__.py',
+   'PYMODULE'),
+  ('numba.cuda.cudadrv.devicearray',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudadrv\\devicearray.py',
+   'PYMODULE'),
+  ('numba.cuda.cudadrv.devices',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudadrv\\devices.py',
+   'PYMODULE'),
+  ('numba.cuda.cudadrv.driver',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudadrv\\driver.py',
+   'PYMODULE'),
+  ('numba.cuda.cudadrv.drvapi',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudadrv\\drvapi.py',
+   'PYMODULE'),
+  ('numba.cuda.cudadrv.dummyarray',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudadrv\\dummyarray.py',
+   'PYMODULE'),
+  ('numba.cuda.cudadrv.enums',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudadrv\\enums.py',
+   'PYMODULE'),
+  ('numba.cuda.cudadrv.error',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudadrv\\error.py',
+   'PYMODULE'),
+  ('numba.cuda.cudadrv.libs',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudadrv\\libs.py',
+   'PYMODULE'),
+  ('numba.cuda.cudadrv.nvrtc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudadrv\\nvrtc.py',
+   'PYMODULE'),
+  ('numba.cuda.cudadrv.nvvm',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudadrv\\nvvm.py',
+   'PYMODULE'),
+  ('numba.cuda.cudadrv.rtapi',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudadrv\\rtapi.py',
+   'PYMODULE'),
+  ('numba.cuda.cudadrv.runtime',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudadrv\\runtime.py',
+   'PYMODULE'),
+  ('numba.cuda.cudaimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudaimpl.py',
+   'PYMODULE'),
+  ('numba.cuda.cudamath',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\cudamath.py',
+   'PYMODULE'),
+  ('numba.cuda.decorators',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\decorators.py',
+   'PYMODULE'),
+  ('numba.cuda.descriptor',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\descriptor.py',
+   'PYMODULE'),
+  ('numba.cuda.device_init',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\device_init.py',
+   'PYMODULE'),
+  ('numba.cuda.deviceufunc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\deviceufunc.py',
+   'PYMODULE'),
+  ('numba.cuda.dispatcher',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\dispatcher.py',
+   'PYMODULE'),
+  ('numba.cuda.errors',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\errors.py',
+   'PYMODULE'),
+  ('numba.cuda.extending',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\extending.py',
+   'PYMODULE'),
+  ('numba.cuda.initialize',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\initialize.py',
+   'PYMODULE'),
+  ('numba.cuda.intrinsic_wrapper',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\intrinsic_wrapper.py',
+   'PYMODULE'),
+  ('numba.cuda.intrinsics',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\intrinsics.py',
+   'PYMODULE'),
+  ('numba.cuda.kernels',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\kernels\\__init__.py',
+   'PYMODULE'),
+  ('numba.cuda.kernels.reduction',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\kernels\\reduction.py',
+   'PYMODULE'),
+  ('numba.cuda.kernels.transpose',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\kernels\\transpose.py',
+   'PYMODULE'),
+  ('numba.cuda.libdevice',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\libdevice.py',
+   'PYMODULE'),
+  ('numba.cuda.libdevicedecl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\libdevicedecl.py',
+   'PYMODULE'),
+  ('numba.cuda.libdevicefuncs',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\libdevicefuncs.py',
+   'PYMODULE'),
+  ('numba.cuda.libdeviceimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\libdeviceimpl.py',
+   'PYMODULE'),
+  ('numba.cuda.mathimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\mathimpl.py',
+   'PYMODULE'),
+  ('numba.cuda.models',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\models.py',
+   'PYMODULE'),
+  ('numba.cuda.nvvmutils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\nvvmutils.py',
+   'PYMODULE'),
+  ('numba.cuda.printimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\printimpl.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator\\__init__.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator.api',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator\\api.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator.compiler',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator\\compiler.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator.cudadrv',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator\\cudadrv\\__init__.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator.cudadrv.devicearray',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator\\cudadrv\\devicearray.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator.cudadrv.devices',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator\\cudadrv\\devices.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator.cudadrv.driver',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator\\cudadrv\\driver.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator.cudadrv.drvapi',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator\\cudadrv\\drvapi.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator.cudadrv.error',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator\\cudadrv\\error.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator.cudadrv.nvvm',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator\\cudadrv\\nvvm.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator.cudadrv.runtime',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator\\cudadrv\\runtime.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator.kernel',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator\\kernel.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator.kernelapi',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator\\kernelapi.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator.reduction',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator\\reduction.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator.vector_types',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator\\vector_types.py',
+   'PYMODULE'),
+  ('numba.cuda.simulator_init',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\simulator_init.py',
+   'PYMODULE'),
+  ('numba.cuda.stubs',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\stubs.py',
+   'PYMODULE'),
+  ('numba.cuda.target',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\target.py',
+   'PYMODULE'),
+  ('numba.cuda.testing',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\testing.py',
+   'PYMODULE'),
+  ('numba.cuda.types',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\types.py',
+   'PYMODULE'),
+  ('numba.cuda.ufuncs',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\ufuncs.py',
+   'PYMODULE'),
+  ('numba.cuda.vector_types',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\vector_types.py',
+   'PYMODULE'),
+  ('numba.cuda.vectorizers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\cuda\\vectorizers.py',
+   'PYMODULE'),
+  ('numba.experimental',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\experimental\\__init__.py',
+   'PYMODULE'),
+  ('numba.experimental.function_type',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\experimental\\function_type.py',
+   'PYMODULE'),
+  ('numba.experimental.jitclass',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\experimental\\jitclass\\__init__.py',
+   'PYMODULE'),
+  ('numba.experimental.jitclass.base',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\experimental\\jitclass\\base.py',
+   'PYMODULE'),
+  ('numba.experimental.jitclass.boxing',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\experimental\\jitclass\\boxing.py',
+   'PYMODULE'),
+  ('numba.experimental.jitclass.decorators',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\experimental\\jitclass\\decorators.py',
+   'PYMODULE'),
+  ('numba.experimental.jitclass.overloads',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\experimental\\jitclass\\overloads.py',
+   'PYMODULE'),
+  ('numba.extending',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\extending.py',
+   'PYMODULE'),
+  ('numba.misc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\misc\\__init__.py',
+   'PYMODULE'),
+  ('numba.misc.appdirs',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\misc\\appdirs.py',
+   'PYMODULE'),
+  ('numba.misc.cffiimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\misc\\cffiimpl.py',
+   'PYMODULE'),
+  ('numba.misc.coverage_support',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\misc\\coverage_support.py',
+   'PYMODULE'),
+  ('numba.misc.dump_style',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\misc\\dump_style.py',
+   'PYMODULE'),
+  ('numba.misc.findlib',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\misc\\findlib.py',
+   'PYMODULE'),
+  ('numba.misc.firstlinefinder',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\misc\\firstlinefinder.py',
+   'PYMODULE'),
+  ('numba.misc.gdb_hook',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\misc\\gdb_hook.py',
+   'PYMODULE'),
+  ('numba.misc.init_utils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\misc\\init_utils.py',
+   'PYMODULE'),
+  ('numba.misc.inspection',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\misc\\inspection.py',
+   'PYMODULE'),
+  ('numba.misc.literal',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\misc\\literal.py',
+   'PYMODULE'),
+  ('numba.misc.llvm_pass_timings',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\misc\\llvm_pass_timings.py',
+   'PYMODULE'),
+  ('numba.misc.mergesort',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\misc\\mergesort.py',
+   'PYMODULE'),
+  ('numba.misc.quicksort',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\misc\\quicksort.py',
+   'PYMODULE'),
+  ('numba.misc.special',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\misc\\special.py',
+   'PYMODULE'),
+  ('numba.np',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\__init__.py',
+   'PYMODULE'),
+  ('numba.np.arraymath',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\arraymath.py',
+   'PYMODULE'),
+  ('numba.np.arrayobj',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\arrayobj.py',
+   'PYMODULE'),
+  ('numba.np.linalg',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\linalg.py',
+   'PYMODULE'),
+  ('numba.np.math',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\math\\__init__.py',
+   'PYMODULE'),
+  ('numba.np.math.cmathimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\math\\cmathimpl.py',
+   'PYMODULE'),
+  ('numba.np.math.mathimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\math\\mathimpl.py',
+   'PYMODULE'),
+  ('numba.np.math.numbers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\math\\numbers.py',
+   'PYMODULE'),
+  ('numba.np.new_arraymath',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\new_arraymath.py',
+   'PYMODULE'),
+  ('numba.np.npdatetime',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\npdatetime.py',
+   'PYMODULE'),
+  ('numba.np.npdatetime_helpers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\npdatetime_helpers.py',
+   'PYMODULE'),
+  ('numba.np.npyfuncs',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\npyfuncs.py',
+   'PYMODULE'),
+  ('numba.np.npyimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\npyimpl.py',
+   'PYMODULE'),
+  ('numba.np.numpy_support',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\numpy_support.py',
+   'PYMODULE'),
+  ('numba.np.old_arraymath',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\old_arraymath.py',
+   'PYMODULE'),
+  ('numba.np.polynomial',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\polynomial\\__init__.py',
+   'PYMODULE'),
+  ('numba.np.polynomial.polynomial_core',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\polynomial\\polynomial_core.py',
+   'PYMODULE'),
+  ('numba.np.polynomial.polynomial_functions',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\polynomial\\polynomial_functions.py',
+   'PYMODULE'),
+  ('numba.np.random',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\random\\__init__.py',
+   'PYMODULE'),
+  ('numba.np.random._constants',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\random\\_constants.py',
+   'PYMODULE'),
+  ('numba.np.random.distributions',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\random\\distributions.py',
+   'PYMODULE'),
+  ('numba.np.random.generator_core',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\random\\generator_core.py',
+   'PYMODULE'),
+  ('numba.np.random.generator_methods',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\random\\generator_methods.py',
+   'PYMODULE'),
+  ('numba.np.random.new_distributions',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\random\\new_distributions.py',
+   'PYMODULE'),
+  ('numba.np.random.new_random_methods',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\random\\new_random_methods.py',
+   'PYMODULE'),
+  ('numba.np.random.old_distributions',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\random\\old_distributions.py',
+   'PYMODULE'),
+  ('numba.np.random.old_random_methods',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\random\\old_random_methods.py',
+   'PYMODULE'),
+  ('numba.np.random.random_methods',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\random\\random_methods.py',
+   'PYMODULE'),
+  ('numba.np.ufunc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\ufunc\\__init__.py',
+   'PYMODULE'),
+  ('numba.np.ufunc.array_exprs',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\ufunc\\array_exprs.py',
+   'PYMODULE'),
+  ('numba.np.ufunc.decorators',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\ufunc\\decorators.py',
+   'PYMODULE'),
+  ('numba.np.ufunc.dufunc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\ufunc\\dufunc.py',
+   'PYMODULE'),
+  ('numba.np.ufunc.gufunc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\ufunc\\gufunc.py',
+   'PYMODULE'),
+  ('numba.np.ufunc.parallel',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\ufunc\\parallel.py',
+   'PYMODULE'),
+  ('numba.np.ufunc.sigparse',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\ufunc\\sigparse.py',
+   'PYMODULE'),
+  ('numba.np.ufunc.ufunc_base',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\ufunc\\ufunc_base.py',
+   'PYMODULE'),
+  ('numba.np.ufunc.ufuncbuilder',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\ufunc\\ufuncbuilder.py',
+   'PYMODULE'),
+  ('numba.np.ufunc.wrappers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\ufunc\\wrappers.py',
+   'PYMODULE'),
+  ('numba.np.ufunc_db',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\ufunc_db.py',
+   'PYMODULE'),
+  ('numba.np.unsafe',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\unsafe\\__init__.py',
+   'PYMODULE'),
+  ('numba.np.unsafe.ndarray',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\np\\unsafe\\ndarray.py',
+   'PYMODULE'),
+  ('numba.parfors',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\parfors\\__init__.py',
+   'PYMODULE'),
+  ('numba.parfors.array_analysis',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\parfors\\array_analysis.py',
+   'PYMODULE'),
+  ('numba.parfors.parfor',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\parfors\\parfor.py',
+   'PYMODULE'),
+  ('numba.parfors.parfor_lowering',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\parfors\\parfor_lowering.py',
+   'PYMODULE'),
+  ('numba.parfors.parfor_lowering_utils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\parfors\\parfor_lowering_utils.py',
+   'PYMODULE'),
+  ('numba.pycc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\pycc\\__init__.py',
+   'PYMODULE'),
+  ('numba.pycc.cc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\pycc\\cc.py',
+   'PYMODULE'),
+  ('numba.pycc.compiler',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\pycc\\compiler.py',
+   'PYMODULE'),
+  ('numba.pycc.decorators',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\pycc\\decorators.py',
+   'PYMODULE'),
+  ('numba.pycc.llvm_types',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\pycc\\llvm_types.py',
+   'PYMODULE'),
+  ('numba.pycc.platform',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\pycc\\platform.py',
+   'PYMODULE'),
+  ('numba.runtests',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\runtests.py',
+   'PYMODULE'),
+  ('numba.stencils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\stencils\\__init__.py',
+   'PYMODULE'),
+  ('numba.stencils.stencil',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\stencils\\stencil.py',
+   'PYMODULE'),
+  ('numba.stencils.stencilparfor',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\stencils\\stencilparfor.py',
+   'PYMODULE'),
+  ('numba.testing',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\testing\\__init__.py',
+   'PYMODULE'),
+  ('numba.testing._runtests',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\testing\\_runtests.py',
+   'PYMODULE'),
+  ('numba.testing.loader',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\testing\\loader.py',
+   'PYMODULE'),
+  ('numba.testing.main',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\testing\\main.py',
+   'PYMODULE'),
+  ('numba.tests',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\tests\\__init__.py',
+   'PYMODULE'),
+  ('numba.tests.support',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\tests\\support.py',
+   'PYMODULE'),
+  ('numba.typed',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\typed\\__init__.py',
+   'PYMODULE'),
+  ('numba.typed.dictimpl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\typed\\dictimpl.py',
+   'PYMODULE'),
+  ('numba.typed.dictobject',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\typed\\dictobject.py',
+   'PYMODULE'),
+  ('numba.typed.listobject',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\typed\\listobject.py',
+   'PYMODULE'),
+  ('numba.typed.typeddict',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\typed\\typeddict.py',
+   'PYMODULE'),
+  ('numba.typed.typedlist',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\typed\\typedlist.py',
+   'PYMODULE'),
+  ('numba.typed.typedobjectutils',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\typed\\typedobjectutils.py',
+   'PYMODULE'),
+  ('numba.types',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numba\\types\\__init__.py',
+   'PYMODULE'),
   ('numbers',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\numbers.py',
@@ -3001,6 +4945,11 @@
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\_core\\strings.py',
    'PYMODULE'),
+  ('numpy._core.tests', '-', 'PYMODULE'),
+  ('numpy._core.tests._natype',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\_core\\tests\\_natype.py',
+   'PYMODULE'),
   ('numpy._core.umath',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\_core\\umath.py',
@@ -3091,11 +5040,7 @@
    'PYMODULE'),
   ('numpy.ctypeslib',
    'C:\\Users\\Nitro '
-   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\ctypeslib\\__init__.py',
-   'PYMODULE'),
-  ('numpy.ctypeslib._ctypeslib',
-   'C:\\Users\\Nitro '
-   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\ctypeslib\\_ctypeslib.py',
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\ctypeslib.py',
    'PYMODULE'),
   ('numpy.dtypes',
    'C:\\Users\\Nitro '
@@ -3224,10 +5169,6 @@
   ('numpy.lib._datasource',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_datasource.py',
-   'PYMODULE'),
-  ('numpy.lib._format_impl',
-   'C:\\Users\\Nitro '
-   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\numpy\\lib\\_format_impl.py',
    'PYMODULE'),
   ('numpy.lib._function_base_impl',
    'C:\\Users\\Nitro '
@@ -4292,6 +6233,10 @@
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\api\\__init__.py',
    'PYMODULE'),
+  ('pandas.api.executors',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\api\\executors\\__init__.py',
+   'PYMODULE'),
   ('pandas.api.extensions',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\api\\extensions\\__init__.py',
@@ -4327,10 +6272,6 @@
   ('pandas.compat._optional',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\compat\\_optional.py',
-   'PYMODULE'),
-  ('pandas.compat.compressors',
-   'C:\\Users\\Nitro '
-   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\compat\\compressors.py',
    'PYMODULE'),
   ('pandas.compat.numpy',
    'C:\\Users\\Nitro '
@@ -4563,6 +6504,10 @@
   ('pandas.core.base',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\base.py',
+   'PYMODULE'),
+  ('pandas.core.col',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\col.py',
    'PYMODULE'),
   ('pandas.core.common',
    'C:\\Users\\Nitro '
@@ -4828,14 +6773,6 @@
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\internals\\api.py',
    'PYMODULE'),
-  ('pandas.core.internals.array_manager',
-   'C:\\Users\\Nitro '
-   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\internals\\array_manager.py',
-   'PYMODULE'),
-  ('pandas.core.internals.base',
-   'C:\\Users\\Nitro '
-   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\internals\\base.py',
-   'PYMODULE'),
   ('pandas.core.internals.blocks',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\internals\\blocks.py',
@@ -4952,10 +6889,6 @@
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\reshape\\tile.py',
    'PYMODULE'),
-  ('pandas.core.reshape.util',
-   'C:\\Users\\Nitro '
-   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\reshape\\util.py',
-   'PYMODULE'),
   ('pandas.core.roperator',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\roperator.py',
@@ -4983,10 +6916,6 @@
   ('pandas.core.strings.accessor',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\strings\\accessor.py',
-   'PYMODULE'),
-  ('pandas.core.strings.base',
-   'C:\\Users\\Nitro '
-   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\strings\\base.py',
    'PYMODULE'),
   ('pandas.core.strings.object_array',
    'C:\\Users\\Nitro '
@@ -5032,10 +6961,6 @@
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\window\\common.py',
    'PYMODULE'),
-  ('pandas.core.window.doc',
-   'C:\\Users\\Nitro '
-   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\window\\doc.py',
-   'PYMODULE'),
   ('pandas.core.window.ewm',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\core\\window\\ewm.py',
@@ -5059,6 +6984,10 @@
   ('pandas.errors',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\errors\\__init__.py',
+   'PYMODULE'),
+  ('pandas.errors.cow',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\errors\\cow.py',
    'PYMODULE'),
   ('pandas.io',
    'C:\\Users\\Nitro '
@@ -5184,13 +7113,13 @@
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\io\\formats\\xml.py',
    'PYMODULE'),
-  ('pandas.io.gbq',
-   'C:\\Users\\Nitro '
-   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\io\\gbq.py',
-   'PYMODULE'),
   ('pandas.io.html',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\io\\html.py',
+   'PYMODULE'),
+  ('pandas.io.iceberg',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pandas\\io\\iceberg.py',
    'PYMODULE'),
   ('pandas.io.json',
    'C:\\Users\\Nitro '
@@ -5431,6 +7360,14 @@
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\pprint.py',
    'PYMODULE'),
+  ('profile',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\profile.py',
+   'PYMODULE'),
+  ('pstats',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\pstats.py',
+   'PYMODULE'),
   ('psycopg2',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\psycopg2\\__init__.py',
@@ -5463,6 +7400,26 @@
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\py_compile.py',
    'PYMODULE'),
+  ('pycparser',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pycparser\\__init__.py',
+   'PYMODULE'),
+  ('pycparser.ast_transforms',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pycparser\\ast_transforms.py',
+   'PYMODULE'),
+  ('pycparser.c_ast',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pycparser\\c_ast.py',
+   'PYMODULE'),
+  ('pycparser.c_lexer',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pycparser\\c_lexer.py',
+   'PYMODULE'),
+  ('pycparser.c_parser',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pycparser\\c_parser.py',
+   'PYMODULE'),
   ('pydoc',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\pydoc.py',
@@ -5474,6 +7431,1346 @@
   ('pydoc_data.topics',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\pydoc_data\\topics.py',
+   'PYMODULE'),
+  ('pygments',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\__init__.py',
+   'PYMODULE'),
+  ('pygments.console',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\console.py',
+   'PYMODULE'),
+  ('pygments.filter',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\filter.py',
+   'PYMODULE'),
+  ('pygments.filters',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\filters\\__init__.py',
+   'PYMODULE'),
+  ('pygments.formatter',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\formatter.py',
+   'PYMODULE'),
+  ('pygments.formatters',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\formatters\\__init__.py',
+   'PYMODULE'),
+  ('pygments.formatters._mapping',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\formatters\\_mapping.py',
+   'PYMODULE'),
+  ('pygments.formatters.bbcode',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\formatters\\bbcode.py',
+   'PYMODULE'),
+  ('pygments.formatters.groff',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\formatters\\groff.py',
+   'PYMODULE'),
+  ('pygments.formatters.html',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\formatters\\html.py',
+   'PYMODULE'),
+  ('pygments.formatters.img',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\formatters\\img.py',
+   'PYMODULE'),
+  ('pygments.formatters.irc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\formatters\\irc.py',
+   'PYMODULE'),
+  ('pygments.formatters.latex',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\formatters\\latex.py',
+   'PYMODULE'),
+  ('pygments.formatters.other',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\formatters\\other.py',
+   'PYMODULE'),
+  ('pygments.formatters.pangomarkup',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\formatters\\pangomarkup.py',
+   'PYMODULE'),
+  ('pygments.formatters.rtf',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\formatters\\rtf.py',
+   'PYMODULE'),
+  ('pygments.formatters.svg',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\formatters\\svg.py',
+   'PYMODULE'),
+  ('pygments.formatters.terminal',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\formatters\\terminal.py',
+   'PYMODULE'),
+  ('pygments.formatters.terminal256',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\formatters\\terminal256.py',
+   'PYMODULE'),
+  ('pygments.lexer',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexer.py',
+   'PYMODULE'),
+  ('pygments.lexers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\__init__.py',
+   'PYMODULE'),
+  ('pygments.lexers._ada_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_ada_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._asy_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_asy_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._cl_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_cl_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._cocoa_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_cocoa_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._csound_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_csound_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._css_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_css_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._googlesql_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_googlesql_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._julia_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_julia_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._lasso_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_lasso_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._lilypond_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_lilypond_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._lua_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_lua_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._luau_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_luau_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._mapping',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_mapping.py',
+   'PYMODULE'),
+  ('pygments.lexers._mql_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_mql_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._mysql_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_mysql_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._openedge_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_openedge_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._php_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_php_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._postgres_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_postgres_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._qlik_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_qlik_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._scheme_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_scheme_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._scilab_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_scilab_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._sourcemod_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_sourcemod_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._sql_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_sql_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._stan_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_stan_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._stata_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_stata_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._tsql_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_tsql_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._usd_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_usd_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._vbscript_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_vbscript_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers._vim_builtins',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\_vim_builtins.py',
+   'PYMODULE'),
+  ('pygments.lexers.actionscript',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\actionscript.py',
+   'PYMODULE'),
+  ('pygments.lexers.ada',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\ada.py',
+   'PYMODULE'),
+  ('pygments.lexers.agile',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\agile.py',
+   'PYMODULE'),
+  ('pygments.lexers.algebra',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\algebra.py',
+   'PYMODULE'),
+  ('pygments.lexers.ambient',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\ambient.py',
+   'PYMODULE'),
+  ('pygments.lexers.amdgpu',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\amdgpu.py',
+   'PYMODULE'),
+  ('pygments.lexers.ampl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\ampl.py',
+   'PYMODULE'),
+  ('pygments.lexers.apdlexer',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\apdlexer.py',
+   'PYMODULE'),
+  ('pygments.lexers.apl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\apl.py',
+   'PYMODULE'),
+  ('pygments.lexers.archetype',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\archetype.py',
+   'PYMODULE'),
+  ('pygments.lexers.arrow',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\arrow.py',
+   'PYMODULE'),
+  ('pygments.lexers.arturo',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\arturo.py',
+   'PYMODULE'),
+  ('pygments.lexers.asc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\asc.py',
+   'PYMODULE'),
+  ('pygments.lexers.asm',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\asm.py',
+   'PYMODULE'),
+  ('pygments.lexers.asn1',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\asn1.py',
+   'PYMODULE'),
+  ('pygments.lexers.automation',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\automation.py',
+   'PYMODULE'),
+  ('pygments.lexers.bare',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\bare.py',
+   'PYMODULE'),
+  ('pygments.lexers.basic',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\basic.py',
+   'PYMODULE'),
+  ('pygments.lexers.bdd',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\bdd.py',
+   'PYMODULE'),
+  ('pygments.lexers.berry',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\berry.py',
+   'PYMODULE'),
+  ('pygments.lexers.bibtex',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\bibtex.py',
+   'PYMODULE'),
+  ('pygments.lexers.blueprint',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\blueprint.py',
+   'PYMODULE'),
+  ('pygments.lexers.boa',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\boa.py',
+   'PYMODULE'),
+  ('pygments.lexers.bqn',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\bqn.py',
+   'PYMODULE'),
+  ('pygments.lexers.business',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\business.py',
+   'PYMODULE'),
+  ('pygments.lexers.c_cpp',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\c_cpp.py',
+   'PYMODULE'),
+  ('pygments.lexers.c_like',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\c_like.py',
+   'PYMODULE'),
+  ('pygments.lexers.capnproto',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\capnproto.py',
+   'PYMODULE'),
+  ('pygments.lexers.carbon',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\carbon.py',
+   'PYMODULE'),
+  ('pygments.lexers.cddl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\cddl.py',
+   'PYMODULE'),
+  ('pygments.lexers.chapel',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\chapel.py',
+   'PYMODULE'),
+  ('pygments.lexers.clean',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\clean.py',
+   'PYMODULE'),
+  ('pygments.lexers.codeql',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\codeql.py',
+   'PYMODULE'),
+  ('pygments.lexers.comal',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\comal.py',
+   'PYMODULE'),
+  ('pygments.lexers.compiled',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\compiled.py',
+   'PYMODULE'),
+  ('pygments.lexers.configs',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\configs.py',
+   'PYMODULE'),
+  ('pygments.lexers.console',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\console.py',
+   'PYMODULE'),
+  ('pygments.lexers.cplint',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\cplint.py',
+   'PYMODULE'),
+  ('pygments.lexers.crystal',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\crystal.py',
+   'PYMODULE'),
+  ('pygments.lexers.csound',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\csound.py',
+   'PYMODULE'),
+  ('pygments.lexers.css',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\css.py',
+   'PYMODULE'),
+  ('pygments.lexers.d',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\d.py',
+   'PYMODULE'),
+  ('pygments.lexers.dalvik',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\dalvik.py',
+   'PYMODULE'),
+  ('pygments.lexers.data',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\data.py',
+   'PYMODULE'),
+  ('pygments.lexers.dax',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\dax.py',
+   'PYMODULE'),
+  ('pygments.lexers.devicetree',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\devicetree.py',
+   'PYMODULE'),
+  ('pygments.lexers.diff',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\diff.py',
+   'PYMODULE'),
+  ('pygments.lexers.dns',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\dns.py',
+   'PYMODULE'),
+  ('pygments.lexers.dotnet',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\dotnet.py',
+   'PYMODULE'),
+  ('pygments.lexers.dsls',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\dsls.py',
+   'PYMODULE'),
+  ('pygments.lexers.dylan',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\dylan.py',
+   'PYMODULE'),
+  ('pygments.lexers.ecl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\ecl.py',
+   'PYMODULE'),
+  ('pygments.lexers.eiffel',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\eiffel.py',
+   'PYMODULE'),
+  ('pygments.lexers.elm',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\elm.py',
+   'PYMODULE'),
+  ('pygments.lexers.elpi',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\elpi.py',
+   'PYMODULE'),
+  ('pygments.lexers.email',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\email.py',
+   'PYMODULE'),
+  ('pygments.lexers.erlang',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\erlang.py',
+   'PYMODULE'),
+  ('pygments.lexers.esoteric',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\esoteric.py',
+   'PYMODULE'),
+  ('pygments.lexers.ezhil',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\ezhil.py',
+   'PYMODULE'),
+  ('pygments.lexers.factor',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\factor.py',
+   'PYMODULE'),
+  ('pygments.lexers.fantom',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\fantom.py',
+   'PYMODULE'),
+  ('pygments.lexers.felix',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\felix.py',
+   'PYMODULE'),
+  ('pygments.lexers.fift',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\fift.py',
+   'PYMODULE'),
+  ('pygments.lexers.floscript',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\floscript.py',
+   'PYMODULE'),
+  ('pygments.lexers.forth',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\forth.py',
+   'PYMODULE'),
+  ('pygments.lexers.fortran',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\fortran.py',
+   'PYMODULE'),
+  ('pygments.lexers.foxpro',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\foxpro.py',
+   'PYMODULE'),
+  ('pygments.lexers.freefem',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\freefem.py',
+   'PYMODULE'),
+  ('pygments.lexers.func',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\func.py',
+   'PYMODULE'),
+  ('pygments.lexers.functional',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\functional.py',
+   'PYMODULE'),
+  ('pygments.lexers.futhark',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\futhark.py',
+   'PYMODULE'),
+  ('pygments.lexers.gcodelexer',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\gcodelexer.py',
+   'PYMODULE'),
+  ('pygments.lexers.gdscript',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\gdscript.py',
+   'PYMODULE'),
+  ('pygments.lexers.gleam',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\gleam.py',
+   'PYMODULE'),
+  ('pygments.lexers.go',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\go.py',
+   'PYMODULE'),
+  ('pygments.lexers.grammar_notation',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\grammar_notation.py',
+   'PYMODULE'),
+  ('pygments.lexers.graph',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\graph.py',
+   'PYMODULE'),
+  ('pygments.lexers.graphics',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\graphics.py',
+   'PYMODULE'),
+  ('pygments.lexers.graphql',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\graphql.py',
+   'PYMODULE'),
+  ('pygments.lexers.graphviz',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\graphviz.py',
+   'PYMODULE'),
+  ('pygments.lexers.gsql',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\gsql.py',
+   'PYMODULE'),
+  ('pygments.lexers.hare',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\hare.py',
+   'PYMODULE'),
+  ('pygments.lexers.haskell',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\haskell.py',
+   'PYMODULE'),
+  ('pygments.lexers.haxe',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\haxe.py',
+   'PYMODULE'),
+  ('pygments.lexers.hdl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\hdl.py',
+   'PYMODULE'),
+  ('pygments.lexers.hexdump',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\hexdump.py',
+   'PYMODULE'),
+  ('pygments.lexers.html',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\html.py',
+   'PYMODULE'),
+  ('pygments.lexers.idl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\idl.py',
+   'PYMODULE'),
+  ('pygments.lexers.igor',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\igor.py',
+   'PYMODULE'),
+  ('pygments.lexers.inferno',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\inferno.py',
+   'PYMODULE'),
+  ('pygments.lexers.installers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\installers.py',
+   'PYMODULE'),
+  ('pygments.lexers.int_fiction',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\int_fiction.py',
+   'PYMODULE'),
+  ('pygments.lexers.iolang',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\iolang.py',
+   'PYMODULE'),
+  ('pygments.lexers.j',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\j.py',
+   'PYMODULE'),
+  ('pygments.lexers.javascript',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\javascript.py',
+   'PYMODULE'),
+  ('pygments.lexers.jmespath',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\jmespath.py',
+   'PYMODULE'),
+  ('pygments.lexers.jslt',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\jslt.py',
+   'PYMODULE'),
+  ('pygments.lexers.json5',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\json5.py',
+   'PYMODULE'),
+  ('pygments.lexers.jsonnet',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\jsonnet.py',
+   'PYMODULE'),
+  ('pygments.lexers.jsx',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\jsx.py',
+   'PYMODULE'),
+  ('pygments.lexers.julia',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\julia.py',
+   'PYMODULE'),
+  ('pygments.lexers.jvm',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\jvm.py',
+   'PYMODULE'),
+  ('pygments.lexers.kuin',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\kuin.py',
+   'PYMODULE'),
+  ('pygments.lexers.kusto',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\kusto.py',
+   'PYMODULE'),
+  ('pygments.lexers.ldap',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\ldap.py',
+   'PYMODULE'),
+  ('pygments.lexers.lean',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\lean.py',
+   'PYMODULE'),
+  ('pygments.lexers.lilypond',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\lilypond.py',
+   'PYMODULE'),
+  ('pygments.lexers.lisp',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\lisp.py',
+   'PYMODULE'),
+  ('pygments.lexers.macaulay2',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\macaulay2.py',
+   'PYMODULE'),
+  ('pygments.lexers.make',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\make.py',
+   'PYMODULE'),
+  ('pygments.lexers.maple',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\maple.py',
+   'PYMODULE'),
+  ('pygments.lexers.markup',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\markup.py',
+   'PYMODULE'),
+  ('pygments.lexers.math',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\math.py',
+   'PYMODULE'),
+  ('pygments.lexers.matlab',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\matlab.py',
+   'PYMODULE'),
+  ('pygments.lexers.maxima',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\maxima.py',
+   'PYMODULE'),
+  ('pygments.lexers.meson',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\meson.py',
+   'PYMODULE'),
+  ('pygments.lexers.mime',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\mime.py',
+   'PYMODULE'),
+  ('pygments.lexers.minecraft',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\minecraft.py',
+   'PYMODULE'),
+  ('pygments.lexers.mips',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\mips.py',
+   'PYMODULE'),
+  ('pygments.lexers.ml',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\ml.py',
+   'PYMODULE'),
+  ('pygments.lexers.modeling',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\modeling.py',
+   'PYMODULE'),
+  ('pygments.lexers.modula2',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\modula2.py',
+   'PYMODULE'),
+  ('pygments.lexers.mojo',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\mojo.py',
+   'PYMODULE'),
+  ('pygments.lexers.monte',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\monte.py',
+   'PYMODULE'),
+  ('pygments.lexers.mosel',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\mosel.py',
+   'PYMODULE'),
+  ('pygments.lexers.ncl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\ncl.py',
+   'PYMODULE'),
+  ('pygments.lexers.nimrod',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\nimrod.py',
+   'PYMODULE'),
+  ('pygments.lexers.nit',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\nit.py',
+   'PYMODULE'),
+  ('pygments.lexers.nix',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\nix.py',
+   'PYMODULE'),
+  ('pygments.lexers.numbair',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\numbair.py',
+   'PYMODULE'),
+  ('pygments.lexers.oberon',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\oberon.py',
+   'PYMODULE'),
+  ('pygments.lexers.objective',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\objective.py',
+   'PYMODULE'),
+  ('pygments.lexers.ooc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\ooc.py',
+   'PYMODULE'),
+  ('pygments.lexers.openscad',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\openscad.py',
+   'PYMODULE'),
+  ('pygments.lexers.other',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\other.py',
+   'PYMODULE'),
+  ('pygments.lexers.parasail',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\parasail.py',
+   'PYMODULE'),
+  ('pygments.lexers.parsers',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\parsers.py',
+   'PYMODULE'),
+  ('pygments.lexers.pascal',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\pascal.py',
+   'PYMODULE'),
+  ('pygments.lexers.pawn',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\pawn.py',
+   'PYMODULE'),
+  ('pygments.lexers.pddl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\pddl.py',
+   'PYMODULE'),
+  ('pygments.lexers.perl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\perl.py',
+   'PYMODULE'),
+  ('pygments.lexers.phix',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\phix.py',
+   'PYMODULE'),
+  ('pygments.lexers.php',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\php.py',
+   'PYMODULE'),
+  ('pygments.lexers.pointless',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\pointless.py',
+   'PYMODULE'),
+  ('pygments.lexers.pony',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\pony.py',
+   'PYMODULE'),
+  ('pygments.lexers.praat',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\praat.py',
+   'PYMODULE'),
+  ('pygments.lexers.procfile',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\procfile.py',
+   'PYMODULE'),
+  ('pygments.lexers.prolog',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\prolog.py',
+   'PYMODULE'),
+  ('pygments.lexers.promql',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\promql.py',
+   'PYMODULE'),
+  ('pygments.lexers.prql',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\prql.py',
+   'PYMODULE'),
+  ('pygments.lexers.ptx',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\ptx.py',
+   'PYMODULE'),
+  ('pygments.lexers.python',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\python.py',
+   'PYMODULE'),
+  ('pygments.lexers.q',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\q.py',
+   'PYMODULE'),
+  ('pygments.lexers.qlik',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\qlik.py',
+   'PYMODULE'),
+  ('pygments.lexers.qvt',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\qvt.py',
+   'PYMODULE'),
+  ('pygments.lexers.r',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\r.py',
+   'PYMODULE'),
+  ('pygments.lexers.rdf',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\rdf.py',
+   'PYMODULE'),
+  ('pygments.lexers.rebol',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\rebol.py',
+   'PYMODULE'),
+  ('pygments.lexers.rego',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\rego.py',
+   'PYMODULE'),
+  ('pygments.lexers.resource',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\resource.py',
+   'PYMODULE'),
+  ('pygments.lexers.ride',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\ride.py',
+   'PYMODULE'),
+  ('pygments.lexers.rita',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\rita.py',
+   'PYMODULE'),
+  ('pygments.lexers.rnc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\rnc.py',
+   'PYMODULE'),
+  ('pygments.lexers.roboconf',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\roboconf.py',
+   'PYMODULE'),
+  ('pygments.lexers.robotframework',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\robotframework.py',
+   'PYMODULE'),
+  ('pygments.lexers.ruby',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\ruby.py',
+   'PYMODULE'),
+  ('pygments.lexers.rust',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\rust.py',
+   'PYMODULE'),
+  ('pygments.lexers.sas',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\sas.py',
+   'PYMODULE'),
+  ('pygments.lexers.savi',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\savi.py',
+   'PYMODULE'),
+  ('pygments.lexers.scdoc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\scdoc.py',
+   'PYMODULE'),
+  ('pygments.lexers.scripting',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\scripting.py',
+   'PYMODULE'),
+  ('pygments.lexers.sgf',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\sgf.py',
+   'PYMODULE'),
+  ('pygments.lexers.shell',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\shell.py',
+   'PYMODULE'),
+  ('pygments.lexers.sieve',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\sieve.py',
+   'PYMODULE'),
+  ('pygments.lexers.slash',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\slash.py',
+   'PYMODULE'),
+  ('pygments.lexers.smalltalk',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\smalltalk.py',
+   'PYMODULE'),
+  ('pygments.lexers.smithy',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\smithy.py',
+   'PYMODULE'),
+  ('pygments.lexers.smv',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\smv.py',
+   'PYMODULE'),
+  ('pygments.lexers.snobol',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\snobol.py',
+   'PYMODULE'),
+  ('pygments.lexers.solidity',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\solidity.py',
+   'PYMODULE'),
+  ('pygments.lexers.soong',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\soong.py',
+   'PYMODULE'),
+  ('pygments.lexers.sophia',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\sophia.py',
+   'PYMODULE'),
+  ('pygments.lexers.special',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\special.py',
+   'PYMODULE'),
+  ('pygments.lexers.spice',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\spice.py',
+   'PYMODULE'),
+  ('pygments.lexers.sql',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\sql.py',
+   'PYMODULE'),
+  ('pygments.lexers.srcinfo',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\srcinfo.py',
+   'PYMODULE'),
+  ('pygments.lexers.stata',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\stata.py',
+   'PYMODULE'),
+  ('pygments.lexers.supercollider',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\supercollider.py',
+   'PYMODULE'),
+  ('pygments.lexers.tablegen',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\tablegen.py',
+   'PYMODULE'),
+  ('pygments.lexers.tact',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\tact.py',
+   'PYMODULE'),
+  ('pygments.lexers.tal',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\tal.py',
+   'PYMODULE'),
+  ('pygments.lexers.tcl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\tcl.py',
+   'PYMODULE'),
+  ('pygments.lexers.teal',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\teal.py',
+   'PYMODULE'),
+  ('pygments.lexers.templates',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\templates.py',
+   'PYMODULE'),
+  ('pygments.lexers.teraterm',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\teraterm.py',
+   'PYMODULE'),
+  ('pygments.lexers.testing',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\testing.py',
+   'PYMODULE'),
+  ('pygments.lexers.text',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\text.py',
+   'PYMODULE'),
+  ('pygments.lexers.textedit',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\textedit.py',
+   'PYMODULE'),
+  ('pygments.lexers.textfmts',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\textfmts.py',
+   'PYMODULE'),
+  ('pygments.lexers.theorem',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\theorem.py',
+   'PYMODULE'),
+  ('pygments.lexers.thingsdb',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\thingsdb.py',
+   'PYMODULE'),
+  ('pygments.lexers.tlb',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\tlb.py',
+   'PYMODULE'),
+  ('pygments.lexers.tls',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\tls.py',
+   'PYMODULE'),
+  ('pygments.lexers.tnt',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\tnt.py',
+   'PYMODULE'),
+  ('pygments.lexers.trafficscript',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\trafficscript.py',
+   'PYMODULE'),
+  ('pygments.lexers.typoscript',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\typoscript.py',
+   'PYMODULE'),
+  ('pygments.lexers.typst',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\typst.py',
+   'PYMODULE'),
+  ('pygments.lexers.ul4',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\ul4.py',
+   'PYMODULE'),
+  ('pygments.lexers.unicon',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\unicon.py',
+   'PYMODULE'),
+  ('pygments.lexers.urbi',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\urbi.py',
+   'PYMODULE'),
+  ('pygments.lexers.usd',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\usd.py',
+   'PYMODULE'),
+  ('pygments.lexers.varnish',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\varnish.py',
+   'PYMODULE'),
+  ('pygments.lexers.verification',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\verification.py',
+   'PYMODULE'),
+  ('pygments.lexers.verifpal',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\verifpal.py',
+   'PYMODULE'),
+  ('pygments.lexers.vip',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\vip.py',
+   'PYMODULE'),
+  ('pygments.lexers.vyper',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\vyper.py',
+   'PYMODULE'),
+  ('pygments.lexers.web',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\web.py',
+   'PYMODULE'),
+  ('pygments.lexers.webassembly',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\webassembly.py',
+   'PYMODULE'),
+  ('pygments.lexers.webidl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\webidl.py',
+   'PYMODULE'),
+  ('pygments.lexers.webmisc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\webmisc.py',
+   'PYMODULE'),
+  ('pygments.lexers.wgsl',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\wgsl.py',
+   'PYMODULE'),
+  ('pygments.lexers.whiley',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\whiley.py',
+   'PYMODULE'),
+  ('pygments.lexers.wowtoc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\wowtoc.py',
+   'PYMODULE'),
+  ('pygments.lexers.wren',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\wren.py',
+   'PYMODULE'),
+  ('pygments.lexers.x10',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\x10.py',
+   'PYMODULE'),
+  ('pygments.lexers.xorg',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\xorg.py',
+   'PYMODULE'),
+  ('pygments.lexers.yang',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\yang.py',
+   'PYMODULE'),
+  ('pygments.lexers.yara',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\yara.py',
+   'PYMODULE'),
+  ('pygments.lexers.zig',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\lexers\\zig.py',
+   'PYMODULE'),
+  ('pygments.modeline',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\modeline.py',
+   'PYMODULE'),
+  ('pygments.plugin',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\plugin.py',
+   'PYMODULE'),
+  ('pygments.regexopt',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\regexopt.py',
+   'PYMODULE'),
+  ('pygments.scanner',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\scanner.py',
+   'PYMODULE'),
+  ('pygments.style',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\style.py',
+   'PYMODULE'),
+  ('pygments.styles',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\__init__.py',
+   'PYMODULE'),
+  ('pygments.styles._mapping',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\_mapping.py',
+   'PYMODULE'),
+  ('pygments.styles.abap',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\abap.py',
+   'PYMODULE'),
+  ('pygments.styles.algol',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\algol.py',
+   'PYMODULE'),
+  ('pygments.styles.algol_nu',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\algol_nu.py',
+   'PYMODULE'),
+  ('pygments.styles.arduino',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\arduino.py',
+   'PYMODULE'),
+  ('pygments.styles.autumn',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\autumn.py',
+   'PYMODULE'),
+  ('pygments.styles.borland',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\borland.py',
+   'PYMODULE'),
+  ('pygments.styles.bw',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\bw.py',
+   'PYMODULE'),
+  ('pygments.styles.coffee',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\coffee.py',
+   'PYMODULE'),
+  ('pygments.styles.colorful',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\colorful.py',
+   'PYMODULE'),
+  ('pygments.styles.default',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\default.py',
+   'PYMODULE'),
+  ('pygments.styles.dracula',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\dracula.py',
+   'PYMODULE'),
+  ('pygments.styles.emacs',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\emacs.py',
+   'PYMODULE'),
+  ('pygments.styles.friendly',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\friendly.py',
+   'PYMODULE'),
+  ('pygments.styles.friendly_grayscale',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\friendly_grayscale.py',
+   'PYMODULE'),
+  ('pygments.styles.fruity',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\fruity.py',
+   'PYMODULE'),
+  ('pygments.styles.gh_dark',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\gh_dark.py',
+   'PYMODULE'),
+  ('pygments.styles.gruvbox',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\gruvbox.py',
+   'PYMODULE'),
+  ('pygments.styles.igor',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\igor.py',
+   'PYMODULE'),
+  ('pygments.styles.inkpot',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\inkpot.py',
+   'PYMODULE'),
+  ('pygments.styles.lightbulb',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\lightbulb.py',
+   'PYMODULE'),
+  ('pygments.styles.lilypond',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\lilypond.py',
+   'PYMODULE'),
+  ('pygments.styles.lovelace',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\lovelace.py',
+   'PYMODULE'),
+  ('pygments.styles.manni',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\manni.py',
+   'PYMODULE'),
+  ('pygments.styles.material',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\material.py',
+   'PYMODULE'),
+  ('pygments.styles.monokai',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\monokai.py',
+   'PYMODULE'),
+  ('pygments.styles.murphy',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\murphy.py',
+   'PYMODULE'),
+  ('pygments.styles.native',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\native.py',
+   'PYMODULE'),
+  ('pygments.styles.nord',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\nord.py',
+   'PYMODULE'),
+  ('pygments.styles.onedark',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\onedark.py',
+   'PYMODULE'),
+  ('pygments.styles.paraiso_dark',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\paraiso_dark.py',
+   'PYMODULE'),
+  ('pygments.styles.paraiso_light',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\paraiso_light.py',
+   'PYMODULE'),
+  ('pygments.styles.pastie',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\pastie.py',
+   'PYMODULE'),
+  ('pygments.styles.perldoc',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\perldoc.py',
+   'PYMODULE'),
+  ('pygments.styles.rainbow_dash',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\rainbow_dash.py',
+   'PYMODULE'),
+  ('pygments.styles.rrt',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\rrt.py',
+   'PYMODULE'),
+  ('pygments.styles.sas',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\sas.py',
+   'PYMODULE'),
+  ('pygments.styles.solarized',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\solarized.py',
+   'PYMODULE'),
+  ('pygments.styles.staroffice',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\staroffice.py',
+   'PYMODULE'),
+  ('pygments.styles.stata_dark',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\stata_dark.py',
+   'PYMODULE'),
+  ('pygments.styles.stata_light',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\stata_light.py',
+   'PYMODULE'),
+  ('pygments.styles.tango',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\tango.py',
+   'PYMODULE'),
+  ('pygments.styles.trac',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\trac.py',
+   'PYMODULE'),
+  ('pygments.styles.vim',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\vim.py',
+   'PYMODULE'),
+  ('pygments.styles.vs',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\vs.py',
+   'PYMODULE'),
+  ('pygments.styles.xcode',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\xcode.py',
+   'PYMODULE'),
+  ('pygments.styles.zenburn',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\styles\\zenburn.py',
+   'PYMODULE'),
+  ('pygments.token',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\token.py',
+   'PYMODULE'),
+  ('pygments.unistring',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\unistring.py',
+   'PYMODULE'),
+  ('pygments.util',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\pygments\\util.py',
    'PYMODULE'),
   ('pyparsing',
    'C:\\Users\\Nitro '
@@ -6642,6 +9939,10 @@
   ('setuptools.command.build',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\setuptools\\command\\build.py',
+   'PYMODULE'),
+  ('setuptools.command.build_ext',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\setuptools\\command\\build_ext.py',
    'PYMODULE'),
   ('setuptools.command.egg_info',
    'C:\\Users\\Nitro '

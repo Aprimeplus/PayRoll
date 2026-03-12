@@ -69,13 +69,17 @@
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_inspect.py',
    'PYSOURCE'),
+  ('pyi_rth_setuptools',
+   'C:\\Users\\Nitro '
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_setuptools.py',
+   'PYSOURCE'),
   ('pyi_rth_mplconfig',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_mplconfig.py',
    'PYSOURCE'),
-  ('pyi_rth_setuptools',
+  ('pyi_rth_cryptography_openssl',
    'C:\\Users\\Nitro '
-   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_setuptools.py',
+   'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\rthooks\\pyi_rth_cryptography_openssl.py',
    'PYSOURCE'),
   ('pyi_rth__tkinter',
    'C:\\Users\\Nitro '
@@ -85,7 +89,7 @@
  [],
  False,
  False,
- 1772789783,
+ 1773283028,
  [('runw.exe',
    'C:\\Users\\Nitro '
    'V15\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',

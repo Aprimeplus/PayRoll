@@ -985,7 +985,7 @@ class PayrollModule(ttk.Frame):
 
         popup = tk.Toplevel(self)
         popup.title(f"บันทึกรายรับ/รายจ่าย - {emp_name}")
-        popup.geometry("500x650")
+        popup.geometry("500x680")
         popup.transient(self)
         popup.grab_set()
         
@@ -1024,14 +1024,37 @@ class PayrollModule(ttk.Frame):
             ent.insert(0, f"{val:.2f}" if val != 0 else "0")
             entries[key] = ent
 
+        ttk.Separator(main_frame, orient="horizontal").pack(fill="x", pady=15)
+        ttk.Label(main_frame, text="อื่นๆ (Others)", font=("", 10, "bold"), foreground="blue").pack(anchor="w", pady=(0,10))
+        
+        # 1. ช่องหมายเหตุ (ใหญ่ขึ้น เป็นกล่อง 2 บรรทัด)
+        f_remark = ttk.Frame(main_frame); f_remark.pack(fill="x", pady=5)
+        ttk.Label(f_remark, text="หมายเหตุ (แสดงในตาราง)", width=25).pack(side="left", anchor="n")
+        remark_entry = tk.Text(f_remark, width=35, height=2, font=("Segoe UI", 10)) # <--- เปลี่ยนเป็น Text Box
+        remark_entry.pack(side="right")
+        remark_entry.insert("1.0", curr_data.get("remark", "")) 
+
+        # 2. ช่องโน้ตภายใน (ใหญ่ขึ้น เป็นกล่อง 3 บรรทัด)
+        f_note = ttk.Frame(main_frame); f_note.pack(fill="x", pady=5)
+        ttk.Label(f_note, text="โน้ตภายใน (เก็บไว้ดูเอง)", width=25).pack(side="left", anchor="n")
+        note_entry = tk.Text(f_note, width=35, height=3, font=("Segoe UI", 10)) 
+        note_entry.pack(side="right")
+        note_entry.insert("1.0", curr_data.get("note", ""))
+
         def save_popup():
             try:
+                # บันทึกตัวเลข
                 new_data = {k: float(e.get().replace(',', '') or 0.0) for k, e in entries.items()}
+                
+                # 🛠️ บันทึกตัวอักษร (ดึงข้อความจากกล่อง Text ทั้งคู่)
+                new_data['remark'] = remark_entry.get("1.0", tk.END).strip() 
+                new_data['note'] = note_entry.get("1.0", tk.END).strip()
+                
                 self.payroll_inputs[emp_id_real] = new_data
                 self.input_tree.set(item_id, column="status", value="✅ บันทึกแล้ว")
                 popup.destroy()
                 messagebox.showinfo("สำเร็จ", "บันทึกข้อมูลแล้ว กรุณากดปุ่ม 'ประมวลผล' เพื่ออัปเดตยอด")
-            except: messagebox.showerror("Error", "กรุณากรอกตัวเลข")
+            except: messagebox.showerror("Error", "กรุณากรอกตัวเลขให้ถูกต้อง")
 
         ttk.Button(main_frame, text="💾 บันทึกยอด", command=save_popup).pack(pady=20)
 
@@ -1162,6 +1185,9 @@ class PayrollModule(ttk.Frame):
                 # 🛠️ อื่นๆ(รับ) ในตาราง = Other Income จาก Popup + สวัสดิการ
                 display_other_sheet = res['other_income']
                 
+                res['remark'] = user_in.get('remark', '')
+                res['note'] = user_in.get('note', '')
+
                 row_data = [
                     real_emp_id, emp_name,
                     f"{res['base_salary']:,.2f}", f"{res.get('position_allowance',0):,.2f}",
@@ -1175,7 +1201,8 @@ class PayrollModule(ttk.Frame):
                     f"{res.get('pnd3',0):,.2f}", 
                     f"{res['provident_fund']:,.2f}", f"{res['loan']:,.2f}", 
                     f"{res['late_deduct']:,.2f}", f"{res['other_deduct']:,.2f}",
-                    f"{res['total_deduct']:,.2f}", f"{res['net_salary']:,.2f}"       
+                    f"{res['total_deduct']:,.2f}", f"{res['net_salary']:,.2f}",
+                    res['remark']  # 🛠️ เอาใส่ไว้ขวาสุด
                 ]
                 sheet_data.append(row_data)
                 self.last_payroll_results.append(res)
@@ -1191,12 +1218,13 @@ class PayrollModule(ttk.Frame):
             f"{total_sum['sso']:,.2f}", f"{total_sum['pnd1']:,.2f}", f"{total_sum['pnd3']:,.2f}", 
             f"{total_sum['provident_fund']:,.2f}", f"{total_sum['loan']:,.2f}",
             f"{total_sum['late']:,.2f}", f"{total_sum['other_deduct']:,.2f}",
-            f"{total_sum['total_deduct']:,.2f}", f"{total_sum['net_salary']:,.2f}"
+            f"{total_sum['total_deduct']:,.2f}", f"{total_sum['net_salary']:,.2f}",
+            ""  # 🛠️ เพิ่มช่องว่างตรงคอลัมน์หมายเหตุ
         ]
         sheet_data.append(summary_row)
 
         # --- 6. อัปเดตตาราง Sheet ---
-        headers = ["รหัส", "ชื่อ-สกุล", "เงินเดือน", "ค่าตำแหน่ง", "OT", "คอมมิชชั่น", "Incentive", "เบี้ยขยัน", "โบนัส", "อื่นๆ(รับ)", "ค่าเที่ยว", "รวมรับ", "ประกันสังคม", "ภ.ง.ด.1", "ภ.ง.ด.3", "กองทุนฯ", "เงินกู้", "มาสาย/ลา", "อื่นๆ(หัก)", "รวมหัก", "สุทธิ"]
+        headers = ["รหัส", "ชื่อ-สกุล", "เงินเดือน", "ค่าตำแหน่ง", "OT", "คอมมิชชั่น", "Incentive", "เบี้ยขยัน", "โบนัส", "อื่นๆ(รับ)", "ค่าเที่ยว", "รวมรับ", "ประกันสังคม", "ภ.ง.ด.1", "ภ.ง.ด.3", "กองทุนฯ", "เงินกู้", "มาสาย/ลา", "อื่นๆ(หัก)", "รวมหัก", "สุทธิ", "หมายเหตุ"] # 🛠️ เพิ่ม "หมายเหตุ" ตรงนี้
         self.results_sheet.headers(headers) 
         self.results_sheet.set_sheet_data(sheet_data)
         
@@ -1243,7 +1271,8 @@ class PayrollModule(ttk.Frame):
                 "total_income": "รวมรับ",
                 "sso": "ประกันสังคม", "provident_fund": "กองทุนสำรองฯ",
                 "loan": "เงินกู้", "late_deduct": "ขาด/สาย", "other_deduct": "อื่นๆ(หัก)",
-                "total_deduct": "รวมหัก", "net_salary": "สุทธิ"
+                "total_deduct": "รวมหัก", "net_salary": "สุทธิ",
+                "remark": "หมายเหตุ" # 🛠️ [เพิ่มบรรทัดนี้]
             }
             
             # กรองเอาเฉพาะคอลัมน์ที่มีอยู่จริง (ป้องกัน Error)

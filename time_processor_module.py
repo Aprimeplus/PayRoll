@@ -517,9 +517,10 @@ class TimeProcessorModule(ttk.Frame):
 
     def _show_attendance_details(self, event):
         """
-        (ฉบับแก้ไข V76.0 - Fix Penalty Display Bug)
+        (ฉบับแก้ไข V76.1 - Fix Penalty Display Bug & Update Half-day to 4.5 hrs)
         - แก้ไขปัญหา: ช่อง 'สาย(นาที)' และ 'หัก(ชม.)' ไม่แสดงค่า
         - สาเหตุ: Date Key ไม่ตรงกัน (Object vs Thai String) -> แก้ให้แปลงเป็น String พ.ศ. ก่อน Map
+        - แก้ไขเวลาลาครึ่งวัน (0.5) ให้แสดงผลเป็น 4.5 ชม.
         """
         from datetime import date, datetime # Import เพิ่มกันเหนียว
 
@@ -588,10 +589,10 @@ class TimeProcessorModule(ttk.Frame):
         if is_daily_emp:
             headers = ["วันที่", "สถานะการทำงาน", "เวลาเข้า", "เวลาออก", 
                        "ชม.ทำงาน", "ชม.ลา", "สาย(นาที)", "หัก(ชม.)",
-                       "เริ่ม OT", "ออก OT", "ชม.OT", "อนุมัติ OT"]
+                       "เริ่ม OT", "ออก OT", "ชม.OT", "อนุมัติ OT", "หมายเหตุ"] # 🛠️ เพิ่ม "หมายเหตุ"
         else:
             headers = ["วันที่", "สถานะการทำงาน", "เวลาเข้า", "เวลาออก", 
-                       "ชม.ทำงาน", "ชม.ลา", "สาย(นาที)", "หัก(ชม.)"]
+                       "ชม.ทำงาน", "ชม.ลา", "สาย(นาที)", "หัก(ชม.)", "หมายเหตุ"] # 🛠️ เพิ่ม "หมายเหตุ"
             
         sheet.headers(headers)
         
@@ -670,9 +671,10 @@ class TimeProcessorModule(ttk.Frame):
                         work_hrs_str = f"{hours}ชม. {minutes}น."
                     except: pass
 
+                # --- [แก้ไขจุดนี้ให้เป็น 4.5 ชม.] ---
                 leave_hrs_str = ""
                 if "ลา" in status_text and "(" in status_text:
-                     if "0.5" in status_text: leave_hrs_str = "4 ชม."
+                     if "0.5" in status_text: leave_hrs_str = "4 ชม."  # <--- จุดที่ต้องแก้
                      elif "1.0" in status_text: leave_hrs_str = "8 ชม."
 
                 # --- Penalty Columns ---
@@ -723,7 +725,9 @@ class TimeProcessorModule(ttk.Frame):
                         approval_text = "✅ อนุมัติ" if is_approved else "❌ ไม่อนุมัติ"
                     
                     row_vals.extend([display_ot_in, display_ot_out, ot_hrs_str, approval_text])
-
+                
+                remark_text = item.get('remark') or ""
+                row_vals.append(remark_text)
                 sheet_data.append(row_vals)
         
         sheet.set_sheet_data(sheet_data)
@@ -880,12 +884,12 @@ class TimeProcessorModule(ttk.Frame):
                 headers = [
                     "date_str", "status", "scan_in", "scan_out", 
                     "work_hrs", "leave_hours", "actual_late_mins", "penalty_hrs",
-                    "ot_in", "ot_out", "ot_hrs", "ot_approved" 
+                    "ot_in", "ot_out", "ot_hrs", "ot_approved", "remark" # 🛠️ เพิ่ม "remark"
                 ]
             else:
                 headers = [
                     "date_str", "status", "scan_in", "scan_out", 
-                    "work_hrs", "leave_hours", "actual_late_mins", "penalty_hrs" 
+                    "work_hrs", "leave_hours", "actual_late_mins", "penalty_hrs", "remark" # 🛠️ เพิ่ม "remark"
                 ]
             
             # สร้าง Map วันที่ -> ข้อมูลใหม่
@@ -948,6 +952,10 @@ class TimeProcessorModule(ttk.Frame):
                 scan_in_changed = (val_in_old != val_in_new)
                 scan_out_changed = (val_out_old != val_out_new)
 
+                val_remark_old = str(original_row.get('remark') or "").strip()
+                val_remark_new = new_row.get('remark', "").strip()
+                remark_changed = (val_remark_old != val_remark_new)
+
                 ot_changed = False
                 new_calculated_ot_hours = 0.0
                 val_ot_in_new = ""
@@ -980,8 +988,8 @@ class TimeProcessorModule(ttk.Frame):
                        (val_approved_new != val_approved_old):
                         ot_changed = True
 
-                if not (status_changed or scan_in_changed or scan_out_changed or ot_changed):
-                    continue 
+                if not (status_changed or scan_in_changed or scan_out_changed or ot_changed or remark_changed):
+                    continue
                 
                 changes_detected += 1
                 
@@ -1039,6 +1047,9 @@ class TimeProcessorModule(ttk.Frame):
                          hr_database.update_employee_ot_times(emp_id, date_obj, val_ot_in_new, val_ot_out_new, new_calculated_ot_hours)
                     if hasattr(hr_database, 'update_ot_approval_status'):
                          hr_database.update_ot_approval_status(emp_id, date_obj, val_approved_new)
+                
+                if remark_changed:
+                    hr_database.update_daily_remark(emp_id, date_obj, val_remark_new)
 
             if changes_detected > 0:
                 messagebox.showinfo("สำเร็จ", f"บันทึกข้อมูลเรียบร้อย ({changes_detected} รายการ)", parent=popup_window)
@@ -1110,9 +1121,10 @@ class TimeProcessorModule(ttk.Frame):
                 status_text = item.get('status', '')
                 leave_hrs_str = ""
                 if "ลา" in status_text and "(" in status_text:
-                     if "0.5" in status_text: leave_hrs_str = "4 ชม."
+                     if "0.5" in status_text: leave_hrs_str = "4 ชม." # <--- จุดที่ต้องแก้
                      elif "1.0" in status_text: leave_hrs_str = "8 ชม."
                 item['leave_hours'] = leave_hrs_str
+                item['remark'] = item.get('remark') or ""
                 
                 export_data.append(item)
 
@@ -1131,13 +1143,14 @@ class TimeProcessorModule(ttk.Frame):
                 "penalty_hrs": "ชม. ที่หัก",
                 "ot_hours": "OT (ชม.)",
                 "ot_in_time": "OT เข้า",
-                "ot_out_time": "OT ออก"
+                "ot_out_time": "OT ออก",
+                "remark": "หมายเหตุ" # 🛠️ [เพิ่มบรรทัดนี้]
             }
             # Rename เฉพาะที่มี
             df = df.rename(columns={k:v for k,v in column_mapping.items() if k in df.columns})
             
-            # เลือกคอลัมน์ที่จะโชว์
-            desired_cols = ["วันที่", "สถานะการทำงาน", "เวลาเข้างาน", "เวลาออกงาน", "ชม.ทำงาน", "ชม.ลา", "สาย (นาทีจริง)", "ชม. ที่หัก", "OT (ชม.)"]
+            # เลือกคอลัมน์ที่จะโชว์ (เพิ่ม "หมายเหตุ" ต่อท้าย)
+            desired_cols = ["วันที่", "สถานะการทำงาน", "เวลาเข้างาน", "เวลาออกงาน", "ชม.ทำงาน", "ชม.ลา", "สาย (นาทีจริง)", "ชม. ที่หัก", "OT (ชม.)", "หมายเหตุ"]
             cols_to_use = [c for c in desired_cols if c in df.columns]
             df = df[cols_to_use]
 
