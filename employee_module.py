@@ -438,9 +438,8 @@ class EmployeeModule(ttk.Frame):
         
         self.birth_entry = DateDropdown(birth_frame, font=("Segoe UI", 10))
         self.birth_entry.pack(side="left")
-        ttk.Button(birth_frame, text="คำนวณอายุ", command=self.calculate_age, width=12).pack(side="left", padx=(10, 5))
         self.age_label = ttk.Label(birth_frame, text="-", font=("Segoe UI", 10, "bold"), foreground="#27ae60")
-        self.age_label.pack(side="left", padx=10)
+        self.age_label.pack(side="left", padx=15)
         
         self.birth_entry.day_var.trace_add("write", self.calculate_age)
         self.birth_entry.month_var.trace_add("write", self.calculate_age)
@@ -545,7 +544,7 @@ class EmployeeModule(ttk.Frame):
             values=[
                 "พนักงานประจำ", "พนักงานสัญญาจ้างรายปี",
                 "สัญญาจ้างเหมารายเดือน", "สัญญาจ้างเหมา", "สัญญาจ้างเหมารายวัน", "สัญญาจ้างเหมารายปี",
-                "ที่ปรึกษา"  
+                "ที่ปรึกษา", "กรรมการ"  # 🛠️ [เพิ่ม] "กรรมการ" เข้าไปต่อท้ายตรงนี้เลยครับ
             ], 
             state="readonly",
             # !!! ตรวจสอบบรรทัดนี้ !!!
@@ -563,9 +562,14 @@ class EmployeeModule(ttk.Frame):
         # --- !! (แก้ไข: เปลี่ยนเป็น DateDropdown) !! ---
         self.start_entry = DateDropdown(start_frame, font=("Segoe UI", 10))
         self.start_entry.pack(side="left")
-        ttk.Button(start_frame, text="คำนวณอายุงาน", command=self.calc_exp, width=15).pack(side="left", padx=(10, 5))
+        # ลบปุ่มออก โชว์แค่ Label อายุงาน
         self.exp_label = ttk.Label(start_frame, text="-", font=("Segoe UI", 10, "bold"), foreground="#3498db")
-        self.exp_label.pack(side="left", padx=10)
+        self.exp_label.pack(side="left", padx=15)
+        
+        # ผูก Event ให้คำนวณอายุงานอัตโนมัติเมื่อวัน/เดือน/ปี เปลี่ยน
+        self.start_entry.day_var.trace_add("write", self.calc_exp)
+        self.start_entry.month_var.trace_add("write", self.calc_exp)
+        self.start_entry.year_var.trace_add("write", self.calc_exp)
         # --- (จบส่วนแก้ไข) ---
         
         row += 1
@@ -2193,7 +2197,7 @@ class EmployeeModule(ttk.Frame):
         self.nickname_entry.insert(0, str(employee.get("nickname", "") or ""))
         self.lname_entry.insert(0, str(employee.get("lname", "") or ""))
         self.birth_entry.set_date_from_str(str(employee.get("birth", "") or ""))
-        self.age_label.config(text=str(employee.get("age", "-")))
+        self.calculate_age() # 🛠️ คำนวณอายุใหม่แบบ Real-time ณ ปัจจุบัน
         self.id_card_entry.insert(0, str(employee.get("id_card", "") or ""))
         expiry_date_str = str(employee.get("id_card_expiry", "") or "")
         self.id_card_expiry_entry.set_date_from_str(expiry_date_str)
@@ -2230,7 +2234,7 @@ class EmployeeModule(ttk.Frame):
         # --- 4. ข้อมูลการจ้าง ---
         self.emp_type.set(str(employee.get("emp_type", "") or ""))
         self.start_entry.set_date_from_str(str(employee.get("start_date", "") or ""))
-        self.exp_label.config(text=str(employee.get("exp", "-")))
+        self.calc_exp()
         self.position_entry.insert(0, str(employee.get("position", "") or ""))
         self.department_entry.insert(0, str(employee.get("department", "") or ""))
         self.work_location_combo.set(str(employee.get("work_location", "") or ""))

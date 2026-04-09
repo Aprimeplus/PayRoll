@@ -741,6 +741,7 @@ class TimeProcessorModule(ttk.Frame):
             if 'ขาดงาน' in row_status: bg, fg = '#fddfe2', '#9f1f2e'
             elif 'สาย' in row_status: bg, fg = '#fff4de', '#a05f00' 
             elif 'ออกก่อน' in row_status: bg, fg = '#fff4de', '#a05f00'
+            elif 'ไม่ครบ' in row_status: bg, fg = '#fff4de', '#a05f00'
             elif 'ลา' in row_status: bg, fg = '#e0f0ff', '#00529e'
             elif 'วันหยุด' in row_status: bg, fg = '#ffffff', 'gray'
             elif is_daily_emp and len(row_vals) > 10 and row_vals[10] != "": bg = '#f0fff0' 

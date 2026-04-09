@@ -39,7 +39,7 @@ class DateDropdown(ttk.Frame):
         
         # สร้างรายการปีจาก (ปัจจุบัน + 5 ปี) ถอยลงไปจนถึงปี 2500
         # range(start, stop, step) -> stop=2499 เพื่อให้จบที่ 2500
-        self.year_list = list(range(current_year_be + 5, 2499, -1))
+        self.year_list = list(range(current_year_be + 20, 2499, -1))
 
         # --- สร้าง Widgets ---
         self.day_combo = ttk.Combobox(self, values=self.day_list, 

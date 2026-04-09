@@ -874,10 +874,10 @@ class PayrollModule(ttk.Frame):
      
     # --- ส่วน Logic ---
     def _open_history_window(self):
-        """เปิดหน้าต่างดูประวัติเงินเดือนย้อนหลัง"""
+        """เปิดหน้าต่างดูประวัติเงินเดือนย้อนหลัง (V91.0 เพิ่มปุ่มพิมพ์สลิปย้อนหลัง)"""
         win = tk.Toplevel(self)
         win.title("📜 ประวัติการจ่ายเงินเดือน (Payroll History)")
-        win.geometry("1200x700")
+        win.geometry("1400x700") 
         
         # --- Filter Frame ---
         top_frame = ttk.Frame(win, padding=10)
@@ -897,7 +897,16 @@ class PayrollModule(ttk.Frame):
         cb_month = ttk.Combobox(top_frame, values=months, width=12, state="readonly")
         cb_month.set(self.THAI_MONTHS[datetime.now().month])
         cb_month.pack(side="left", padx=5)
+
+        # เลือกรอบวิก
+        ttk.Label(top_frame, text="รอบ:").pack(side="left", padx=(10, 2))
+        cb_period = ttk.Combobox(top_frame, values=["ทั้งเดือน", "วิก 1 (1-15)", "วิก 2 (16-สิ้นเดือน)"], width=15, state="readonly")
+        cb_period.set("ทั้งเดือน")
+        cb_period.pack(side="left", padx=5)
         
+        # 🛠️ ตัวแปรเก็บข้อมูลประวัติดิบ เพื่อนำไปส่งให้ PDF
+        win.current_records = []
+
         # --- Sheet แสดงข้อมูล ---
         sheet_frame = ttk.Frame(win)
         sheet_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -906,6 +915,76 @@ class PayrollModule(ttk.Frame):
         history_sheet.pack(fill="both", expand=True)
         history_sheet.enable_bindings("single_select", "row_select", "column_width_resize", "arrowkeys", "copy")
 
+        # 🛠️ [NEW] ฟังก์ชันสำหรับพิมพ์สลิปจากหน้าประวัติโดยตรง
+        def print_history_payslip():
+            if not win.current_records:
+                messagebox.showwarning("เตือน", "ไม่มีข้อมูลประวัติ กรุณาค้นหาก่อนครับ", parent=win)
+                return
+
+            selected_indexes = history_sheet.get_selected_rows(return_tuple=True)
+            
+            # ถ้าเลือกแถวสุดท้ายที่เป็น TOTAL ให้ตัดออก
+            if selected_indexes and selected_indexes[-1] == len(win.current_records):
+                selected_indexes = selected_indexes[:-1]
+
+            if not selected_indexes:
+                if not messagebox.askyesno("พิมพ์ทั้งหมด?", "คุณไม่ได้เลือกพนักงาน\nต้องการพิมพ์สลิปของ 'ทุกคน' ในงวดนี้หรือไม่?", parent=win):
+                    return
+                selected_indexes = range(len(win.current_records))
+            
+            data_to_print = []
+            for i in selected_indexes:
+                r = win.current_records[i]
+                
+                # แปลงข้อมูลจาก DB ให้ตรงกับรูปแบบที่ _generate_pdf ต้องการ
+                mapped_data = {
+                    "emp_id": r["emp_id"],
+                    "name": f"{r.get('fname','')} {r.get('lname','')}",
+                    "position": r.get('position', '-'),
+                    "department": r.get('department', '-'),
+                    "base_salary": float(r.get("base_salary", 0) or 0),
+                    "position_allowance": float(r.get("position_allowance", 0) or 0),
+                    "ot": float(r.get("ot_pay", 0) or 0),
+                    "commission": float(r.get("commission", 0) or 0),
+                    "bonus": float(r.get("bonus", 0) or 0),
+                    "incentive": float(r.get("incentive", 0) or 0),
+                    "diligence": float(r.get("diligence", 0) or 0),
+                    "driving_allowance": float(r.get("driving_allowance", 0) or 0),
+                    "other_income": float(r.get("other_income", 0) or 0),
+                    "total_income": float(r.get("total_income", 0) or 0),
+                    "sso": float(r.get("sso_deduct", 0) or 0),
+                    "pnd1": float(r.get("tax_deduct", 0) or 0), 
+                    "pnd3": 0.0, 
+                    "provident_fund": float(r.get("provident_fund", 0) or 0),
+                    "loan": float(r.get("loan_deduct", 0) or 0),
+                    "late_deduct": float(r.get("late_deduct", 0) or 0),
+                    "other_deduct": float(r.get("other_deduct", 0) or 0),
+                    "total_deduct": float(r.get("total_deduct", 0) or 0),
+                    "net_salary": float(r.get("net_salary", 0) or 0),
+                    "remark": str(r.get("remark", ""))
+                }
+                data_to_print.append(mapped_data)
+
+            # หาวันที่จ่ายเงินจากประวัติ
+            pd_date = win.current_records[0].get('payment_date')
+            pay_date_str = f"{pd_date.day}/{pd_date.month}/{pd_date.year+543}" if pd_date else "-"
+
+            filename_prefix = f"Payslip_History_{data_to_print[0]['emp_id']}" if len(data_to_print)==1 else "Payslip_History_All"
+            save_path = filedialog.asksaveasfilename(
+                defaultextension=".pdf",
+                filetypes=[("PDF Files", "*.pdf")],
+                initialfile=f"{filename_prefix}.pdf",
+                title="บันทึกสลิปเงินเดือนย้อนหลัง"
+            )
+            if not save_path: return
+            
+            try:
+                self._generate_pdf(data_to_print, save_path, pay_date_str)
+                messagebox.showinfo("สำเร็จ", f"สร้างสลิปเงินเดือนย้อนหลังเรียบร้อยแล้ว:\n{save_path}", parent=win)
+                os.startfile(save_path)
+            except Exception as e:
+                messagebox.showerror("PDF Error", f"เกิดข้อผิดพลาดในการสร้างสลิปย้อนหลัง:\n{e}", parent=win)
+
         # ฟังก์ชันโหลดข้อมูล
         def load_history():
             try:
@@ -913,60 +992,118 @@ class PayrollModule(ttk.Frame):
                 y_ce = y_be - 543
                 m_name = cb_month.get()
                 m_int = self.MONTH_TO_INT[m_name]
+                
+                p_text = cb_period.get()
+                calc_mode = 0
+                if "วิก 1" in p_text: calc_mode = 1
+                elif "วิก 2" in p_text: calc_mode = 2
             except: return
 
-            # ดึงข้อมูลจาก DB
-            records = hr_database.get_monthly_payroll_records(m_int, y_ce)
+            records = hr_database.get_monthly_payroll_records(m_int, y_ce, calc_mode)
+            
+            win.current_records = records # 🛠️ เก็บประวัติไว้ใช้ตอนพิมพ์สลิป
             
             if not records:
-                messagebox.showinfo("ไม่พบข้อมูล", f"ไม่พบประวัติการจ่ายเงินของงวด {m_name} {y_be}")
+                messagebox.showinfo("ไม่พบข้อมูล", f"ไม่พบประวัติการจ่ายเงินของ {m_name} {y_be} ({p_text})")
                 history_sheet.set_sheet_data([])
                 return
 
-            # แปลงข้อมูลลงตาราง
+            t_base = 0.0; t_pos = 0.0; t_ot = 0.0; t_comm = 0.0; t_incen = 0.0
+            t_dil = 0.0; t_bonus = 0.0; t_other_inc = 0.0; t_drive = 0.0; t_total_inc = 0.0
+            t_sso = 0.0; t_tax = 0.0; t_prov = 0.0; t_loan = 0.0; t_late = 0.0
+            t_other_ded = 0.0; t_total_ded = 0.0; t_net = 0.0
+
             sheet_data = []
             pay_date_display = "-"
             
             for r in records:
-                # ดึงวันที่จ่ายมาโชว์สักหน่อย (เอาจากคนแรกก็ได้)
                 if pay_date_display == "-" and r.get('payment_date'):
-                    pd = r['payment_date'] # date object
-                    pay_date_display = f"{pd.day}/{pd.month}/{pd.year+543}"
+                    pd_date = r['payment_date'] 
+                    pay_date_display = f"{pd_date.day}/{pd_date.month}/{pd_date.year+543}"
+
+                t_base += float(r.get('base_salary', 0))
+                t_pos += float(r.get('position_allowance', 0))
+                t_ot += float(r.get('ot_pay', 0))
+                t_comm += float(r.get('commission', 0))
+                t_incen += float(r.get('incentive', 0))
+                t_dil += float(r.get('diligence', 0))
+                t_bonus += float(r.get('bonus', 0))
+                t_other_inc += float(r.get('other_income', 0))
+                t_drive += float(r.get('driving_allowance', 0))
+                t_total_inc += float(r.get('total_income', 0))
+                
+                t_sso += float(r.get('sso_deduct', 0))
+                t_tax += float(r.get('tax_deduct', 0))
+                t_prov += float(r.get('provident_fund', 0))
+                t_loan += float(r.get('loan_deduct', 0))
+                t_late += float(r.get('late_deduct', 0))
+                t_other_ded += float(r.get('other_deduct', 0))
+                t_total_ded += float(r.get('total_deduct', 0))
+                t_net += float(r.get('net_salary', 0))
 
                 fullname = f"{r.get('fname','')} {r.get('lname','')}"
                 row = [
                     r['emp_id'], fullname,
-                    f"{r['base_salary']:,.2f}", 
-                    f"{r['ot_pay']:,.2f}", 
-                    f"{r['commission']:,.2f}", 
-                    f"{r['total_income']:,.2f}", # รวมรับ
-                    f"{r['sso_deduct']:,.2f}", 
-                    f"{r['tax_deduct']:,.2f}", 
-                    f"{r['total_deduct']:,.2f}", # รวมหัก
-                    f"{r['net_salary']:,.2f}"     # สุทธิ
+                    f"{r.get('base_salary', 0):,.2f}", f"{r.get('position_allowance', 0):,.2f}",
+                    f"{r.get('ot_pay', 0):,.2f}", f"{r.get('commission', 0):,.2f}", 
+                    f"{r.get('incentive', 0):,.2f}", f"{r.get('diligence', 0):,.2f}",
+                    f"{r.get('bonus', 0):,.2f}", f"{r.get('other_income', 0):,.2f}", 
+                    f"{r.get('driving_allowance', 0):,.2f}", 
+                    f"{r.get('total_income', 0):,.2f}", 
+                    f"{r.get('sso_deduct', 0):,.2f}", f"{r.get('tax_deduct', 0):,.2f}", 
+                    f"{r.get('provident_fund', 0):,.2f}", f"{r.get('loan_deduct', 0):,.2f}", 
+                    f"{r.get('late_deduct', 0):,.2f}", f"{r.get('other_deduct', 0):,.2f}",
+                    f"{r.get('total_deduct', 0):,.2f}", 
+                    f"{r.get('net_salary', 0):,.2f}",
+                    r.get('remark', '') 
                 ]
                 sheet_data.append(row)
             
-            # ตั้งชื่อหัวตาราง
+            if sheet_data:
+                summary_row = [
+                    "TOTAL", "รวมทั้งสิ้น",
+                    f"{t_base:,.2f}", f"{t_pos:,.2f}",
+                    f"{t_ot:,.2f}", f"{t_comm:,.2f}", 
+                    f"{t_incen:,.2f}", f"{t_dil:,.2f}",
+                    f"{t_bonus:,.2f}", f"{t_other_inc:,.2f}", 
+                    f"{t_drive:,.2f}", 
+                    f"{t_total_inc:,.2f}", 
+                    f"{t_sso:,.2f}", f"{t_tax:,.2f}", 
+                    f"{t_prov:,.2f}", f"{t_loan:,.2f}", 
+                    f"{t_late:,.2f}", f"{t_other_ded:,.2f}",
+                    f"{t_total_ded:,.2f}", 
+                    f"{t_net:,.2f}",
+                    ""
+                ]
+                sheet_data.append(summary_row)
+
             headers = [
-                "รหัส", "ชื่อ-สกุล", 
-                "เงินเดือน", "OT", "คอมมิชชั่น", "รวมรับ",
-                "ประกันสังคม", "ภาษี", "รวมหัก", "สุทธิ (รับจริง)"
+                "รหัส", "ชื่อ-สกุล", "เงินเดือน", "ค่าตำแหน่ง", "OT", "คอมมิชชั่น", 
+                "Incentive", "เบี้ยขยัน", "โบนัส", "อื่นๆ(รับ)", "ค่าเที่ยว", "รวมรับ", 
+                "ประกันสังคม", "ภาษี", "กองทุนฯ", "เงินกู้", "มาสาย/ลา", "อื่นๆ(หัก)", "รวมหัก", 
+                "สุทธิ", "หมายเหตุ"
             ]
             history_sheet.headers(headers)
             history_sheet.set_sheet_data(sheet_data)
             
-            # บอกวันที่จ่ายที่หัวหน้าต่าง
-            win.title(f"📜 ประวัติการจ่ายเงินเดือน - งวด {m_name} {y_be} (จ่ายเมื่อ: {pay_date_display})")
+            history_sheet.highlight_columns(columns=list(range(2, 12)), bg="#e6f7ff", fg="black") 
+            history_sheet.highlight_columns(columns=list(range(12, 19)), bg="#fff7e6", fg="black") 
+            history_sheet.highlight_columns(columns=[19], bg="#ffffcc", fg="black") 
+            if sheet_data: 
+                history_sheet.highlight_rows(rows=[len(sheet_data)-1], bg="#ccffcc", fg="black") 
+            
+            win.title(f"📜 ประวัติการจ่ายเงินเดือน - งวด {m_name} {y_be} | {p_text} (จ่ายเมื่อ: {pay_date_display})")
 
         ttk.Button(top_frame, text="🔍 ค้นหาประวัติ", command=load_history).pack(side="left", padx=10)
         
-        # โหลดครั้งแรกเลย
+        # 🛠️ [NEW] ปุ่มพิมพ์สลิปย้อนหลัง นำไปวางข้างๆ ปุ่มค้นหาประวัติ
+        ttk.Button(top_frame, text="🖨️ พิมพ์สลิปย้อนหลัง (PDF)", command=print_history_payslip, style="Primary.TButton").pack(side="left", padx=10)
+        
         load_history()
 
     def _open_input_popup(self, event):
         """
-        (ฉบับแก้ไข V89.28 - Fix Errors)
+        (ฉบับแก้ไข V90.0 - แยกคอลัมน์ วิก 1 และ วิก 2)
         """
         selection = self.input_tree.selection()
         if not selection: return
@@ -976,24 +1113,32 @@ class PayrollModule(ttk.Frame):
         emp_id_real = str(tree_values[1]) 
         emp_name = str(tree_values[2])
         
-        # 1. ดึงข้อมูลเดิมจาก Memory (ป้องกัน IndexError จากการดึง tree_values[7])
-        curr_data = self.payroll_inputs.get(emp_id_real, {
-            "ot": 0.0, "commission": 0.0, "incentive": 0.0, "diligence": 0.0, 
-            "bonus": 0.0, "housing_income": 0.0, "other_income": 0.0,
-            "tax": 0.0, "provident_fund": 0.0, "loan": 0.0, "housing_deduct": 0.0, "other_deduct": 0.0
-        })
+        # ดึงข้อมูลเดิมจาก Memory (ถ้าไม่มีก็สร้างใหม่)
+        curr_data = self.payroll_inputs.get(emp_id_real, {})
 
         popup = tk.Toplevel(self)
         popup.title(f"บันทึกรายรับ/รายจ่าย - {emp_name}")
-        popup.geometry("500x680")
+        popup.geometry("600x750") # 🛠️ ขยายหน้าต่างให้กว้างขึ้น
         popup.transient(self)
         popup.grab_set()
         
         main_frame = ttk.Frame(popup, padding=20)
         main_frame.pack(fill="both", expand=True)
-        entries = {}
+        
+        entries_1 = {} # เก็บช่องกรอกวิก 1
+        entries_2 = {} # เก็บช่องกรอกวิก 2
 
-        ttk.Label(main_frame, text="รายได้ (Addition)", font=("", 10, "bold"), foreground="green").pack(anchor="w", pady=(0,10))
+        # --- หัวตาราง ---
+        header_f = ttk.Frame(main_frame)
+        header_f.pack(fill="x", pady=(0, 10))
+        ttk.Label(header_f, text="รายการ (ระบุตัวเลข)", width=22, font=("", 10, "bold")).pack(side="left")
+        ttk.Label(header_f, text="วิก 1 (วันที่ 1-15)", width=18, font=("", 10, "bold")).pack(side="left", padx=5)
+        ttk.Label(header_f, text="วิก 2 (16-สิ้นเดือน)", width=18, font=("", 10, "bold")).pack(side="left", padx=5)
+
+        ttk.Separator(main_frame, orient="horizontal").pack(fill="x", pady=5)
+
+        # --- ส่วนรายได้ ---
+        ttk.Label(main_frame, text="รายได้ (Addition)", font=("", 10, "bold"), foreground="green").pack(anchor="w", pady=(5,5))
         fields_inc = [
             ("ค่าล่วงเวลา (OT)", "ot"), ("คอมมิชชั่น", "commission"), 
             ("Incentive", "incentive"), ("เบี้ยขยัน (Manual)", "diligence"), 
@@ -1003,14 +1148,24 @@ class PayrollModule(ttk.Frame):
 
         for label, key in fields_inc:
             f = ttk.Frame(main_frame); f.pack(fill="x", pady=2)
-            ttk.Label(f, text=label, width=25).pack(side="left")
-            ent = ttk.Entry(f, width=15); ent.pack(side="right")
-            val = curr_data.get(key, 0.0)
-            ent.insert(0, f"{val:.2f}" if val != 0 else "0")
-            entries[key] = ent
+            ttk.Label(f, text=label, width=22).pack(side="left")
+            
+            # วิก 1
+            ent1 = ttk.Entry(f, width=15); ent1.pack(side="left", padx=5)
+            val1 = curr_data.get(f"{key}_1", 0.0)
+            ent1.insert(0, f"{val1:.2f}" if val1 != 0 else "0")
+            entries_1[key] = ent1
+            
+            # วิก 2
+            ent2 = ttk.Entry(f, width=15); ent2.pack(side="left", padx=5)
+            val2 = curr_data.get(f"{key}_2", 0.0)
+            ent2.insert(0, f"{val2:.2f}" if val2 != 0 else "0")
+            entries_2[key] = ent2
 
-        ttk.Separator(main_frame, orient="horizontal").pack(fill="x", pady=15)
-        ttk.Label(main_frame, text="รายการหัก (Deduction)", font=("", 10, "bold"), foreground="red").pack(anchor="w", pady=(0,10))
+        ttk.Separator(main_frame, orient="horizontal").pack(fill="x", pady=10)
+        
+        # --- ส่วนเงินหัก ---
+        ttk.Label(main_frame, text="รายการหัก (Deduction)", font=("", 10, "bold"), foreground="red").pack(anchor="w", pady=(0,5))
         fields_ded = [
             ("ภาษี (Manual)", "tax"), ("กองทุนสำรองฯ", "provident_fund"), 
             ("หักเงินกู้/ยืม", "loan"), ("ค่าที่พักใน", "housing_deduct"), ("หักอื่นๆ", "other_deduct")
@@ -1018,35 +1173,47 @@ class PayrollModule(ttk.Frame):
 
         for label, key in fields_ded:
             f = ttk.Frame(main_frame); f.pack(fill="x", pady=2)
-            ttk.Label(f, text=label, width=25).pack(side="left")
-            ent = ttk.Entry(f, width=15); ent.pack(side="right")
-            val = curr_data.get(key, 0.0)
-            ent.insert(0, f"{val:.2f}" if val != 0 else "0")
-            entries[key] = ent
+            ttk.Label(f, text=label, width=22).pack(side="left")
+            
+            # วิก 1
+            ent1 = ttk.Entry(f, width=15); ent1.pack(side="left", padx=5)
+            val1 = curr_data.get(f"{key}_1", 0.0)
+            ent1.insert(0, f"{val1:.2f}" if val1 != 0 else "0")
+            entries_1[key] = ent1
+            
+            # วิก 2
+            ent2 = ttk.Entry(f, width=15); ent2.pack(side="left", padx=5)
+            val2 = curr_data.get(f"{key}_2", 0.0)
+            ent2.insert(0, f"{val2:.2f}" if val2 != 0 else "0")
+            entries_2[key] = ent2
 
-        ttk.Separator(main_frame, orient="horizontal").pack(fill="x", pady=15)
-        ttk.Label(main_frame, text="อื่นๆ (Others)", font=("", 10, "bold"), foreground="blue").pack(anchor="w", pady=(0,10))
+        ttk.Separator(main_frame, orient="horizontal").pack(fill="x", pady=10)
         
-        # 1. ช่องหมายเหตุ (ใหญ่ขึ้น เป็นกล่อง 2 บรรทัด)
-        f_remark = ttk.Frame(main_frame); f_remark.pack(fill="x", pady=5)
-        ttk.Label(f_remark, text="หมายเหตุ (แสดงในตาราง)", width=25).pack(side="left", anchor="n")
-        remark_entry = tk.Text(f_remark, width=35, height=2, font=("Segoe UI", 10)) # <--- เปลี่ยนเป็น Text Box
-        remark_entry.pack(side="right")
+        # --- อื่นๆ ---
+        ttk.Label(main_frame, text="อื่นๆ (Others)", font=("", 10, "bold"), foreground="blue").pack(anchor="w", pady=(0,5))
+        
+        f_remark = ttk.Frame(main_frame); f_remark.pack(fill="x", pady=2)
+        ttk.Label(f_remark, text="หมายเหตุ (ในตาราง)", width=22).pack(side="left", anchor="n")
+        remark_entry = tk.Text(f_remark, width=40, height=2, font=("Segoe UI", 10)) 
+        remark_entry.pack(side="left")
         remark_entry.insert("1.0", curr_data.get("remark", "")) 
 
-        # 2. ช่องโน้ตภายใน (ใหญ่ขึ้น เป็นกล่อง 3 บรรทัด)
-        f_note = ttk.Frame(main_frame); f_note.pack(fill="x", pady=5)
-        ttk.Label(f_note, text="โน้ตภายใน (เก็บไว้ดูเอง)", width=25).pack(side="left", anchor="n")
-        note_entry = tk.Text(f_note, width=35, height=3, font=("Segoe UI", 10)) 
-        note_entry.pack(side="right")
+        f_note = ttk.Frame(main_frame); f_note.pack(fill="x", pady=2)
+        ttk.Label(f_note, text="โน้ตภายใน (ดูเอง)", width=22).pack(side="left", anchor="n")
+        note_entry = tk.Text(f_note, width=40, height=2, font=("Segoe UI", 10)) 
+        note_entry.pack(side="left")
         note_entry.insert("1.0", curr_data.get("note", ""))
 
         def save_popup():
             try:
-                # บันทึกตัวเลข
-                new_data = {k: float(e.get().replace(',', '') or 0.0) for k, e in entries.items()}
+                new_data = {}
+                # บันทึกของวิก 1 และวิก 2 แยกรหัสกัน (เช่น ot_1, ot_2)
+                all_keys = [k for _, k in fields_inc] + [k for _, k in fields_ded]
+                for k in all_keys:
+                    new_data[f"{k}_1"] = float(entries_1[k].get().replace(',', '') or 0.0)
+                    new_data[f"{k}_2"] = float(entries_2[k].get().replace(',', '') or 0.0)
                 
-                # 🛠️ บันทึกตัวอักษร (ดึงข้อความจากกล่อง Text ทั้งคู่)
+                # บันทึกหมายเหตุ
                 new_data['remark'] = remark_entry.get("1.0", tk.END).strip() 
                 new_data['note'] = note_entry.get("1.0", tk.END).strip()
                 
@@ -1054,20 +1221,16 @@ class PayrollModule(ttk.Frame):
                 self.input_tree.set(item_id, column="status", value="✅ บันทึกแล้ว")
                 popup.destroy()
                 messagebox.showinfo("สำเร็จ", "บันทึกข้อมูลแล้ว กรุณากดปุ่ม 'ประมวลผล' เพื่ออัปเดตยอด")
-            except: messagebox.showerror("Error", "กรุณากรอกตัวเลขให้ถูกต้อง")
+            except: messagebox.showerror("Error", "กรุณากรอกตัวเลขให้ถูกต้อง (ห้ามมีตัวหนังสือในช่องยอดเงิน)")
 
         ttk.Button(main_frame, text="💾 บันทึกยอด", command=save_popup).pack(pady=20)
 
     def _run_payroll_calculation(self):
         """
-        ฟังก์ชันหลักคำนวณเงินเดือน - ฉบับสมบูรณ์ V89.28 (Full Integration)
-        - 🛠️ [FIX] แก้ไข AttributeError: ใช้ self.start_date_entry / end_date_entry
-        - 🛠️ [FIX] แก้ไข ID Lookup: ดึงค่าจาก Popup โดยใช้รหัสพนักงานจริง
-        - 🛠️ [FIX] แก้ไข Summation: รวมยอด อื่นๆ(รับ) และ เบี้ยขยัน เข้าก้อนรวมรับแน่นอน
+        ฟังก์ชันหลักคำนวณเงินเดือน - ฉบับสมบูรณ์ V90.0 (รองรับแบ่งวิก 1 และ วิก 2 อัตโนมัติ)
         """
-        # --- 1. ตรวจสอบวันที่ ---
+        # --- 1. ตรวจสอบวันที่ และ เช็คโหมดวิก (Period Mode) ---
         try:
-            # ใช้ชื่อตัวแปรที่ถูกต้องตามที่คุณประกาศไว้ใน __init__
             start_date = self.start_date_entry.get_date()
             end_date = self.end_date_entry.get_date()
             if not start_date or not end_date: 
@@ -1075,12 +1238,21 @@ class PayrollModule(ttk.Frame):
                 return
             current_month = start_date.month
             current_year = start_date.year 
+            
+            # 🛠️ [NEW] เช็คว่ากำลังคิดเงินเดือนของช่วงไหน
+            calc_mode = 0 # 0 = เต็มเดือน (เอาวิก 1 + วิก 2), 1 = วิก 1 (เอาแค่ _1), 2 = วิก 2 (เอาแค่ _2)
+            if start_date.day <= 15 and end_date.day <= 15:
+                calc_mode = 1 # เลือกคำนวณ 1-15
+            elif start_date.day >= 16:
+                calc_mode = 2 # เลือกคำนวณ 16-สิ้นเดือน
+            else:
+                calc_mode = 0 # เลือกคำนวณคร่อม 2 รอบ (เช่น 1-31)
+                
         except Exception as e:
             print(f"Date Error: {e}")
             return
 
         # 2. กวาดรายชื่อพนักงานที่ถูกเลือก (ที่ติ๊ก ☑)
-        # ตรวจสอบทั้งแท็บพนักงานประจำ และแท็บสัญญาจ้าง
         selected_iids = []
         def collect_ids(tree_widget):
             ids = []
@@ -1091,7 +1263,6 @@ class PayrollModule(ttk.Frame):
                         ids.append(iid)
             return ids
 
-        # ดักจับ iid จากทุก Treeview ที่เป็นไปได้
         if hasattr(self, 'tree_reg') and hasattr(self, 'tree_cont'):
             selected_iids.extend(collect_ids(self.tree_reg))
             selected_iids.extend(collect_ids(self.tree_cont))
@@ -1123,19 +1294,33 @@ class PayrollModule(ttk.Frame):
         }
 
         # --- 4. เริ่ม Loop คำนวณรายคน ---
-        # ใช้ iid เพื่ออัปเดตตารางหน้าแรก แต่ใช้ real_id เพื่อคำนวณ
         current_tree = self.input_tree if hasattr(self, 'input_tree') else self.tree_reg
 
         for iid in selected_iids:
-            # 🛠️ [FIX] ดึงรหัสพนักงานจริงจากช่องที่ 2 (เช่น AP001)
-            # เราต้องหาว่า iid นี้อยู่ใน tree ตัวไหน
             node_tree = self.tree_reg if iid in self.tree_reg.get_children() else self.tree_cont
             real_emp_id = node_tree.item(iid, "values")[1]
             
-            # 🛠️ [FIX] ดึงค่าจาก Popup โดยใช้รหัสพนักงานจริง
-            user_in = self.payroll_inputs.get(real_emp_id, {})
+            # 🛠️ [NEW] ดึงค่าจาก Popup และกรองตาม calc_mode ที่เลือกไว้
+            raw_input = self.payroll_inputs.get(real_emp_id, {})
+            user_in = {}
+            user_in['remark'] = raw_input.get('remark', '')
+            user_in['note'] = raw_input.get('note', '')
             
-            # เรียกคำนวณ Backend (V89.26+)
+            # รายการฟิลด์ตัวเลขทั้งหมด
+            numeric_fields = ['ot', 'commission', 'incentive', 'diligence', 'bonus', 'housing_income', 'other_income', 'tax', 'provident_fund', 'loan', 'housing_deduct', 'other_deduct']
+            
+            for field in numeric_fields:
+                val1 = float(raw_input.get(f"{field}_1", 0.0))
+                val2 = float(raw_input.get(f"{field}_2", 0.0))
+                
+                if calc_mode == 1:   # คิดเงินวิก 1
+                    user_in[field] = val1
+                elif calc_mode == 2: # คิดเงินวิก 2
+                    user_in[field] = val2
+                else:                # คิดเงินเต็มเดือน
+                    user_in[field] = val1 + val2
+            
+            # เรียกคำนวณ Backend 
             res = hr_database.calculate_payroll_for_employee(real_emp_id, start_date, end_date, user_in)
             
             if res:
@@ -1302,6 +1487,8 @@ class PayrollModule(ttk.Frame):
         # 1. ดึงเดือน/ปี ที่คำนวณ
         try:
             start_date = self.start_date_entry.get_date()
+            end_date = self.end_date_entry.get_date() # 🛠️ [FIX] เพิ่มบรรทัดนี้เข้ามาครับ!
+            
             m_int = start_date.month
             y_ce = start_date.year
             month_name = list(self.THAI_MONTHS.values())[m_int - 1]
@@ -1327,9 +1514,15 @@ class PayrollModule(ttk.Frame):
 
         # 3. บันทึกลง Database
         success_count = 0
+        
+        # 🛠️ [NEW] หาว่าตอนนี้เรากำลังบันทึกวิกไหน (คำนวณจากวันที่เลือกไว้)
+        calc_mode = 0
+        if start_date.day <= 15 and end_date.day <= 15: calc_mode = 1
+        elif start_date.day >= 16: calc_mode = 2
+
         for item in self.last_payroll_results:
-            # ส่ง pay_date ที่เลือกเข้าไปบันทึก
-            ok = hr_database.save_monthly_payroll(item['emp_id'], m_int, y_ce, pay_date, item)
+            # 🛠️ ส่ง calc_mode ไปให้ Database
+            ok = hr_database.save_monthly_payroll(item['emp_id'], m_int, y_ce, pay_date, item, calc_mode)
             if ok: success_count += 1
             
         messagebox.showinfo("สำเร็จ", f"บันทึกประวัติการจ่ายเงินเรียบร้อยแล้ว\nจำนวน: {success_count} รายการ\n(วันที่จ่าย: {pay_date_str})")
@@ -2162,7 +2355,7 @@ class PayrollModule(ttk.Frame):
             messagebox.showerror("Error", f"สร้างใบปะหน้าไม่สำเร็จ: {e}")
 
     def _sync_commission_from_asmart(self):
-        """ปุ่มสำหรับดึงข้อมูลจาก A+ Smart (รองรับ 2 แท็บ)"""
+        """ปุ่มสำหรับดึงข้อมูลจาก A+ Smart (อัปเดต: ค้นหาด้วย 'ชื่อ' แทน 'รหัส')"""
         
         # 1. เช็คว่าเลือกเดือน/ปี หรือยัง
         y_ce, m_int = self._get_selected_dates()
@@ -2181,31 +2374,28 @@ class PayrollModule(ttk.Frame):
         # 2. วนลูปทุกตาราง (ประจำ + จ้างเหมา)
         for tree in target_trees:
             for item_id in tree.get_children():
-                # ดึงค่าจากตาราง
                 vals = tree.item(item_id, "values")
                 
-                # [แก้ไข] values[0] คือ Checkbox, values[1] คือ รหัสพนักงาน
                 emp_id = vals[1] 
+                emp_name = vals[2] # ดึงชื่อ-นามสกุลจากคอลัมน์ที่ 3
                 
-                # 3. ไปดึงยอดเงินจาก DB
-                comm_amt = hr_database.get_commission_from_asmart(emp_id, m_int, y_ce)
+                # 3. ไปดึงยอดเงินจาก DB โดยส่ง 'ชื่อ' ไปแทน
+                comm_amt = hr_database.get_commission_from_asmart_by_name(emp_name, m_int, y_ce)
                 
                 if comm_amt > 0:
-                    # 4. อัปเดตเข้าตัวแปร payroll_inputs
                     if emp_id not in self.payroll_inputs:
                         self.payroll_inputs[emp_id] = {}
                     
-                    # บันทึกยอดลงช่อง commission
-                    self.payroll_inputs[emp_id]['commission'] = comm_amt
+                    # 🛠️ [FIX] ยัดเงินเข้า 'วิก 2' (commission_2) เพื่อให้ตารางคำนวณและหน้า Popup มองเห็น!
+                    self.payroll_inputs[emp_id]['commission_2'] = comm_amt
                     
-                    # 5. อัปเดตสถานะในตาราง (ใช้ตัวแปร tree ตัวปัจจุบัน)
                     tree.set(item_id, column="status", value=f"✅ A+ Smart: {comm_amt:,.2f}")
                     updated_count += 1
 
         if updated_count > 0:
             messagebox.showinfo("สำเร็จ", f"ดึงข้อมูลคอมมิชชั่นเรียบร้อย {updated_count} รายการ")
         else:
-            messagebox.showinfo("ไม่พบข้อมูล", "ไม่พบยอดคอมมิชชั่นในช่วงเวลานี้ (หรือรหัสพนักงานไม่ตรงกัน)")
+            messagebox.showinfo("ไม่พบข้อมูล", "ไม่พบยอดคอมมิชชั่นในช่วงเวลานี้ (หรือชื่อพนักงานไม่ตรงกันเลย)")
 
     def _open_daily_timesheet(self):
         """เปิดหน้าต่างบันทึกงานรายวัน (Daily Timesheet) - ฉบับรองรับ 2 แท็บ"""
