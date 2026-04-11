@@ -172,23 +172,23 @@ class AttendanceModule(ttk.Frame):
         ttk.Button(btn_frame, text="🔄 รีเฟรช", command=load_data).pack(side="right", padx=5)
 
     def _open_edit_leave_popup(self, leave_id, parent_win, refresh_callback):
-        """(ฉบับแก้ไข) หน้าต่าง Popup สำหรับแก้ไขข้อมูลการลา"""
-        
+        """(ฉบับแก้ไข V3) เพิ่ม 'เริ่มวันที่' ถึง 'สิ้นสุดวันที่' และคำนวณจำนวนวันอัตโนมัติ"""
+        from datetime import datetime, timedelta
+        from custom_widgets import DateDropdown
+
         # 1. ดึงข้อมูลเก่าจาก DB
-        print(f"DEBUG: กำลังดึงข้อมูล leave_id = {leave_id}") # Debug
         record = hr_database.get_leave_record_by_id(leave_id)
         
-        # ถ้าไม่เจอข้อมูล (record เป็น None) ให้แจ้งเตือนและจบการทำงาน
         if not record:
-            messagebox.showerror("Error", f"ไม่พบข้อมูลรหัส: {leave_id}\n(อาจถูกลบไปแล้ว หรือชื่อตาราง DB ไม่ถูกต้อง)")
+            messagebox.showerror("Error", f"ไม่พบข้อมูลรหัส: {leave_id}")
             return
 
         # 2. สร้างหน้าต่าง Popup
         edit_win = tk.Toplevel(parent_win)
         edit_win.title(f"✏️ แก้ไขรายการ ID: {leave_id}")
-        edit_win.geometry("450x400")
+        edit_win.geometry("680x550") # ขยายความกว้างเพื่อให้วาง 2 คอลัมน์ได้สวยๆ
         edit_win.transient(parent_win)
-        edit_win.grab_set() # ล็อคหน้าต่างแม่
+        edit_win.grab_set() 
         
         # จัดกึ่งกลางจอ
         try:
@@ -198,55 +198,202 @@ class AttendanceModule(ttk.Frame):
             edit_win.geometry(f"+{x}+{y}")
         except: pass
         
-        form_frame = ttk.Frame(edit_win, padding=20)
-        form_frame.pack(fill="both", expand=True)
+        leave_frame = ttk.LabelFrame(edit_win, text="  📝 แก้ไขข้อมูลการลา (ป่วย/กิจ/พักร้อน)  ", padding=20)
+        leave_frame.pack(fill="both", expand=True, padx=15, pady=15)
         
-        # --- สร้าง Form ---
+        row = 0
         
-        # 3. ประเภทการลา
-        ttk.Label(form_frame, text="ประเภทการลา:", font=("", 10, "bold")).pack(anchor="w", pady=(0, 5))
-        cb_type = ttk.Combobox(form_frame, values=["ลาป่วย", "ลากิจ", "ลาพักร้อน", "ลาไม่รับค่าจ้าง", "อื่นๆ"], state="readonly", font=("", 10))
-        cb_type.set(record.get('leave_type', ''))
-        cb_type.pack(fill="x", pady=5)
+        # --- เริ่มวันที่ & ถึงวันที่ ---
+        ttk.Label(leave_frame, text="เริ่มวันที่:", font=("Segoe UI", 10, "bold")).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=10)
+        edit_leave_start_date = DateDropdown(leave_frame, font=("Segoe UI", 10))
+        edit_leave_start_date.grid(row=row, column=1, sticky="w", pady=10)
         
-        # 4. จำนวนวัน
-        ttk.Label(form_frame, text="จำนวนวัน:", font=("", 10, "bold")).pack(anchor="w", pady=(10, 5))
-        ent_days = ttk.Entry(form_frame, font=("", 10))
-        ent_days.insert(0, str(record.get('num_days', 0)))
-        ent_days.pack(fill="x", pady=5)
+        ttk.Label(leave_frame, text="ถึงวันที่:", font=("Segoe UI", 10, "bold")).grid(row=row, column=2, sticky="e", padx=(20, 10), pady=10)
+        edit_leave_end_date = DateDropdown(leave_frame, font=("Segoe UI", 10))
+        edit_leave_end_date.grid(row=row, column=3, sticky="w", pady=10)
+
+        # เซ็ตวันที่เริ่มต้นและสิ้นสุดเดิมจาก Database
+        old_date_raw = record.get('leave_date')
+        parsed_old_date = None
         
-        # 5. หมายเหตุ
-        ttk.Label(form_frame, text="สาเหตุ/หมายเหตุ:", font=("", 10, "bold")).pack(anchor="w", pady=(10, 5))
-        ent_reason = ttk.Entry(form_frame, font=("", 10))
-        ent_reason.insert(0, record.get('reason', ''))
-        ent_reason.pack(fill="x", pady=5)
+        # 1. จัดการแปลงค่าให้เป็น Object วันที่ที่ถูกต้องเสมอ
+        if old_date_raw:
+            if hasattr(old_date_raw, 'day'): 
+                parsed_old_date = old_date_raw # เป็น date object อยู่แล้ว
+            elif isinstance(old_date_raw, str): 
+                try:
+                    # ถ้าฐานข้อมูลส่งมาเป็น String (แบบ 2024-04-10)
+                    parsed_old_date = datetime.strptime(old_date_raw.split(" ")[0], '%Y-%m-%d').date()
+                except:
+                    try:
+                        # ถ้าฐานข้อมูลส่งมาเป็น String พ.ศ. (แบบ 10/04/2567)
+                        d, m, y = map(int, old_date_raw.split('/'))
+                        parsed_old_date = datetime(y - 543, m, d).date()
+                    except: pass
+
+        # 2. ตั้งค่าลง Dropdown
+        if parsed_old_date:
+            edit_leave_start_date.set_date(parsed_old_date)
+            try:
+                old_days = float(record.get('num_days', 1.0))
+                if old_days >= 1:
+                    end_date = parsed_old_date + timedelta(days=int(old_days)-1)
+                    edit_leave_end_date.set_date(end_date)
+                else:
+                    edit_leave_end_date.set_date(parsed_old_date)
+            except:
+                edit_leave_end_date.set_date(parsed_old_date)
+        row += 1
+        
+        # --- ประเภท & จำนวนวัน ---
+        ttk.Label(leave_frame, text="ประเภท:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=10)
+        edit_leave_type = ttk.Combobox(leave_frame, width=15, font=("Segoe UI", 10),
+                                           values=["ลาป่วย", "ลากิจ", "ลาพักร้อน", "ลาไม่รับค่าจ้าง", "ลาอื่นๆ"], state="readonly")   
+        edit_leave_type.grid(row=row, column=1, sticky="w", pady=10)
+        edit_leave_type.set(record.get('leave_type', ''))
+
+        ttk.Label(leave_frame, text="จำนวนวัน:", font=("Segoe UI", 10)).grid(row=row, column=2, sticky="e", padx=(20, 10), pady=10)
+        edit_leave_days = ttk.Entry(leave_frame, width=15, font=("Segoe UI", 10))
+        edit_leave_days.grid(row=row, column=3, sticky="w", pady=10)
+        edit_leave_days.insert(0, str(record.get('num_days', 1.0)))
+
+        row += 1
+        
+        # --- ปุ่มช่วยคำนวณวัน (Auto-Calc) ---
+        def calc_days():
+            sd = edit_leave_start_date.get_date()
+            ed = edit_leave_end_date.get_date()
+            if sd and ed:
+                if ed >= sd:
+                    days = (ed - sd).days + 1
+                    edit_leave_days.delete(0, tk.END)
+                    edit_leave_days.insert(0, str(float(days)))
+                else:
+                    messagebox.showwarning("เตือน", "วันที่สิ้นสุดต้องมากกว่าหรือเท่ากับวันที่เริ่มต้น", parent=edit_win)
+        
+        ttk.Button(leave_frame, text="🔄 คำนวณจำนวนวันจากวันที่", command=calc_days).grid(row=row, column=3, sticky="w", pady=(0, 10))
+
+        row += 1
+
+        # --- รูปแบบเวลา (กรณีลารายชั่วโมง) ---
+        ttk.Label(leave_frame, text="รูปแบบเวลา:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="e", padx=(0, 10), pady=10)
+        edit_leave_duration_type = ttk.Combobox(leave_frame, width=15, font=("Segoe UI", 10),
+                                           values=["ตลอดวัน", "ระบุเวลา (ชม.)"], state="readonly")
+        edit_leave_duration_type.grid(row=row, column=1, sticky="w", pady=10)
+        
+        edit_leave_time_frame = ttk.Frame(leave_frame)
+        edit_leave_time_frame.grid(row=row, column=2, columnspan=2, sticky="w", pady=0, padx=10)
+        
+        time_options = [f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 15, 30, 45)]
+        
+        ttk.Label(edit_leave_time_frame, text="ตั้งแต่:").pack(side="left")
+        edit_leave_start_time = ttk.Combobox(edit_leave_time_frame, values=time_options, width=6, font=("Segoe UI", 10))
+        edit_leave_start_time.pack(side="left", padx=5)
+        
+        ttk.Label(edit_leave_time_frame, text="ถึง:").pack(side="left")
+        edit_leave_end_time = ttk.Combobox(edit_leave_time_frame, values=time_options, width=6, font=("Segoe UI", 10))
+        edit_leave_end_time.pack(side="left", padx=5)
+
+        old_start = record.get('leave_start_time')
+        old_end = record.get('leave_end_time')
+        if old_start and str(old_start) != "0:00:00": 
+            edit_leave_start_time.set(str(old_start)[:5])
+            edit_leave_duration_type.set("ระบุเวลา (ชม.)")
+        else:
+            edit_leave_duration_type.set("ตลอดวัน")
+            
+        if old_end and str(old_end) != "0:00:00": 
+            edit_leave_end_time.set(str(old_end)[:5])
+
+        def toggle_leave_time_entries(event=None):
+            if edit_leave_duration_type.get() == "ระบุเวลา (ชม.)":
+                edit_leave_time_frame.grid() 
+            else:
+                edit_leave_time_frame.grid_remove()
+                edit_leave_start_time.set("")
+                edit_leave_end_time.set("")
+
+        edit_leave_duration_type.bind("<<ComboboxSelected>>", toggle_leave_time_entries)
+        toggle_leave_time_entries()
+
+        row += 1
+        
+        # --- เหตุผล ---
+        ttk.Label(leave_frame, text="เหตุผล:", font=("Segoe UI", 10)).grid(row=row, column=0, sticky="ne", padx=(0, 10), pady=10)
+        edit_leave_reason = tk.Text(leave_frame, width=45, height=3, font=("Segoe UI", 10))
+        edit_leave_reason.insert("1.0", record.get('reason', ''))
+        edit_leave_reason.grid(row=row, column=1, columnspan=3, sticky="w", pady=10)
+
+        row += 1
         
         # --- ฟังก์ชันบันทึก ---
         def save_edit():
-            new_type = cb_type.get()
-            new_reason = ent_reason.get()
+            new_date = edit_leave_start_date.get_date() # ใช้ 'เริ่มวันที่' เป็นหลักในการบันทึก
+            new_type = edit_leave_type.get()
+            new_reason = edit_leave_reason.get("1.0", "end-1c")
             
-            # เช็คค่าตัวเลข
-            try:
-                new_days = float(ent_days.get())
-                if new_days <= 0: raise ValueError
-            except:
-                messagebox.showerror("ข้อผิดพลาด", "กรุณากรอก 'จำนวนวัน' เป็นตัวเลขที่มากกว่า 0")
+            num_days = 0.0
+            start_time_val = None
+            end_time_val = None
+
+            if not new_date:
+                messagebox.showwarning("เตือน", "กรุณาเลือกวันเริ่มต้น", parent=edit_win)
                 return
             
-            # สั่ง update ลง Database
-            # (ต้องมีฟังก์ชัน update_leave_record ใน hr_database.py ด้วย)
-            success = hr_database.update_leave_record(leave_id, new_type, new_days, new_reason)
+            try:
+                # ดึงจำนวนวันจากช่องกรอก
+                num_days = float(edit_leave_days.get())
+                if num_days <= 0: raise ValueError
+            except:
+                messagebox.showerror("ผิดพลาด", "กรุณากรอก 'จำนวนวัน' เป็นตัวเลขที่มากกว่า 0", parent=edit_win)
+                return
+            
+            # ถ้าเป็นการลารายชั่วโมง ให้คำนวณจำนวนวันใหม่จากเวลา
+            if edit_leave_duration_type.get() == "ระบุเวลา (ชม.)":
+                try:
+                    t1_str = edit_leave_start_time.get()
+                    t2_str = edit_leave_end_time.get()
+                    
+                    if not t1_str or not t2_str:
+                        messagebox.showwarning("เตือน", "กรุณาระบุเวลาให้ครบถ้วน", parent=edit_win)
+                        return
+                        
+                    start_time_val = datetime.strptime(t1_str, '%H:%M').time()
+                    end_time_val = datetime.strptime(t2_str, '%H:%M').time()
+                    
+                    dummy_date = datetime.today().date()
+                    diff = datetime.combine(dummy_date, end_time_val) - datetime.combine(dummy_date, start_time_val)
+                    hours = diff.total_seconds() / 3600.0
+                    
+                    if hours <= 0:
+                        messagebox.showwarning("เตือน", "เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น", parent=edit_win)
+                        return
+                        
+                    num_days = round(hours / 8.0, 4) # 1 วันทำการ = 8 ชม.
+                except Exception as e:
+                    messagebox.showerror("ผิดพลาด", f"รูปแบบเวลาไม่ถูกต้อง: {e}", parent=edit_win)
+                    return
+            
+            # ส่งข้อมูลไปบันทึก (ฟังก์ชันนี้เราได้แก้ใน hr_database.py ไปแล้ว)
+            success = hr_database.update_leave_record(
+                leave_id=leave_id, 
+                leave_date=new_date, 
+                l_type=new_type, 
+                l_days=num_days, 
+                l_reason=new_reason,
+                start_time=start_time_val,
+                end_time=end_time_val
+            )
             
             if success:
-                messagebox.showinfo("สำเร็จ", "บันทึกการแก้ไขเรียบร้อยแล้ว ✅")
-                edit_win.destroy()     # ปิด Popup
-                refresh_callback()     # รีโหลดตารางหลักใหม่
+                messagebox.showinfo("สำเร็จ", "บันทึกการแก้ไขเรียบร้อยแล้ว ✅", parent=edit_win)
+                edit_win.destroy()     
+                refresh_callback()     
             else:
-                messagebox.showerror("ล้มเหลว", "ไม่สามารถบันทึกข้อมูลได้\n(กรุณาตรวจสอบการเชื่อมต่อ Database)")
+                messagebox.showerror("ล้มเหลว", "ไม่สามารถบันทึกข้อมูลได้", parent=edit_win)
 
-        # ปุ่มบันทึก
-        ttk.Button(form_frame, text="💾 บันทึกการแก้ไข", command=save_edit, style="Success.TButton").pack(pady=30, fill="x", ipady=5)
+        ttk.Button(leave_frame, text="💾 บันทึกการแก้ไข", command=save_edit, 
+                   width=20, style="Primary.TButton").grid(row=row, column=1, columnspan=3, sticky="e", pady=15)
 
     def _create_main_layout(self):
         """สร้างโครงสร้างหลักแบบ 2 คอลัมน์ (Master-Detail)"""

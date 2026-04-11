@@ -12,7 +12,7 @@ from custom_widgets import DateDropdown
 #  ส่วนที่ 1: Popup บันทึกเที่ยวรถ (Driving) (เหมือนเดิม)
 # ==========================================
 class DrivingDetailsPopup(tk.Toplevel):
-    """หน้าต่างย่อยสำหรับกรอกรายละเอียดเที่ยวรถ"""
+    """หน้าต่างย่อยสำหรับกรอกรายละเอียดเที่ยวรถ (เพิ่มฟีเจอร์แก้ไข)"""
     def __init__(self, parent, emp_id, date_obj, current_details, on_save_callback):
         super().__init__(parent)
         self.emp_info = hr_database.load_single_employee(emp_id)
@@ -23,6 +23,7 @@ class DrivingDetailsPopup(tk.Toplevel):
         self.date_obj = date_obj
         self.on_save = on_save_callback
         self.details_data = current_details if current_details else []
+        self.edit_index = None # ตัวแปรเก็บตำแหน่งรายการที่กำลังแก้ไข
         self._build_ui()
         self._refresh_table()
 
@@ -31,63 +32,76 @@ class DrivingDetailsPopup(tk.Toplevel):
         header_frame.pack(fill="x")
         ttk.Label(header_frame, text=f"วันที่: {self.date_obj.strftime('%d/%m/%Y')}", font=("", 12, "bold"), foreground="#2980b9").pack(side="left")
         
-        # 1. Form Input
-        input_frame = ttk.LabelFrame(self, text="เพิ่มเที่ยวรถ", padding=10)
-        input_frame.pack(fill="x", padx=10, pady=5)
+        # 1. Form Input (ปรับ Layout ใหม่ให้สมดุล)
+        input_frame = ttk.LabelFrame(self, text="  เพิ่ม/แก้ไขเที่ยวรถ  ", padding=15)
+        input_frame.pack(fill="x", padx=15, pady=5)
         
-        grid_opts = {'padx': 5, 'pady': 5, 'sticky': 'w'}
+        # เปิดโหมด Weight ให้คอลัมน์ที่ 1 และ 3 ขยายตัวเต็มพื้นที่ว่าง
+        input_frame.columnconfigure(1, weight=1)
+        input_frame.columnconfigure(3, weight=1)
         
-        ttk.Label(input_frame, text="ประเภทรถ:").grid(row=0, column=0, **grid_opts)
-        self.cb_car = ttk.Combobox(input_frame, values=["กระบะ", "เฮี๊ยบ"], state="readonly", width=10)
-        self.cb_car.grid(row=0, column=1, **grid_opts)
+        # --- แถวที่ 0 ---
+        ttk.Label(input_frame, text="ประเภทรถ:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
+        self.cb_car = ttk.Combobox(input_frame, values=["กระบะ", "เฮี๊ยบ"], state="readonly")
+        self.cb_car.grid(row=0, column=1, padx=5, pady=5, sticky="w")
         self.cb_car.set("กระบะ")
         
-        ttk.Label(input_frame, text="ทะเบียนรถ:").grid(row=0, column=2, **grid_opts)
-        self.ent_plate = ttk.Entry(input_frame, width=15)
-        self.ent_plate.grid(row=0, column=3, **grid_opts)
+        ttk.Label(input_frame, text="ทะเบียนรถ:").grid(row=0, column=2, padx=5, pady=5, sticky="e")
+        self.ent_plate = ttk.Entry(input_frame)
+        self.ent_plate.grid(row=0, column=3, padx=5, pady=5, sticky="ew") # sticky="ew" คือให้ยืดซ้ายขวา
 
-        ttk.Label(input_frame, text="ชื่อคนขับ:").grid(row=1, column=0, **grid_opts)
-        self.ent_driver = ttk.Entry(input_frame, width=20)
-        self.ent_driver.grid(row=1, column=1, **grid_opts)
+        # --- แถวที่ 1 ---
+        ttk.Label(input_frame, text="ชื่อคนขับ:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
+        self.ent_driver = ttk.Entry(input_frame)
+        self.ent_driver.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
         
-        ttk.Label(input_frame, text="วันที่ส่งงาน:").grid(row=1, column=2, **grid_opts)
+        ttk.Label(input_frame, text="วันที่ส่งงาน:").grid(row=1, column=2, padx=5, pady=5, sticky="e")
         self.ent_send_date = DateDropdown(input_frame)
         self.ent_send_date.set_date(self.date_obj)
-        self.ent_send_date.grid(row=1, column=3, **grid_opts)
+        self.ent_send_date.grid(row=1, column=3, padx=5, pady=5, sticky="w")
 
-        ttk.Label(input_frame, text="เอกสารอ้างอิง:").grid(row=2, column=0, **grid_opts)
+        # --- แถวที่ 2 ---
+        ttk.Label(input_frame, text="เอกสารอ้างอิง:").grid(row=2, column=0, padx=5, pady=5, sticky="e")
         doc_frame = ttk.Frame(input_frame)
-        doc_frame.grid(row=2, column=1, columnspan=3, **grid_opts)
+        doc_frame.grid(row=2, column=1, columnspan=3, padx=5, pady=5, sticky="w")
         
-        self.cb_doc_type = ttk.Combobox(doc_frame, values=["SO", "DS", "PX"], state="readonly", width=5)
+        self.cb_doc_type = ttk.Combobox(doc_frame, values=["SO", "DS", "PX"], state="readonly", width=6)
         self.cb_doc_type.pack(side="left")
         self.cb_doc_type.set("SO")
         
-        self.ent_doc_id = ttk.Entry(doc_frame, width=20)
+        self.ent_doc_id = ttk.Entry(doc_frame, width=25)
         self.ent_doc_id.pack(side="left", padx=5)
 
+        # --- แถวที่ 3 (ตัวเลือก & ปุ่ม) ---
         opt_frame = ttk.Frame(input_frame)
-        opt_frame.grid(row=3, column=0, columnspan=5, sticky='w', pady=5)
+        opt_frame.grid(row=3, column=0, columnspan=3, sticky="w", pady=(10, 0), padx=5)
         
         self.is_free_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(opt_frame, text="เที่ยวพ่วง / ฟรี (0 บาท)", variable=self.is_free_var).pack(side="left", padx=(5, 20))
+        ttk.Checkbutton(opt_frame, text="เที่ยวพ่วง / ฟรี (0 บาท)", variable=self.is_free_var).pack(side="left", padx=(0, 20))
         
         self.is_service_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(opt_frame, text="บริการรวมลง", variable=self.is_service_var, command=self._toggle_service_fee).pack(side="left", padx=5)
         
         ttk.Label(opt_frame, text="จำนวนเงิน:").pack(side="left", padx=5)
-        self.ent_service_fee = ttk.Entry(opt_frame, width=10, state="disabled")
+        self.ent_service_fee = ttk.Entry(opt_frame, width=12, state="disabled")
         self.ent_service_fee.pack(side="left")
-        ttk.Label(opt_frame, text="บาท").pack(side="left")
+        ttk.Label(opt_frame, text="บาท").pack(side="left", padx=(5, 0))
         
-        ttk.Button(input_frame, text="➕ เพิ่มรายการ", command=self._add_item, style="Success.TButton").grid(row=3, column=4, padx=10, sticky="e")
+        # แยกปุ่มมาไว้คอลัมน์สุดท้าย จะได้ไม่ตีกับ Checkbox
+        self.btn_add = ttk.Button(input_frame, text="➕ เพิ่มรายการ", command=self._add_item, style="Success.TButton")
+        self.btn_add.grid(row=3, column=3, padx=5, pady=(10, 0), sticky="e", ipady=3)
 
-        # 2. Table
+        # 2. Table (ปรับความกว้างและเพิ่ม Scrollbar)
         list_frame = ttk.Frame(self)
-        list_frame.pack(fill="both", expand=True, padx=10)
+        list_frame.pack(fill="both", expand=True, padx=15, pady=5)
+        
+        # เพิ่ม Scrollbar แนวตั้ง
+        scrollbar_y = ttk.Scrollbar(list_frame, orient="vertical")
+        scrollbar_y.pack(side="right", fill="y")
         
         cols = ("car", "plate", "doc_ref", "driver", "send_date", "cost", "service", "total")
-        self.tree = ttk.Treeview(list_frame, columns=cols, show="headings", height=10)
+        self.tree = ttk.Treeview(list_frame, columns=cols, show="headings", height=10, yscrollcommand=scrollbar_y.set)
+        scrollbar_y.config(command=self.tree.yview)
         
         self.tree.heading("car", text="ประเภท")
         self.tree.heading("plate", text="ทะเบียน")
@@ -98,25 +112,31 @@ class DrivingDetailsPopup(tk.Toplevel):
         self.tree.heading("service", text="ค่าบริการ")
         self.tree.heading("total", text="รวม")
         
-        self.tree.column("car", width=60, anchor="center")
-        self.tree.column("plate", width=80)
-        self.tree.column("doc_ref", width=110) 
-        self.tree.column("driver", width=100)
-        self.tree.column("send_date", width=80, anchor="center")
-        self.tree.column("cost", width=60, anchor="e")
-        self.tree.column("service", width=60, anchor="e")
-        self.tree.column("total", width=70, anchor="e")
+        # ปรับขนาดคอลัมน์ให้รวมกันพอดีกับหน้าจอ
+        self.tree.column("car", width=80, anchor="center")
+        self.tree.column("plate", width=120)
+        self.tree.column("doc_ref", width=150) 
+        self.tree.column("driver", width=150)
+        self.tree.column("send_date", width=100, anchor="center")
+        self.tree.column("cost", width=90, anchor="e")
+        self.tree.column("service", width=90, anchor="e")
+        self.tree.column("total", width=100, anchor="e")
         
         self.tree.pack(side="left", fill="both", expand=True)
         
-        # 3. Footer
-        btn_frame = ttk.Frame(self, padding=10)
-        btn_frame.pack(fill="x")
+        # Event Double Click
+        self.tree.bind("<Double-1>", self._load_edit_item)
+        ttk.Label(self, text="💡 ดับเบิลคลิกที่รายการในตารางเพื่อดึงข้อมูลกลับขึ้นมาแก้ไข", foreground="gray", font=("", 9)).pack(anchor="w", padx=15)
         
-        ttk.Button(btn_frame, text="❌ ลบรายการ", command=self._delete_item).pack(side="left")
-        self.lbl_total = ttk.Label(btn_frame, text="รวมเงินสุทธิ: 0.00 บาท", font=("", 12, "bold"), foreground="blue")
+        # 3. Footer
+        btn_frame = ttk.Frame(self, padding=15)
+        btn_frame.pack(fill="x", side="bottom")
+        
+        ttk.Button(btn_frame, text="❌ ลบรายการที่เลือก", command=self._delete_item).pack(side="left")
+        self.lbl_total = ttk.Label(btn_frame, text="รวมเงินสุทธิ: 0.00 บาท", font=("", 13, "bold"), foreground="blue")
         self.lbl_total.pack(side="left", padx=20)
-        ttk.Button(btn_frame, text="💾 บันทึกและปิด", command=self._confirm_save, style="Primary.TButton").pack(side="right")
+        
+        ttk.Button(btn_frame, text="💾 บันทึกและปิด", command=self._confirm_save, style="Primary.TButton").pack(side="right", ipady=4)
 
     def _toggle_service_fee(self):
         if self.is_service_var.get():
@@ -125,6 +145,46 @@ class DrivingDetailsPopup(tk.Toplevel):
         else:
             self.ent_service_fee.delete(0, tk.END)
             self.ent_service_fee.config(state="disabled")
+
+    def _load_edit_item(self, event=None):
+        """โหลดข้อมูลจากตารางกลับไปที่ฟอร์มเพื่อแก้ไข"""
+        sel = self.tree.selection()
+        if not sel: return
+        
+        self.edit_index = self.tree.index(sel[0]) # จำไว้ว่ากำลังแก้ไขบรรทัดไหน
+        item = self.details_data[self.edit_index]
+        
+        self.cb_car.set(item.get('car_type', 'กระบะ'))
+        self.ent_plate.delete(0, tk.END)
+        self.ent_plate.insert(0, item.get('license', ''))
+        
+        self.ent_driver.delete(0, tk.END)
+        self.ent_driver.insert(0, item.get('driver', ''))
+        
+        if item.get('send_date'):
+            self.ent_send_date.set_date(item.get('send_date'))
+            
+        doc_type = item.get('doc_type', 'SO')
+        self.cb_doc_type.set(doc_type)
+        
+        doc_id = item.get('doc_id', '')
+        if doc_id.startswith(doc_type):
+            number = doc_id[len(doc_type):]
+        else:
+            number = doc_id
+        self.ent_doc_id.delete(0, tk.END)
+        self.ent_doc_id.insert(0, number)
+        
+        self.is_free_var.set(item.get('is_free', False))
+        self.is_service_var.set(item.get('is_service', False))
+        
+        self._toggle_service_fee()
+        if self.is_service_var.get():
+            self.ent_service_fee.delete(0, tk.END)
+            self.ent_service_fee.insert(0, str(item.get('service_fee', 0.0)))
+            
+        # เปลี่ยนชื่อปุ่มเป็นสีส้ม/อัปเดต
+        self.btn_add.config(text="💾 อัปเดตรายการ", style="Warning.TButton")
 
     def _add_item(self):
         car = self.cb_car.get()
@@ -138,7 +198,9 @@ class DrivingDetailsPopup(tk.Toplevel):
         service_fee = 0.0
         if is_service:
             try: service_fee = float(self.ent_service_fee.get())
-            except: return
+            except: 
+                messagebox.showwarning("เตือน", "กรุณากรอกค่าบริการเป็นตัวเลข")
+                return
 
         prefix = self.cb_doc_type.get()
         number = self.ent_doc_id.get().strip()
@@ -150,14 +212,33 @@ class DrivingDetailsPopup(tk.Toplevel):
             "cost": cost, "doc_type": prefix, "doc_id": combined_doc_id,
             "is_free": is_free, "is_service": is_service, "service_fee": service_fee
         }
-        self.details_data.append(item)
+        
+        if self.edit_index is not None:
+            # โหมดแก้ไข: เอาไปทับข้อมูลเดิม
+            self.details_data[self.edit_index] = item
+            self.edit_index = None
+            self.btn_add.config(text="➕ เพิ่มรายการ", style="Success.TButton")
+        else:
+            # โหมดเพิ่มใหม่
+            self.details_data.append(item)
+            
         self._refresh_table()
+        
+        # เคลียร์ค่าหลังเพิ่ม/อัปเดต
         self.ent_doc_id.delete(0, tk.END)
+        self.is_service_var.set(False)
+        self._toggle_service_fee()
         
     def _delete_item(self):
         sel = self.tree.selection()
         if not sel: return
         del self.details_data[self.tree.index(sel[0])]
+        
+        # ถ้าเผลอกดลบรายการที่กำลังแก้ไขอยู่ ให้คืนสถานะปุ่มกลับ
+        if self.edit_index is not None:
+            self.edit_index = None
+            self.btn_add.config(text="➕ เพิ่มรายการ", style="Success.TButton")
+            
         self._refresh_table()
 
     def _refresh_table(self):

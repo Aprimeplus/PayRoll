@@ -3807,33 +3807,37 @@ def get_leave_record_by_id(leave_id):
         conn = get_db_connection()
         if not conn: return None
 
-        cursor = conn.cursor()
-        # 👇 แก้เป็น WHERE leave_id = %s
+        # เปลี่ยนมาใช้ DictCursor เพื่อให้ระบบดึงข้อมูลมา "ครบทุกคอลัมน์" อัตโนมัติ
+        from psycopg2 import extras
+        cursor = conn.cursor(cursor_factory=extras.DictCursor)
+        
         cursor.execute("SELECT * FROM employee_leave_records WHERE leave_id = %s", (leave_id,))
         row = cursor.fetchone()
         conn.close()
         
         if row:
-            # 👇 แก้ Index ให้ตรงกับตารางจริง (3=type, 4=days, 5=reason)
-            return {
-                'leave_type': row[3],   
-                'num_days': float(row[4]), 
-                'reason': row[5]        
-            } 
+            return dict(row) # คืนค่ากลับไปทั้งหมด (รวมถึง leave_date, เวลาเริ่ม-สิ้นสุด)
         return None
+        
     except Exception as e:
         print(f"Error fetching leave record: {e}")
         return None
-
-def update_leave_record(leave_id, l_type, l_days, l_reason):
+        
+def update_leave_record(leave_id, leave_date, l_type, l_days, l_reason, start_time=None, end_time=None):
     try:
         conn = get_db_connection()
         if not conn: return False
 
         cursor = conn.cursor()
-        # 👇 แก้เป็น WHERE leave_id = %s
-        sql = "UPDATE employee_leave_records SET leave_type=%s, num_days=%s, reason=%s WHERE leave_id=%s"
-        cursor.execute(sql, (l_type, l_days, l_reason, leave_id))
+        # เพิ่ม leave_date เข้าไปในคำสั่ง SET
+        sql = """
+            UPDATE employee_leave_records 
+            SET leave_date=%s, leave_type=%s, num_days=%s, reason=%s, 
+                leave_start_time=%s, leave_end_time=%s 
+            WHERE leave_id=%s
+        """
+        # เรียงตัวแปรให้ตรงกับคำสั่ง SQL
+        cursor.execute(sql, (leave_date, l_type, l_days, l_reason, start_time, end_time, leave_id))
         conn.commit()
         conn.close()
         return True
