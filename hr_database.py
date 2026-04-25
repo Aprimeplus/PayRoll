@@ -2268,7 +2268,7 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
             else: result["pnd1"] = (result["commission"] * 0.03) + manual_tax
             result["tax"] = result["pnd1"] + result["pnd3"]
 
-            if not is_sso_exempt and (end_date.day == calendar.monthrange(end_date.year, end_date.month)[1]):
+            if not is_sso_exempt and not is_director and (end_date.day == calendar.monthrange(end_date.year, end_date.month)[1]):
                 sso_config = load_sso_config(end_date.year)
                 sso_base = min(max(result["base_salary"] + result["position_allowance"], 1650), float(sso_config.get("max_salary", 15000)))
                 result["sso"] = int(sso_base * (float(sso_config.get("rate", 5.0))/100.0) + 0.5)
@@ -2486,9 +2486,24 @@ def process_attendance_summary(start_date, end_date):
 
                         # คำนวณ OT ยึดจากเวลาที่ควรออก (required_out_dt)
                         if allow_ot_calc and not is_ot_approved and not leave_info and len(day_logs) > 1:
-                            if t_out_dt > required_out_dt:
-                                raw_ot_mins = int((t_out_dt - required_out_dt).total_seconds() / 60)
-                                if raw_ot_mins >= 60: ot_hours_to_save = float(int(raw_ot_mins / 60))
+                            # [FIX] ถ้ามี ot_in_time และ ot_out_time บันทึกไว้ในฐานข้อมูลแล้ว
+                            # ให้คำนวณ OT จาก ot_out_time - ot_in_time โดยตรง
+                            # แทนการใช้ scan_out ซึ่งอาจถูกแก้ไขและไม่ตรงกับเวลา OT จริง
+                            saved_ot_in = existing_rec.get('ot_in_time') if existing_rec else None
+                            saved_ot_out = existing_rec.get('ot_out_time') if existing_rec else None
+                            if saved_ot_in and saved_ot_out:
+                                try:
+                                    ot_in_t = datetime.strptime(saved_ot_in[:5], "%H:%M")
+                                    ot_out_t = datetime.strptime(saved_ot_out[:5], "%H:%M")
+                                    ot_diff_mins = int((ot_out_t - ot_in_t).total_seconds() / 60)
+                                    if ot_diff_mins >= 60:
+                                        ot_hours_to_save = float(int(ot_diff_mins / 60))
+                                except Exception:
+                                    pass
+                            else:
+                                if t_out_dt > required_out_dt:
+                                    raw_ot_mins = int((t_out_dt - required_out_dt).total_seconds() / 60)
+                                    if raw_ot_mins >= 60: ot_hours_to_save = float(int(raw_ot_mins / 60))
 
                     else: 
                         if leave_info: 

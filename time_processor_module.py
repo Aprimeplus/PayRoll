@@ -979,7 +979,11 @@ class TimeProcessorModule(ttk.Frame):
                     val_approved_old = bool(original_row.get('is_ot_approved', False))
                     
                     if val_ot_in_new and val_ot_out_new:
-                        new_calculated_ot_hours = self._calculate_time_diff(val_ot_in_new, val_ot_out_new)
+                        # [FIX] คำนวณ OT โดยปัดลงเป็นชั่วโมงเต็ม (ตรงกับ Logic ใน hr_database)
+                        # เช่น 1 ชม. 30 นาที → 1 ชม. (ไม่ใช่ 1.5)
+                        raw_diff_hrs = self._calculate_time_diff(val_ot_in_new, val_ot_out_new)
+                        raw_diff_mins = int(raw_diff_hrs * 60)
+                        new_calculated_ot_hours = float(int(raw_diff_mins / 60)) if raw_diff_mins >= 60 else 0.0
                     
                     old_ot_hours = float(original_row.get('ot_hours', 0) or 0)
                     
