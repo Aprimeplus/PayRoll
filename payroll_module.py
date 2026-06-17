@@ -523,20 +523,130 @@ class PayrollModule(ttk.Frame):
             self.email_approve_btn = ttk.Button(row3, text="✅ อนุมัติการส่งเมล", command=self._open_email_approval_window)
             self.email_approve_btn.pack(side="left", padx=2)
 
-        # --- ส่วนแสดงผลตาราง (Sheet) ---
-        # ใช้ Frame หุ้มเพื่อให้ขยายเต็มพื้นที่ที่เหลือ
-        sheet_frame = ttk.Frame(parent_tab)
-        sheet_frame.pack(fill="both", expand=True, pady=(5,0))
-        
-        self.results_sheet = Sheet(sheet_frame,
-                                   show_x_scrollbar=True,
-                                   show_y_scrollbar=True,
-                                   headers=None,
-                                   theme="light blue"
-                                  )
-        self.results_sheet.pack(fill="both", expand=True)
-        
-        # ตั้งค่า Binding (การคลิก/เลือก)
+        # --- ส่วนแสดงผลตาราง (2 Sheet: frozen + main) ---
+        table_frame = tk.Frame(parent_tab)
+        table_frame.pack(fill="both", expand=True, pady=(5, 0))
+
+        FROZEN_W = 240  # ความกว้าง frozen sheet (รหัส + ชื่อ)
+
+        # ---- Sheet ซ้าย: frozen (รหัส + ชื่อ-สกุล) ----
+        self.results_sheet_frozen = Sheet(
+            table_frame,
+            headers=None,
+            theme="light blue",
+            show_row_index=False,
+            row_index_width=0,
+            show_x_scrollbar=False,
+            show_y_scrollbar=False,
+            empty_horizontal=0,
+            empty_vertical=0,
+        )
+
+        self.results_sheet_frozen.place(x=0, y=0, width=FROZEN_W, relheight=1.0)
+
+        def _nuke_frozen_scrollbars():
+            """ซ่อน scrollbar ของ frozen sheet และปรับความสูงให้ตรงกับ main sheet"""
+            try:
+                try:
+                    sb_h = self.results_sheet.xscrollbar.winfo_height()
+                except Exception:
+                    sb_h = 16
+                if sb_h < 4:
+                    sb_h = 16
+                self.results_sheet_frozen.place(
+                    x=0, y=0, width=FROZEN_W,
+                    relheight=1.0, height=-sb_h
+                )
+            except Exception:
+                pass
+            for canvas_name in ('x_scrollbar', 'y_scrollbar', 'top_left'):
+                try: self.results_sheet_frozen.hide(canvas=canvas_name)
+                except Exception: pass
+            try: self.results_sheet_frozen.yscrollbar.grid_remove()
+            except Exception: pass
+            try: self.results_sheet_frozen.xscrollbar.grid_remove()
+            except Exception: pass
+
+        self.after(100, _nuke_frozen_scrollbars)
+        self.after(400, _nuke_frozen_scrollbars)
+        self.after(800, _nuke_frozen_scrollbars)
+
+        # ---- Sheet ขวา: main (คอลัมน์ที่เหลือ) ----
+        self.results_sheet = Sheet(
+            table_frame,
+            headers=None,
+            theme="light blue",
+            show_row_index=False,
+            row_index_width=0,
+            empty_horizontal=0,
+            empty_vertical=0,
+        )
+        self.results_sheet.place(x=FROZEN_W, y=0, relwidth=1.0, relheight=1.0, width=-FROZEN_W)
+
+        def _on_table_resize(event):
+            try:
+                self.results_sheet.place(x=FROZEN_W, y=0, relwidth=1.0, relheight=1.0, width=-FROZEN_W)
+            except Exception:
+                pass
+        table_frame.bind("<Configure>", _on_table_resize)
+
+        # ---- Sync vertical scroll ----
+        self._last_yview_main   = -1.0
+        self._last_yview_frozen = -1.0
+
+        def _do_sync():
+            try:
+                try: y_main = self.results_sheet.get_yview()[0]
+                except Exception: y_main = self.results_sheet.MT.yview()[0]
+                try: y_frozen = self.results_sheet_frozen.get_yview()[0]
+                except Exception: y_frozen = self.results_sheet_frozen.MT.yview()[0]
+
+                if abs(y_main - self._last_yview_main) > 0.0001:
+                    self._last_yview_main   = y_main
+                    self._last_yview_frozen = y_main
+                    self.results_sheet_frozen.yview_moveto(y_main)
+                    try: self.results_sheet_frozen.MT.yview_moveto(y_main)
+                    except Exception: pass
+                elif abs(y_frozen - self._last_yview_frozen) > 0.0001:
+                    self._last_yview_frozen = y_frozen
+                    self._last_yview_main   = y_frozen
+                    self.results_sheet.yview_moveto(y_frozen)
+                    try: self.results_sheet.MT.yview_moveto(y_frozen)
+                    except Exception: pass
+            except Exception:
+                pass
+            self.after(20, _do_sync)
+
+        self.after(300, _do_sync)
+
+        # wheel บน frozen → scroll main
+        def _frozen_wheel(event=None):
+            try:
+                units = -3 if event.delta > 0 else 3
+                self.results_sheet.MT.yview_scroll(units, "units")
+            except Exception:
+                pass
+            return "break"
+
+        def _frozen_wheel_up(event=None):
+            try: self.results_sheet.MT.yview_scroll(-3, "units")
+            except Exception: pass
+            return "break"
+
+        def _frozen_wheel_down(event=None):
+            try: self.results_sheet.MT.yview_scroll(3, "units")
+            except Exception: pass
+            return "break"
+
+        for w in [self.results_sheet_frozen, self.results_sheet_frozen.MT]:
+            try:
+                w.bind("<MouseWheel>", _frozen_wheel)
+                w.bind("<Button-4>",   _frozen_wheel_up)
+                w.bind("<Button-5>",   _frozen_wheel_down)
+            except Exception:
+                pass
+
+        # ---- ตั้งค่า Binding ของ main sheet ----
         self.results_sheet.enable_bindings(
             "single_select",
             "row_select",
@@ -546,10 +656,65 @@ class PayrollModule(ttk.Frame):
             "rc_select",
             "copy"
         )
-        
-        # Bind Event ดับเบิ้ลคลิกเพื่อดูรายละเอียด
+        self.results_sheet_frozen.enable_bindings(
+            "single_select",
+            "row_select",
+        )
+
+        # ---- Sync row selection + Blue highlight ทั้งแถว ----
+        self._selected_row = None
+
+        def _apply_row_highlight(row_idx):
+            try:
+                data_len = len(self.results_sheet.get_sheet_data())
+                if data_len == 0:
+                    return
+                last_row = data_len - 1
+                prev = self._selected_row
+                if prev is not None and prev != row_idx:
+                    if prev == last_row:
+                        self.results_sheet.highlight_rows(rows=[prev], bg="#ccffcc", fg="black")
+                        self.results_sheet_frozen.highlight_rows(rows=[prev], bg="#ccffcc", fg="black")
+                    else:
+                        self.results_sheet.dehighlight_rows(rows=[prev])
+                        self.results_sheet_frozen.dehighlight_rows(rows=[prev])
+                self.results_sheet.highlight_rows(rows=[row_idx], bg="#cce5ff", fg="#003366")
+                self.results_sheet_frozen.highlight_rows(rows=[row_idx], bg="#cce5ff", fg="#003366")
+                self._selected_row = row_idx
+            except Exception as e:
+                print(f"[highlight] {e}")
+
+        def _on_sheet_select(event=None):
+            try:
+                row = None
+                if event and hasattr(event, 'selected') and event.selected:
+                    row = event.selected.row
+                if row is not None:
+                    self.results_sheet_frozen.select_row(row)
+                    _apply_row_highlight(row)
+            except Exception as e:
+                print(f"[SheetSelect] {e}")
+
+        self.results_sheet.bind("<<SheetSelect>>", _on_sheet_select)
+
+        def _on_frozen_select(event=None):
+            try:
+                row = None
+                if event and hasattr(event, 'selected') and event.selected:
+                    row = event.selected.row
+                if row is not None:
+                    self.results_sheet.select_row(row)
+                    _apply_row_highlight(row)
+            except Exception as e:
+                print(f"[FrozenSelect] {e}")
+
+        self.results_sheet_frozen.bind("<<SheetSelect>>", _on_frozen_select)
+
+        # Bind Event ดับเบิ้ลคลิก
         self.results_sheet.bind("<Double-1>", self._on_result_double_click)
         self.results_sheet.extra_bindings("cell_double_click", func=self._on_result_double_click)
+
+        self.after(1000, _nuke_frozen_scrollbars)
     def _on_result_double_click(self, event=None):
         """ทำงานเมื่อดับเบิลคลิก (เวอร์ชั่นรองรับ ค่าเที่ยว, OT, เบี้ยขยัน)"""
         # print(f"\n--- 🖱️ DEBUG: Checking Click ---") 
@@ -1252,14 +1417,24 @@ class PayrollModule(ttk.Frame):
             print(f"Date Error: {e}")
             return
 
-        # 2. กวาดรายชื่อพนักงานที่ถูกเลือก (ที่ติ๊ก ☑)
+        # 2. โหลดข้อมูล Manual Inputs จาก DB ให้ทันสมัย (เพื่อให้ commission/OT ที่กรอกไว้ติดมาด้วย)
+        try:
+            saved_inputs = hr_database.load_payroll_manual_inputs(current_month, current_year)
+            if saved_inputs:
+                merged = dict(saved_inputs)
+                merged.update(self.payroll_inputs)
+                self.payroll_inputs = merged
+        except Exception as e:
+            print(f"[Warning] โหลด payroll_inputs จาก DB ไม่ได้: {e}")
+
+        # 3. กวาดรายชื่อพนักงานที่ถูกเลือก (ที่ติ๊ก ☑)
         selected_iids = []
         def collect_ids(tree_widget):
             ids = []
             if tree_widget is not None:
                 for iid in tree_widget.get_children():
                     vals = tree_widget.item(iid, "values")
-                    if vals and vals[0] == "☑":  
+                    if vals and vals[0] == "☑":
                         ids.append(iid)
             return ids
 
@@ -1268,12 +1443,12 @@ class PayrollModule(ttk.Frame):
             selected_iids.extend(collect_ids(self.tree_cont))
         elif hasattr(self, 'input_tree'):
             selected_iids.extend(collect_ids(self.input_tree))
-        
+
         if not selected_iids:
             messagebox.showwarning("เตือน", "กรุณาเลือกพนักงานที่ต้องการคำนวณอย่างน้อย 1 คน")
             return
 
-        # --- 3. เตรียมโครงสร้างเก็บผลรวมและ Config ---
+        # --- 4. เตรียมโครงสร้างเก็บผลรวมและ Config ---
         try:
             allowance_settings = hr_database.load_allowance_settings()
             taxable_map = { item['name']: item['is_taxable'] for item in allowance_settings }
@@ -1409,15 +1584,29 @@ class PayrollModule(ttk.Frame):
         sheet_data.append(summary_row)
 
         # --- 6. อัปเดตตาราง Sheet ---
-        headers = ["รหัส", "ชื่อ-สกุล", "เงินเดือน", "ค่าตำแหน่ง", "OT", "คอมมิชชั่น", "Incentive", "เบี้ยขยัน", "โบนัส", "อื่นๆ(รับ)", "ค่าเที่ยว", "รวมรับ", "ประกันสังคม", "ภ.ง.ด.1", "ภ.ง.ด.3", "กองทุนฯ", "เงินกู้", "มาสาย/ลา", "อื่นๆ(หัก)", "รวมหัก", "สุทธิ", "หมายเหตุ"] # 🛠️ เพิ่ม "หมายเหตุ" ตรงนี้
-        self.results_sheet.headers(headers) 
-        self.results_sheet.set_sheet_data(sheet_data)
-        
-        # ใส่สี Highlight ตาราง
-        self.results_sheet.highlight_columns(columns=list(range(2, 11)), bg="#e6f7ff", fg="black") # รายรับสีฟ้า
-        self.results_sheet.highlight_columns(columns=list(range(12, 19)), bg="#fff7e6", fg="black") # รายหักสีส้ม
-        self.results_sheet.highlight_columns(columns=[20], bg="#ffffcc", fg="black") # สุทธิสีเหลือง
-        if sheet_data: self.results_sheet.highlight_rows(rows=[len(sheet_data)-1], bg="#ccffcc", fg="black") # แถวรวมสีเขียว
+        headers = ["รหัส", "ชื่อ-สกุล", "เงินเดือน", "ค่าตำแหน่ง", "OT", "คอมมิชชั่น", "Incentive", "เบี้ยขยัน", "โบนัส", "อื่นๆ(รับ)", "ค่าเที่ยว", "รวมรับ", "ประกันสังคม", "ภ.ง.ด.1", "ภ.ง.ด.3", "กองทุนฯ", "เงินกู้", "มาสาย/ลา", "อื่นๆ(หัก)", "รวมหัก", "สุทธิ", "หมายเหตุ"]
+
+        # แยกข้อมูล: 2 คอลัมน์แรก → frozen, ที่เหลือ → main
+        frozen_headers  = headers[:2]
+        main_headers    = headers[2:]
+        frozen_data     = [[row[0], row[1]] for row in sheet_data]
+        main_data       = [row[2:] for row in sheet_data]
+
+        self.results_sheet_frozen.headers(frozen_headers)
+        self.results_sheet_frozen.set_sheet_data(frozen_data)
+        self.results_sheet_frozen.column_width(0, 70)
+        self.results_sheet_frozen.column_width(1, 160)
+
+        self.results_sheet.headers(main_headers)
+        self.results_sheet.set_sheet_data(main_data)
+
+        # ใส่สี Highlight (index เลื่อนซ้าย 2)
+        self.results_sheet.highlight_columns(columns=list(range(0, 9)),   bg="#e6f7ff", fg="black")
+        self.results_sheet.highlight_columns(columns=list(range(10, 17)), bg="#fff7e6", fg="black")
+        self.results_sheet.highlight_columns(columns=[18],                bg="#ffffcc", fg="black")
+        if main_data:
+            self.results_sheet.highlight_rows(rows=[len(main_data)-1], bg="#ccffcc", fg="black")
+            self.results_sheet_frozen.highlight_rows(rows=[len(frozen_data)-1], bg="#ccffcc", fg="black")
 
         # --- 7. เปิดใช้งานปุ่มอื่นๆ ---
         self.export_btn.config(state="normal")

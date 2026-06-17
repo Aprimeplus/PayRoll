@@ -2178,48 +2178,81 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
             holiday_dates = {row['holiday_date'] for row in cursor.fetchall()}
 
             actual_days = 0.0; penalty_hrs = 0.0; absent_days = 0.0; no_pay_days = 0.0; auto_trip = 0.0
-            total_approved_ot_hours = 0.0 
+            total_approved_ot_hours = 0.0
+
+            if is_daily_calculation:
+                print(f"\n{'='*65}")
+                print(f"[DEBUG DAILY PAYROLL] รหัส: {emp_id} | ช่วง: {start_date} ถึง {end_date}")
+                print(f"  อัตรารายวัน (salary_db) : {salary_db:,.2f} บาท/วัน")
+                print(f"  hourly_rate             : {salary_db/8:,.2f} บาท/ชม.")
+                print(f"{'─'*65}")
+                print(f"  {'วันที่':<12} {'มี Record?':<12} {'มีใบลา?':<10} {'วันหยุด?':<10} {'status':<30} {'actual_days'}")
+                print(f"{'─'*65}")
 
             for d in pd.date_range(start_date, end_date).date:
                 rec = daily_map.get(d)
                 lv = leave_map.get(d)
                 is_h = (d.weekday() == 6 or d in holiday_dates)
-                
+                _day_action = "—"
+
                 if lv:
                     num_d = float(lv['num_days'] or 1.0)
                     is_unpaid = 'ลาไม่รับค่าจ้าง' in str(lv['leave_type'])
-                    if num_d < 1.0: 
+                    if num_d < 1.0:
                         actual_days += 1.0
-                        if is_unpaid or is_daily_calculation: 
+                        _day_action = f"+1 (ลา {num_d} วัน, หัก {num_d*8:.1f} ชม.)"
+                        if is_unpaid or is_daily_calculation:
                             penalty_hrs += (num_d * 8.0) # 🛠️ หักเวลาครึ่งวันไปก่อน 4 ชม.
                             # 🛠️ [NEW] ถ้าทำงานไม่ครบอีก (ขาดเพิ่ม) ให้บวกชั่วโมงที่ขาดเข้าไปด้วย!
                             if rec and 'หัก' in str(rec['status']):
                                 m = re.search(r"หัก\s*([\d\.]+)\s*ชม", str(rec['status']))
                                 if m: penalty_hrs += float(m.group(1))
                     else:
+                        _day_action = f"ลาเต็มวัน ({'ไม่รับค่าจ้าง' if is_unpaid else 'รับค่าจ้าง'}) → ไม่นับวัน"
                         if is_unpaid: no_pay_days += 1.0
-                        
-                    if rec: 
+
+                    if rec:
                         auto_trip += float(rec.get('total_amount', 0))
                         if rec.get('is_ot_approved'): total_approved_ot_hours += float(rec.get('ot_hours', 0.0))
-                
+
                 elif rec:
                     status_text = str(rec['status'])
-                    if 'ขาดงาน' in status_text: 
+                    if 'ขาดงาน' in status_text:
                         absent_days += 1.0
+                        _day_action = "ขาดงาน → ไม่นับวัน"
                     elif 'วันหยุด' in status_text:
-                        pass
+                        _day_action = "วันหยุด → ไม่นับวัน"
                     else:
                         actual_days += 1.0
                         m = re.search(r"หัก\s*([\d\.]+)\s*ชม", status_text)
-                        if m: penalty_hrs += float(m.group(1))
-                    
+                        _hrs = float(m.group(1)) if m else 0
+                        if _hrs > 0: penalty_hrs += _hrs
+                        _day_action = f"+1 วัน | penalty+{_hrs:.1f}ชม. | status={status_text[:25]}"
+
                     auto_trip += float(rec.get('total_amount', 0))
                     if rec.get('is_ot_approved'):
                         total_approved_ot_hours += float(rec.get('ot_hours', 0.0))
 
-                elif not is_h and not is_fixed: 
+                elif not is_h and not is_fixed:
                     absent_days += 1.0
+                    _day_action = "ไม่มี record + ไม่ใช่วันหยุด → absent"
+                else:
+                    _day_action = "วันหยุด (ไม่มี record)"
+
+                if is_daily_calculation:
+                    _rec_flag = "✓" if rec else "✗"
+                    _lv_flag  = "✓" if lv  else "✗"
+                    _h_flag   = "✓" if is_h else "✗"
+                    print(f"  {d.strftime('%d/%m/%Y'):<12} {_rec_flag:<12} {_lv_flag:<10} {_h_flag:<10} {_day_action[:30]:<30} {actual_days:.1f}")
+
+            if is_daily_calculation:
+                print(f"{'─'*65}")
+                print(f"  สรุปวันทำงานจริง (actual_days) : {actual_days:.1f} วัน")
+                print(f"  วันขาดงาน (absent_days)        : {absent_days:.1f} วัน")
+                print(f"  ชม.หัก (penalty_hrs)           : {penalty_hrs:.2f} ชม.")
+                print(f"  ค่าจ้างฐาน = {actual_days:.1f} × {salary_db:,.2f} = {actual_days*salary_db:,.2f} บาท")
+                print(f"  ยอดหักสาย  = {penalty_hrs:.2f} × {salary_db/8:,.2f} = {penalty_hrs*(salary_db/8):,.2f} บาท")
+                print(f"{'='*65}\n")
 
             # --- [4] สรุปยอดเงิน และ OT ---
             cursor.execute("SELECT position_allowance FROM salary_history WHERE emp_id = %s ORDER BY history_id DESC LIMIT 1", (emp_id,))
@@ -2275,6 +2308,23 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
 
             result["total_deduct"] = (result["sso"] + result["tax"] + result["provident_fund"] + result["late_deduct"] + result["loan"] + result["other_deduct"])
             result["net_salary"] = result["total_income"] - result["total_deduct"]
+
+            if is_daily_calculation:
+                print(f"[DEBUG DAILY RESULT] รหัส: {emp_id}")
+                print(f"  base_salary    : {result['base_salary']:>10,.2f}  (actual_days × salary_db)")
+                print(f"  position_allow : {result['position_allowance']:>10,.2f}")
+                print(f"  ot             : {result['ot']:>10,.2f}")
+                print(f"  diligence      : {result['diligence']:>10,.2f}")
+                print(f"  other_income   : {result['other_income']:>10,.2f}")
+                print(f"  ──────────────────────────────────")
+                print(f"  total_income   : {result['total_income']:>10,.2f}")
+                print(f"  late_deduct    : {result['late_deduct']:>10,.2f}  ({penalty_hrs:.2f}ชม. × {salary_db/8:.2f})")
+                print(f"  sso            : {result['sso']:>10,.2f}  ({'คิดในรอบนี้' if result['sso'] > 0 else 'ไม่คิด (ไม่ใช่สิ้นเดือน)'})")
+                print(f"  tax            : {result['tax']:>10,.2f}")
+                print(f"  total_deduct   : {result['total_deduct']:>10,.2f}")
+                print(f"  ══════════════════════════════════")
+                print(f"  NET SALARY     : {result['net_salary']:>10,.2f}")
+                print(f"{'='*65}\n")
 
     except Exception as e:
         print(f"Payroll Error: {e}")
