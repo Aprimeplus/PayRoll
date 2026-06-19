@@ -366,7 +366,8 @@ def init_db():
                 cursor.execute("""
                     ALTER TABLE salary_history
                     ADD COLUMN IF NOT EXISTS new_position TEXT,
-                    ADD COLUMN IF NOT EXISTS assessment_score TEXT;
+                    ADD COLUMN IF NOT EXISTS assessment_score TEXT,
+                    ADD COLUMN IF NOT EXISTS adjustment_month TEXT;
                 """)
             except Exception: conn.rollback()
 
@@ -861,11 +862,11 @@ def _upsert_employee_data(cursor, data):
                 assess_score = item.get("assessment_score", "")
                 cursor.execute(
                     """
-                    INSERT INTO salary_history 
-                    (emp_id, adjustment_year, new_salary, position_allowance, new_position, assessment_score) 
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    INSERT INTO salary_history
+                    (emp_id, adjustment_year, adjustment_month, new_salary, position_allowance, new_position, assessment_score)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """,
-                    (emp_id, item.get("year"), new_salary, position_allowance, new_pos, assess_score) 
+                    (emp_id, item.get("year"), item.get("month", ""), new_salary, position_allowance, new_pos, assess_score)
                 )
 
         cursor.execute("DELETE FROM employee_training_records WHERE emp_id = %s", (emp_id,))
@@ -1002,9 +1003,9 @@ def load_single_employee(emp_id):
             employee_data['welfare_amounts'] = [str(row['amount']) if row['amount'] else "" for row in welfare_rows]
             cursor.execute(
                 """
-                SELECT adjustment_year, new_salary, position_allowance, 
-                       new_position, assessment_score 
-                FROM salary_history 
+                SELECT adjustment_year, adjustment_month, new_salary, position_allowance,
+                       new_position, assessment_score
+                FROM salary_history
                 WHERE emp_id = %s ORDER BY history_id
                 """,
                 (emp_id,)
@@ -1012,11 +1013,12 @@ def load_single_employee(emp_id):
             history_rows = cursor.fetchall()
             employee_data['salary_history'] = [
                 {
-                    "year": row['adjustment_year'], 
-                    "salary": str(row['new_salary']) if row['new_salary'] else "",
+                    "year":               row['adjustment_year'],
+                    "month":              row.get('adjustment_month', "") or "",
+                    "salary":             str(row['new_salary']) if row['new_salary'] else "",
                     "position_allowance": str(row['position_allowance']) if row.get('position_allowance') else "",
-                    "new_position": row.get('new_position', ""), 
-                    "assessment_score": row.get('assessment_score', "") 
+                    "new_position":       row.get('new_position', ""),
+                    "assessment_score":   row.get('assessment_score', "")
                 }
                 for row in history_rows
             ]

@@ -850,35 +850,41 @@ class EmployeeModule(ttk.Frame):
         history_frame.pack(fill="x", pady=(0, 15))
         self.salary_history = []
         years = [2569, 2570, 2571, 2572, 2573]
+        THAI_MONTHS = ["", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+                       "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
         ttk.Label(history_frame, text="ครั้งที่", font=("Segoe UI", 10, "bold")).grid(row=0, column=0, padx=10, pady=5)
         ttk.Label(history_frame, text="ปี", font=("Segoe UI", 10, "bold")).grid(row=0, column=1, padx=10, pady=5)
-        ttk.Label(history_frame, text="เงินเดือนใหม่", font=("Segoe UI", 10, "bold")).grid(row=0, column=2, padx=10, pady=5)
-        ttk.Label(history_frame, text="ค่าตำแหน่ง", font=("Segoe UI", 10, "bold")).grid(row=0, column=3, padx=10, pady=5)
-        ttk.Label(history_frame, text="ตำแหน่งใหม่", font=("Segoe UI", 10, "bold")).grid(row=0, column=4, padx=10, pady=5) 
-        ttk.Label(history_frame, text="ผลประเมิน (Manual)", font=("Segoe UI", 10, "bold")).grid(row=0, column=5, padx=10, pady=5) 
+        ttk.Label(history_frame, text="เดือน", font=("Segoe UI", 10, "bold")).grid(row=0, column=2, padx=10, pady=5)
+        ttk.Label(history_frame, text="เงินเดือนใหม่", font=("Segoe UI", 10, "bold")).grid(row=0, column=3, padx=10, pady=5)
+        ttk.Label(history_frame, text="ค่าตำแหน่ง", font=("Segoe UI", 10, "bold")).grid(row=0, column=4, padx=10, pady=5)
+        ttk.Label(history_frame, text="ตำแหน่งใหม่", font=("Segoe UI", 10, "bold")).grid(row=0, column=5, padx=10, pady=5)
+        ttk.Label(history_frame, text="ผลประเมิน (Manual)", font=("Segoe UI", 10, "bold")).grid(row=0, column=6, padx=10, pady=5)
         for i in range(5):
             ttk.Label(history_frame, text=f"{i+1}", font=("Segoe UI", 10)).grid(row=i+1, column=0, padx=10, pady=5)
-            year_combo = ttk.Combobox(history_frame, values=years, width=12, state="readonly", font=("Segoe UI", 10))
+            year_combo = ttk.Combobox(history_frame, values=years, width=10, state="readonly", font=("Segoe UI", 10))
             year_combo.grid(row=i+1, column=1, padx=10, pady=5)
-            salary_entry = ttk.Entry(history_frame, width=20, font=("Segoe UI", 10))
-            salary_entry.grid(row=i+1, column=2, padx=10, pady=5)
-            allowance_entry = ttk.Entry(history_frame, width=20, font=("Segoe UI", 10))
-            allowance_entry.grid(row=i+1, column=3, padx=10, pady=5)
-            new_pos_entry = ttk.Entry(history_frame, width=20, font=("Segoe UI", 10))
-            new_pos_entry.grid(row=i+1, column=4, padx=10, pady=5)
+            month_combo = ttk.Combobox(history_frame, values=THAI_MONTHS[1:], width=13, state="readonly", font=("Segoe UI", 10))
+            month_combo.grid(row=i+1, column=2, padx=10, pady=5)
+            salary_entry = ttk.Entry(history_frame, width=15, font=("Segoe UI", 10))
+            salary_entry.grid(row=i+1, column=3, padx=10, pady=5)
+            allowance_entry = ttk.Entry(history_frame, width=15, font=("Segoe UI", 10))
+            allowance_entry.grid(row=i+1, column=4, padx=10, pady=5)
+            new_pos_entry = ttk.Entry(history_frame, width=18, font=("Segoe UI", 10))
+            new_pos_entry.grid(row=i+1, column=5, padx=10, pady=5)
             score_frame = ttk.Frame(history_frame)
-            score_frame.grid(row=i+1, column=5, padx=10, pady=5, sticky="w") 
-            score_entry = ttk.Entry(score_frame, width=15, font=("Segoe UI", 10),
-                                      validate="key", 
+            score_frame.grid(row=i+1, column=6, padx=10, pady=5, sticky="w")
+            score_entry = ttk.Entry(score_frame, width=12, font=("Segoe UI", 10),
+                                      validate="key",
                                       validatecommand=self.score_validator)
             score_entry.pack(side="left")
             ttk.Label(score_frame, text="/ 1000", font=("Segoe UI", 10, "italic"), foreground="gray").pack(side="left", padx=(5,0))
             self.salary_history.append({
-                "year": year_combo, 
-                "salary": salary_entry, 
+                "year":               year_combo,
+                "month":              month_combo,
+                "salary":             salary_entry,
                 "position_allowance": allowance_entry,
-                "new_position": new_pos_entry,      
-                "assessment_score": score_entry   
+                "new_position":       new_pos_entry,
+                "assessment_score":   score_entry
             })
             canvas.bind("<Enter>", lambda e, c=canvas: c.bind_all("<MouseWheel>", lambda ev: self._on_mousewheel(ev, c)))
             canvas.bind("<Leave>", lambda e: self.unbind_all("<MouseWheel>"))
@@ -1879,12 +1885,13 @@ class EmployeeModule(ttk.Frame):
             "welfare_amounts": [entry.get() for entry in self.welfare_amount_entries],
             "salary_history": [
                 {
-                    "year": h["year"].get(), 
-                    "salary": h["salary"].get(),
+                    "year":               h["year"].get(),
+                    "month":              h["month"].get(),
+                    "salary":             h["salary"].get(),
                     "position_allowance": h["position_allowance"].get(),
-                    "new_position": h["new_position"].get(),
-                    "assessment_score": h["assessment_score"].get()
-                } 
+                    "new_position":       h["new_position"].get(),
+                    "assessment_score":   h["assessment_score"].get()
+                }
                 for h in self.salary_history
             ]
         }
@@ -2262,15 +2269,17 @@ class EmployeeModule(ttk.Frame):
             hist_widget["position_allowance"].delete(0, tk.END)
             hist_widget["new_position"].delete(0, tk.END)
             hist_widget["assessment_score"].delete(0, tk.END)
-            
+
             if i < len(hist_data):
                 hist_widget["year"].set(str(hist_data[i].get("year", "") or ""))
+                hist_widget["month"].set(str(hist_data[i].get("month", "") or ""))
                 hist_widget["salary"].insert(0, str(hist_data[i].get("salary") or ""))
                 hist_widget["position_allowance"].insert(0, str(hist_data[i].get("position_allowance") or ""))
                 hist_widget["new_position"].insert(0, str(hist_data[i].get("new_position") or ""))
                 hist_widget["assessment_score"].insert(0, str(hist_data[i].get("assessment_score") or ""))
             else:
                 hist_widget["year"].set("")
+                hist_widget["month"].set("")
 
         # --- 6. ธนาคารและอื่นๆ ---
         health_status = str(employee.get("health", "ไม่มี") or "ไม่มี")
@@ -2441,9 +2450,10 @@ class EmployeeModule(ttk.Frame):
         # ล้างประวัติเงินเดือน
         for hist in self.salary_history:
             hist["year"].set("")
+            hist["month"].set("")
             hist["salary"].delete(0, tk.END)
             hist["position_allowance"].delete(0, tk.END)
-            hist["new_position"].delete(0, tk.END)      
+            hist["new_position"].delete(0, tk.END)
             hist["assessment_score"].delete(0, tk.END)
 
         # 4. ข้อมูลสุขภาพ & บัญชี
