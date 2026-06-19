@@ -849,7 +849,7 @@ class EmployeeModule(ttk.Frame):
         history_frame = ttk.LabelFrame(scroll_frame, text="  📊 ประวัติการปรับเงินเดือนรายปี  ", padding=20)
         history_frame.pack(fill="x", pady=(0, 15))
         self.salary_history = []
-        years = [2569, 2570, 2571, 2572, 2573]
+        years = [2568, 2569, 2570, 2571, 2572, 2573]
         THAI_MONTHS = ["", "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
                        "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"]
         ttk.Label(history_frame, text="ครั้งที่", font=("Segoe UI", 10, "bold")).grid(row=0, column=0, padx=10, pady=5)
