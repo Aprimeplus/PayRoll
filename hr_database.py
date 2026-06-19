@@ -369,7 +369,16 @@ def init_db():
                     ADD COLUMN IF NOT EXISTS assessment_score TEXT,
                     ADD COLUMN IF NOT EXISTS adjustment_month TEXT;
                 """)
-            except Exception: conn.rollback()
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                # fallback: add each column individually to avoid multi-column ALTER failure
+                for _col in ("new_position TEXT", "assessment_score TEXT", "adjustment_month TEXT"):
+                    try:
+                        cursor.execute(f"ALTER TABLE salary_history ADD COLUMN IF NOT EXISTS {_col}")
+                        conn.commit()
+                    except Exception:
+                        conn.rollback()
 
             # 9. ตารางประวัติฝึกอบรม
             cursor.execute("""
@@ -1001,15 +1010,27 @@ def load_single_employee(emp_id):
             employee_data['welfare_options'] = [row['welfare_name'] for row in welfare_rows]
             employee_data['welfare'] = [bool(row['has_welfare']) for row in welfare_rows]
             employee_data['welfare_amounts'] = [str(row['amount']) if row['amount'] else "" for row in welfare_rows]
-            cursor.execute(
-                """
-                SELECT adjustment_year, adjustment_month, new_salary, position_allowance,
-                       new_position, assessment_score
-                FROM salary_history
-                WHERE emp_id = %s ORDER BY history_id
-                """,
-                (emp_id,)
-            )
+            try:
+                cursor.execute(
+                    """
+                    SELECT adjustment_year, adjustment_month, new_salary, position_allowance,
+                           new_position, assessment_score
+                    FROM salary_history
+                    WHERE emp_id = %s ORDER BY history_id
+                    """,
+                    (emp_id,)
+                )
+            except Exception:
+                conn.rollback()
+                cursor.execute(
+                    """
+                    SELECT adjustment_year, new_salary, position_allowance,
+                           new_position, assessment_score
+                    FROM salary_history
+                    WHERE emp_id = %s ORDER BY history_id
+                    """,
+                    (emp_id,)
+                )
             history_rows = cursor.fetchall()
             employee_data['salary_history'] = [
                 {
