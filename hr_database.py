@@ -2093,7 +2093,34 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
             salary_db = float(emp_info.get("salary", 0.0))
             emp_type = str(emp_info.get("emp_type", ""))
             work_loc = str(emp_info.get("work_location", "")) # 🛠️ ดึงสถานที่ทำงานมาเช็ค
-            
+
+            # --- ดึงเงินเดือนตามช่วงเวลาที่คำนวณ (จาก salary_history) ---
+            _MONTH_TO_INT = {
+                "มกราคม":1,"กุมภาพันธ์":2,"มีนาคม":3,"เมษายน":4,
+                "พฤษภาคม":5,"มิถุนายน":6,"กรกฎาคม":7,"สิงหาคม":8,
+                "กันยายน":9,"ตุลาคม":10,"พฤศจิกายน":11,"ธันวาคม":12,
+            }
+            _calc_key = (start_date.year + 543) * 100 + start_date.month
+            _best_key = None
+            _best_salary = None
+            _best_allowance = None
+            for _h in emp_info.get("salary_history", []):
+                try:
+                    _hy = int(_h.get("year") or 0)
+                    _hm = _MONTH_TO_INT.get(str(_h.get("month", "") or ""), 1)
+                    _hs = float(_h.get("salary") or 0)
+                    _hpa = _h.get("position_allowance", "")
+                    _hkey = _hy * 100 + _hm
+                    if _hy > 0 and _hs > 0 and _hkey <= _calc_key:
+                        if _best_key is None or _hkey > _best_key:
+                            _best_key = _hkey
+                            _best_salary = _hs
+                            _best_allowance = float(_hpa) if _hpa else None
+                except Exception:
+                    pass
+            if _best_salary:
+                salary_db = _best_salary
+
             is_daily_style = ("รายวัน" in emp_type) or ("Daily" in emp_type)
             is_warehouse = "คลัง" in work_loc # 🛠️ เช็คว่าเป็นคลังสินค้าหรือไม่
             is_contractor = any(k in emp_type for k in ["จ้างเหมา", "ที่ปรึกษา", "Contract", "สัญญาจ้าง"])
@@ -2278,9 +2305,12 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
                 print(f"{'='*65}\n")
 
             # --- [4] สรุปยอดเงิน และ OT ---
-            cursor.execute("SELECT position_allowance FROM salary_history WHERE emp_id = %s ORDER BY history_id DESC LIMIT 1", (emp_id,))
-            pa = cursor.fetchone()
-            result["position_allowance"] = float(pa[0]) if pa and pa[0] else 0.0
+            if _best_allowance is not None:
+                result["position_allowance"] = _best_allowance
+            else:
+                cursor.execute("SELECT position_allowance FROM salary_history WHERE emp_id = %s ORDER BY history_id DESC LIMIT 1", (emp_id,))
+                pa = cursor.fetchone()
+                result["position_allowance"] = float(pa[0]) if pa and pa[0] else 0.0
 
             # 🛠️ [NEW] กฎพิเศษสำหรับ "กรรมการ" (รับเงินเต็มจำนวนเสมอ ไม่หักขาด/ลา/สาย)
             is_director = "กรรมการ" in emp_type
