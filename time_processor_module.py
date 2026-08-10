@@ -169,14 +169,20 @@ class TimeProcessorModule(ttk.Frame):
             
             if is_replace:
                 hr_database.delete_scan_logs_range(min_date, max_date)
-                
+
             # 3. บันทึกข้อมูลลง DB
             count = hr_database.insert_scan_logs(self.raw_log_data)
-            
-            messagebox.showinfo("สำเร็จ", f"นำเข้าข้อมูลเรียบร้อย {count} รายการ")
-            
-            # 4. สั่งประมวลผลทันที
-            self._save_logs_to_db()
+            self.raw_log_data = []
+            self.save_to_db_btn.config(state="disabled")
+            self.upload_status_label.config(
+                text=f"✅ บันทึก {count} รายการลง DB แล้ว — กำลังประมวลผล...", foreground="blue"
+            )
+            self.update_idletasks()
+
+            # 4. เซ็ตวันที่จากไฟล์ แล้วประมวลผลอัตโนมัติ
+            self.start_date_entry.set_date(min_date)
+            self.end_date_entry.set_date(max_date)
+            self._run_processing()
 
         except Exception as e:
             messagebox.showerror("Error", f"เกิดข้อผิดพลาด: {e}")
