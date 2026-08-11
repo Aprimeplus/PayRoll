@@ -2120,8 +2120,23 @@ class PayrollModule(ttk.Frame):
         # 2. ล้างข้อมูลเก่าทั้ง 2 ตาราง
         for i in self.tree_reg.get_children(): self.tree_reg.delete(i)
         for i in self.tree_cont.get_children(): self.tree_cont.delete(i)
-        
+
         self.payroll_inputs = {}
+
+        # reset ผลคำนวณเก่า เพื่อป้องกันพิมพ์สลิปผิดเดือน
+        self.last_payroll_results = []
+        if hasattr(self, 'print_btn'):
+            self.print_btn.config(state="disabled")
+        if hasattr(self, 'export_btn'):
+            self.export_btn.config(state="disabled")
+        if hasattr(self, 'pnd1_btn'):
+            self.pnd1_btn.config(state="disabled")
+        if hasattr(self, 'pnd3_btn'):
+            self.pnd3_btn.config(state="disabled")
+        if hasattr(self, 'save_db_btn'):
+            self.save_db_btn.config(state="disabled")
+        if hasattr(self, 'email_req_btn'):
+            self.email_req_btn.config(state="disabled")
         
         # 3. ดึงข้อมูลพนักงานทั้งหมด
         emps = hr_database.load_all_employees()
