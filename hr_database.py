@@ -2600,13 +2600,13 @@ def process_attendance_summary(start_date, end_date):
                                     ot_out_t = datetime.strptime(saved_ot_out[:5], "%H:%M")
                                     ot_diff_mins = int((ot_out_t - ot_in_t).total_seconds() / 60)
                                     if ot_diff_mins >= 60:
-                                        ot_hours_to_save = float(int(ot_diff_mins / 60))
+                                        ot_hours_to_save = round(ot_diff_mins / 60.0, 2)
                                 except Exception:
                                     pass
                             else:
                                 if t_out_dt > required_out_dt:
                                     raw_ot_mins = int((t_out_dt - required_out_dt).total_seconds() / 60)
-                                    if raw_ot_mins >= 60: ot_hours_to_save = float(int(raw_ot_mins / 60))
+                                    if raw_ot_mins >= 60: ot_hours_to_save = round(raw_ot_mins / 60.0, 2)
 
                     else: 
                         if leave_info: 
