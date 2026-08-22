@@ -2140,13 +2140,25 @@ class PayrollModule(ttk.Frame):
         
         # 3. ดึงข้อมูลพนักงานทั้งหมด
         emps = hr_database.load_all_employees()
-        
+
         # กลุ่มสัญญาพิเศษ
         special_types = ["สัญญาจ้างเหมา", "สัญญาจ้างเหมารายเดือน", "ที่ปรึกษา"]
 
+        import calendar as _cal
+        from datetime import date as _date
+        _y_ce, _m_int = self._get_selected_dates()
+        if _y_ce:
+            _period_start = _date(_y_ce, _m_int, 1)
+            _period_end = _date(_y_ce, _m_int, _cal.monthrange(_y_ce, _m_int)[1])
+        else:
+            _period_start = _period_end = None
+
         for emp in emps:
-            # ข้ามคนที่ลาออก
-            if emp.get('status') in ['พ้นสภาพพนักงาน', 'ลาออก']: continue
+            if _period_start:
+                _start = emp.get('start_date')
+                _term = emp.get('termination_date')
+                if _start and _start > _period_end: continue
+                if _term and _term < _period_start: continue
             
             emp_type = emp.get('emp_type', 'รายเดือน')
             emp_id = emp['id']
