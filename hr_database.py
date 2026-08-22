@@ -2250,13 +2250,32 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
                     is_unpaid = 'ลาไม่รับค่าจ้าง' in str(lv['leave_type'])
                     if num_d < 1.0:
                         actual_days += 1.0
-                        _day_action = f"+1 (ลา {num_d} วัน, หัก {num_d*8:.1f} ชม.)"
                         if is_unpaid or is_daily_calculation:
-                            penalty_hrs += (num_d * 8.0) # 🛠️ หักเวลาครึ่งวันไปก่อน 4 ชม.
-                            # 🛠️ [NEW] ถ้าทำงานไม่ครบอีก (ขาดเพิ่ม) ให้บวกชั่วโมงที่ขาดเข้าไปด้วย!
+                            # 🛠️ [FIX] รายวัน: ใช้ชั่วโมงทำงานจริงจาก daily_record ถ้ามี in/out
+                            # เพราะ leave_end_time อาจไม่ตรงกับเวลาออกงานจริง ทำให้ num_days ผิด
+                            if is_daily_calculation and rec and rec.get('work_in_time') and rec.get('work_out_time'):
+                                try:
+                                    _win_s = str(rec['work_in_time'])[:5]
+                                    _wout_s = str(rec['work_out_time'])[:5]
+                                    _fmt = "%H:%M"
+                                    _wi = datetime.strptime(_win_s, _fmt)
+                                    _wo = datetime.strptime(_wout_s, _fmt)
+                                    _mins = int((_wo - _wi).total_seconds() // 60)
+                                    _work_hrs = max(0.0, float(_mins // 60))
+                                    _leave_hrs = max(0.0, 8.0 - _work_hrs)
+                                    penalty_hrs += _leave_hrs
+                                    _day_action = f"+1 (ทำงาน {_work_hrs:.0f} ชม. หัก {_leave_hrs:.0f} ชม.)"
+                                except Exception:
+                                    penalty_hrs += (num_d * 8.0)
+                                    _day_action = f"+1 (ลา {num_d} วัน, หัก {num_d*8:.1f} ชม.)"
+                            else:
+                                penalty_hrs += (num_d * 8.0)
+                                _day_action = f"+1 (ลา {num_d} วัน, หัก {num_d*8:.1f} ชม.)"
                             if rec and 'หัก' in str(rec['status']):
                                 m = re.search(r"หัก\s*([\d\.]+)\s*ชม", str(rec['status']))
                                 if m: penalty_hrs += float(m.group(1))
+                        else:
+                            _day_action = f"+1 (ลา {num_d} วัน, รับค่าจ้างเต็ม)"
                     else:
                         _day_action = f"ลาเต็มวัน ({'ไม่รับค่าจ้าง' if is_unpaid else 'รับค่าจ้าง'}) → ไม่นับวัน"
                         if is_unpaid: no_pay_days += 1.0
