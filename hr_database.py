@@ -2329,38 +2329,39 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
 
             ot_rate = hourly_r * 1.5
             
-            # รวมเงิน OT
+            # รวมเงิน OT (round 2 ตำแหน่ง เพื่อให้ตรงกับ Excel)
             auto_ot_money = total_approved_ot_hours * ot_rate
-            result["ot"] = auto_ot_money + manual_ot_money
+            result["ot"] = round(auto_ot_money + manual_ot_money, 2)
 
             if is_daily_calculation:
-                result["base_salary"] = actual_days * salary_db
-                result["late_deduct"] = penalty_hrs * hourly_r # รายวัน หักแค่รายชั่วโมงที่หายไป วันที่ขาดจะไม่ได้เงินอยู่แล้ว
+                result["base_salary"] = round(actual_days * salary_db, 2)
+                result["late_deduct"] = round(penalty_hrs * hourly_r, 2)
             else:
                 result["base_salary"] = salary_db
-                result["late_deduct"] = (penalty_hrs * hourly_r) + (absent_days * day_r) + (no_pay_days * day_r)
+                result["late_deduct"] = round((penalty_hrs * hourly_r) + (absent_days * day_r) + (no_pay_days * day_r), 2)
 
-            result["driving_allowance"] = auto_trip
-            
-            # ยอดรวมรับทั้งหมด
-            result["total_income"] = (
-                result["base_salary"] + result["position_allowance"] + result["ot"] + 
-                result["commission"] + result["incentive"] + result["diligence"] + 
-                result["bonus"] + result["other_income"] + result["driving_allowance"]
+            result["driving_allowance"] = round(auto_trip, 2)
+            result["other_income"] = round(result["other_income"], 2)
+
+            # ยอดรวมรับทั้งหมด (round ทุก component ก่อน เพื่อให้ตรงกับ Excel)
+            result["total_income"] = round(
+                result["base_salary"] + result["position_allowance"] + result["ot"] +
+                result["commission"] + result["incentive"] + result["diligence"] +
+                result["bonus"] + result["other_income"] + result["driving_allowance"], 2
             )
 
             # --- [5] ภาษีและ SSO ---
-            if is_pnd3_applicable: result["pnd3"] = result["total_income"] * 0.03
-            else: result["pnd1"] = (result["commission"] * 0.03) + manual_tax
-            result["tax"] = result["pnd1"] + result["pnd3"]
+            if is_pnd3_applicable: result["pnd3"] = round(result["total_income"] * 0.03, 2)
+            else: result["pnd1"] = round((result["commission"] * 0.03) + manual_tax, 2)
+            result["tax"] = round(result["pnd1"] + result["pnd3"], 2)
 
             if not is_sso_exempt and not is_director and (end_date.day == calendar.monthrange(end_date.year, end_date.month)[1]):
                 sso_config = load_sso_config(end_date.year)
                 sso_base = min(max(result["base_salary"] + result["position_allowance"], 1650), float(sso_config.get("max_salary", 15000)))
                 result["sso"] = int(sso_base * (float(sso_config.get("rate", 5.0))/100.0) + 0.5)
 
-            result["total_deduct"] = (result["sso"] + result["tax"] + result["provident_fund"] + result["late_deduct"] + result["loan"] + result["other_deduct"])
-            result["net_salary"] = result["total_income"] - result["total_deduct"]
+            result["total_deduct"] = round(result["sso"] + result["tax"] + result["provident_fund"] + result["late_deduct"] + result["loan"] + result["other_deduct"], 2)
+            result["net_salary"] = round(result["total_income"] - result["total_deduct"], 2)
 
             if is_daily_calculation:
                 print(f"[DEBUG DAILY RESULT] รหัส: {emp_id}")
