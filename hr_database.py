@@ -2324,12 +2324,8 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
                 print(f"{'='*65}\n")
 
             # --- [4] สรุปยอดเงิน และ OT ---
-            if _best_allowance is not None:
-                result["position_allowance"] = _best_allowance
-            else:
-                cursor.execute("SELECT position_allowance FROM salary_history WHERE emp_id = %s ORDER BY history_id DESC LIMIT 1", (emp_id,))
-                pa = cursor.fetchone()
-                result["position_allowance"] = float(pa[0]) if pa and pa[0] else 0.0
+            # ใช้ค่าตำแหน่งจาก entry ที่ตรงกับช่วงเวลา ถ้าไม่มีให้เป็น 0
+            result["position_allowance"] = _best_allowance if _best_allowance is not None else 0.0
 
             # 🛠️ [NEW] กฎพิเศษสำหรับ "กรรมการ" (รับเงินเต็มจำนวนเสมอ ไม่หักขาด/ลา/สาย)
             is_director = "กรรมการ" in emp_type
