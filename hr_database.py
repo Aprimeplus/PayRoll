@@ -2372,7 +2372,7 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
 
             if not is_sso_exempt and not is_director and (end_date.day == calendar.monthrange(end_date.year, end_date.month)[1]):
                 sso_config = load_sso_config(end_date.year)
-                sso_base = min(max(result["base_salary"] + result["position_allowance"], 1650), float(sso_config.get("max_salary", 15000)))
+                sso_base = min(max(result["base_salary"], 1650), float(sso_config.get("max_salary", 15000)))
                 result["sso"] = int(sso_base * (float(sso_config.get("rate", 5.0))/100.0) + 0.5)
 
             result["total_deduct"] = round(result["sso"] + result["tax"] + result["provident_fund"] + result["late_deduct"] + result["loan"] + result["other_deduct"], 2)
