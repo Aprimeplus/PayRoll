@@ -24,6 +24,7 @@ class DrivingDetailsPopup(tk.Toplevel):
         self.on_save = on_save_callback
         self.details_data = current_details if current_details else []
         self.edit_index = None # ตัวแปรเก็บตำแหน่งรายการที่กำลังแก้ไข
+        self._suggestions = hr_database.get_vehicle_and_driver_suggestions()
         self._build_ui()
         self._refresh_table()
 
@@ -47,13 +48,14 @@ class DrivingDetailsPopup(tk.Toplevel):
         self.cb_car.set("กระบะ")
         
         ttk.Label(input_frame, text="ทะเบียนรถ:").grid(row=0, column=2, padx=5, pady=5, sticky="e")
-        self.ent_plate = ttk.Entry(input_frame)
-        self.ent_plate.grid(row=0, column=3, padx=5, pady=5, sticky="ew") # sticky="ew" คือให้ยืดซ้ายขวา
+        self.cb_plate = ttk.Combobox(input_frame, values=self._suggestions["plates"])
+        self.cb_plate.grid(row=0, column=3, padx=5, pady=5, sticky="ew")
+        self.cb_plate.bind("<<ComboboxSelected>>", self._on_plate_selected)
 
         # --- แถวที่ 1 ---
         ttk.Label(input_frame, text="ชื่อคนขับ:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
-        self.ent_driver = ttk.Entry(input_frame)
-        self.ent_driver.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
+        self.cb_driver = ttk.Combobox(input_frame, values=self._suggestions["drivers"])
+        self.cb_driver.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
         
         ttk.Label(input_frame, text="วันที่ส่งงาน:").grid(row=1, column=2, padx=5, pady=5, sticky="e")
         self.ent_send_date = DateDropdown(input_frame)
@@ -155,11 +157,8 @@ class DrivingDetailsPopup(tk.Toplevel):
         item = self.details_data[self.edit_index]
         
         self.cb_car.set(item.get('car_type', 'กระบะ'))
-        self.ent_plate.delete(0, tk.END)
-        self.ent_plate.insert(0, item.get('license', ''))
-        
-        self.ent_driver.delete(0, tk.END)
-        self.ent_driver.insert(0, item.get('driver', ''))
+        self.cb_plate.set(item.get('license', ''))
+        self.cb_driver.set(item.get('driver', ''))
         
         if item.get('send_date'):
             self.ent_send_date.set_date(item.get('send_date'))
@@ -186,6 +185,12 @@ class DrivingDetailsPopup(tk.Toplevel):
         # เปลี่ยนชื่อปุ่มเป็นสีส้ม/อัปเดต
         self.btn_add.config(text="💾 อัปเดตรายการ", style="Warning.TButton")
 
+    def _on_plate_selected(self, event=None):
+        plate = self.cb_plate.get()
+        driver = self._suggestions["plate_to_driver"].get(plate, "")
+        if driver and not self.cb_driver.get().strip():
+            self.cb_driver.set(driver)
+
     def _add_item(self):
         car = self.cb_car.get()
         is_free = self.is_free_var.get()
@@ -207,8 +212,8 @@ class DrivingDetailsPopup(tk.Toplevel):
         combined_doc_id = f"{prefix}{number}" if number else ""
 
         item = {
-            "car_type": car, "license": self.ent_plate.get().strip(),
-            "driver": self.ent_driver.get().strip(), "send_date": self.ent_send_date.get_date(),
+            "car_type": car, "license": self.cb_plate.get().strip(),
+            "driver": self.cb_driver.get().strip(), "send_date": self.ent_send_date.get_date(),
             "cost": cost, "doc_type": prefix, "doc_id": combined_doc_id,
             "is_free": is_free, "is_service": is_service, "service_fee": service_fee
         }

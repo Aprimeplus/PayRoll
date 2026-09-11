@@ -366,9 +366,19 @@ def init_db():
                 cursor.execute("""
                     ALTER TABLE salary_history
                     ADD COLUMN IF NOT EXISTS new_position TEXT,
-                    ADD COLUMN IF NOT EXISTS assessment_score TEXT;
+                    ADD COLUMN IF NOT EXISTS assessment_score TEXT,
+                    ADD COLUMN IF NOT EXISTS adjustment_month TEXT;
                 """)
-            except Exception: conn.rollback()
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                # fallback: add each column individually to avoid multi-column ALTER failure
+                for _col in ("new_position TEXT", "assessment_score TEXT", "adjustment_month TEXT"):
+                    try:
+                        cursor.execute(f"ALTER TABLE salary_history ADD COLUMN IF NOT EXISTS {_col}")
+                        conn.commit()
+                    except Exception:
+                        conn.rollback()
 
             # 9. ตารางประวัติฝึกอบรม
             cursor.execute("""
@@ -861,11 +871,11 @@ def _upsert_employee_data(cursor, data):
                 assess_score = item.get("assessment_score", "")
                 cursor.execute(
                     """
-                    INSERT INTO salary_history 
-                    (emp_id, adjustment_year, new_salary, position_allowance, new_position, assessment_score) 
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    INSERT INTO salary_history
+                    (emp_id, adjustment_year, adjustment_month, new_salary, position_allowance, new_position, assessment_score)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """,
-                    (emp_id, item.get("year"), new_salary, position_allowance, new_pos, assess_score) 
+                    (emp_id, item.get("year"), item.get("month", ""), new_salary, position_allowance, new_pos, assess_score)
                 )
 
         cursor.execute("DELETE FROM employee_training_records WHERE emp_id = %s", (emp_id,))
@@ -1000,23 +1010,36 @@ def load_single_employee(emp_id):
             employee_data['welfare_options'] = [row['welfare_name'] for row in welfare_rows]
             employee_data['welfare'] = [bool(row['has_welfare']) for row in welfare_rows]
             employee_data['welfare_amounts'] = [str(row['amount']) if row['amount'] else "" for row in welfare_rows]
-            cursor.execute(
-                """
-                SELECT adjustment_year, new_salary, position_allowance, 
-                       new_position, assessment_score 
-                FROM salary_history 
-                WHERE emp_id = %s ORDER BY history_id
-                """,
-                (emp_id,)
-            )
+            try:
+                cursor.execute(
+                    """
+                    SELECT adjustment_year, adjustment_month, new_salary, position_allowance,
+                           new_position, assessment_score
+                    FROM salary_history
+                    WHERE emp_id = %s ORDER BY history_id
+                    """,
+                    (emp_id,)
+                )
+            except Exception:
+                conn.rollback()
+                cursor.execute(
+                    """
+                    SELECT adjustment_year, new_salary, position_allowance,
+                           new_position, assessment_score
+                    FROM salary_history
+                    WHERE emp_id = %s ORDER BY history_id
+                    """,
+                    (emp_id,)
+                )
             history_rows = cursor.fetchall()
             employee_data['salary_history'] = [
                 {
-                    "year": row['adjustment_year'], 
-                    "salary": str(row['new_salary']) if row['new_salary'] else "",
+                    "year":               row['adjustment_year'],
+                    "month":              row.get('adjustment_month', "") or "",
+                    "salary":             str(row['new_salary']) if row['new_salary'] else "",
                     "position_allowance": str(row['position_allowance']) if row.get('position_allowance') else "",
-                    "new_position": row.get('new_position', ""), 
-                    "assessment_score": row.get('assessment_score', "") 
+                    "new_position":       row.get('new_position', ""),
+                    "assessment_score":   row.get('assessment_score', "")
                 }
                 for row in history_rows
             ]
@@ -2070,7 +2093,34 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
             salary_db = float(emp_info.get("salary", 0.0))
             emp_type = str(emp_info.get("emp_type", ""))
             work_loc = str(emp_info.get("work_location", "")) # 🛠️ ดึงสถานที่ทำงานมาเช็ค
-            
+
+            # --- ดึงเงินเดือนตามช่วงเวลาที่คำนวณ (จาก salary_history) ---
+            _MONTH_TO_INT = {
+                "มกราคม":1,"กุมภาพันธ์":2,"มีนาคม":3,"เมษายน":4,
+                "พฤษภาคม":5,"มิถุนายน":6,"กรกฎาคม":7,"สิงหาคม":8,
+                "กันยายน":9,"ตุลาคม":10,"พฤศจิกายน":11,"ธันวาคม":12,
+            }
+            _calc_key = (start_date.year + 543) * 100 + start_date.month
+            _best_key = None
+            _best_salary = None
+            _best_allowance = None
+            for _h in emp_info.get("salary_history", []):
+                try:
+                    _hy = int(_h.get("year") or 0)
+                    _hm = _MONTH_TO_INT.get(str(_h.get("month", "") or ""), 1)
+                    _hs = float(_h.get("salary") or 0)
+                    _hpa = _h.get("position_allowance", "")
+                    _hkey = _hy * 100 + _hm
+                    if _hy > 0 and _hs > 0 and _hkey <= _calc_key:
+                        if _best_key is None or _hkey > _best_key:
+                            _best_key = _hkey
+                            _best_salary = _hs
+                            _best_allowance = float(_hpa) if _hpa else None
+                except Exception:
+                    pass
+            if _best_salary:
+                salary_db = _best_salary
+
             is_daily_style = ("รายวัน" in emp_type) or ("Daily" in emp_type)
             is_warehouse = "คลัง" in work_loc # 🛠️ เช็คว่าเป็นคลังสินค้าหรือไม่
             is_contractor = any(k in emp_type for k in ["จ้างเหมา", "ที่ปรึกษา", "Contract", "สัญญาจ้าง"])
@@ -2178,53 +2228,104 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
             holiday_dates = {row['holiday_date'] for row in cursor.fetchall()}
 
             actual_days = 0.0; penalty_hrs = 0.0; absent_days = 0.0; no_pay_days = 0.0; auto_trip = 0.0
-            total_approved_ot_hours = 0.0 
+            total_approved_ot_hours = 0.0
+
+            if is_daily_calculation:
+                print(f"\n{'='*65}")
+                print(f"[DEBUG DAILY PAYROLL] รหัส: {emp_id} | ช่วง: {start_date} ถึง {end_date}")
+                print(f"  อัตรารายวัน (salary_db) : {salary_db:,.2f} บาท/วัน")
+                print(f"  hourly_rate             : {salary_db/8:,.2f} บาท/ชม.")
+                print(f"{'─'*65}")
+                print(f"  {'วันที่':<12} {'มี Record?':<12} {'มีใบลา?':<10} {'วันหยุด?':<10} {'status':<30} {'actual_days'}")
+                print(f"{'─'*65}")
 
             for d in pd.date_range(start_date, end_date).date:
                 rec = daily_map.get(d)
                 lv = leave_map.get(d)
                 is_h = (d.weekday() == 6 or d in holiday_dates)
-                
+                _day_action = "—"
+
                 if lv:
                     num_d = float(lv['num_days'] or 1.0)
                     is_unpaid = 'ลาไม่รับค่าจ้าง' in str(lv['leave_type'])
-                    if num_d < 1.0: 
+                    if num_d < 1.0:
                         actual_days += 1.0
-                        if is_unpaid or is_daily_calculation: 
-                            penalty_hrs += (num_d * 8.0) # 🛠️ หักเวลาครึ่งวันไปก่อน 4 ชม.
-                            # 🛠️ [NEW] ถ้าทำงานไม่ครบอีก (ขาดเพิ่ม) ให้บวกชั่วโมงที่ขาดเข้าไปด้วย!
+                        if is_unpaid or is_daily_calculation:
+                            # 🛠️ [FIX] รายวัน: ใช้ชั่วโมงทำงานจริงจาก daily_record ถ้ามี in/out
+                            # เพราะ leave_end_time อาจไม่ตรงกับเวลาออกงานจริง ทำให้ num_days ผิด
+                            if is_daily_calculation and rec and rec.get('work_in_time') and rec.get('work_out_time'):
+                                try:
+                                    _win_s = str(rec['work_in_time'])[:5]
+                                    _wout_s = str(rec['work_out_time'])[:5]
+                                    _fmt = "%H:%M"
+                                    _wi = datetime.strptime(_win_s, _fmt)
+                                    _wo = datetime.strptime(_wout_s, _fmt)
+                                    _mins = int((_wo - _wi).total_seconds() // 60)
+                                    _work_hrs = max(0.0, float(_mins // 60))
+                                    _leave_hrs = max(0.0, 8.0 - _work_hrs)
+                                    penalty_hrs += _leave_hrs
+                                    _day_action = f"+1 (ทำงาน {_work_hrs:.0f} ชม. หัก {_leave_hrs:.0f} ชม.)"
+                                except Exception:
+                                    penalty_hrs += (num_d * 8.0)
+                                    _day_action = f"+1 (ลา {num_d} วัน, หัก {num_d*8:.1f} ชม.)"
+                            else:
+                                penalty_hrs += (num_d * 8.0)
+                                _day_action = f"+1 (ลา {num_d} วัน, หัก {num_d*8:.1f} ชม.)"
                             if rec and 'หัก' in str(rec['status']):
                                 m = re.search(r"หัก\s*([\d\.]+)\s*ชม", str(rec['status']))
                                 if m: penalty_hrs += float(m.group(1))
+                        else:
+                            _day_action = f"+1 (ลา {num_d} วัน, รับค่าจ้างเต็ม)"
                     else:
+                        _day_action = f"ลาเต็มวัน ({'ไม่รับค่าจ้าง' if is_unpaid else 'รับค่าจ้าง'}) → ไม่นับวัน"
                         if is_unpaid: no_pay_days += 1.0
-                        
-                    if rec: 
+
+                    if rec:
                         auto_trip += float(rec.get('total_amount', 0))
                         if rec.get('is_ot_approved'): total_approved_ot_hours += float(rec.get('ot_hours', 0.0))
-                
+
                 elif rec:
                     status_text = str(rec['status'])
-                    if 'ขาดงาน' in status_text: 
+                    if 'ขาดงาน' in status_text:
                         absent_days += 1.0
+                        _day_action = "ขาดงาน → ไม่นับวัน"
                     elif 'วันหยุด' in status_text:
-                        pass
+                        _day_action = "วันหยุด → ไม่นับวัน"
                     else:
                         actual_days += 1.0
                         m = re.search(r"หัก\s*([\d\.]+)\s*ชม", status_text)
-                        if m: penalty_hrs += float(m.group(1))
-                    
+                        _hrs = float(m.group(1)) if m else 0
+                        if _hrs > 0: penalty_hrs += _hrs
+                        _day_action = f"+1 วัน | penalty+{_hrs:.1f}ชม. | status={status_text[:25]}"
+
                     auto_trip += float(rec.get('total_amount', 0))
                     if rec.get('is_ot_approved'):
                         total_approved_ot_hours += float(rec.get('ot_hours', 0.0))
 
-                elif not is_h and not is_fixed: 
+                elif not is_h and not is_fixed:
                     absent_days += 1.0
+                    _day_action = "ไม่มี record + ไม่ใช่วันหยุด → absent"
+                else:
+                    _day_action = "วันหยุด (ไม่มี record)"
+
+                if is_daily_calculation:
+                    _rec_flag = "✓" if rec else "✗"
+                    _lv_flag  = "✓" if lv  else "✗"
+                    _h_flag   = "✓" if is_h else "✗"
+                    print(f"  {d.strftime('%d/%m/%Y'):<12} {_rec_flag:<12} {_lv_flag:<10} {_h_flag:<10} {_day_action[:30]:<30} {actual_days:.1f}")
+
+            if is_daily_calculation:
+                print(f"{'─'*65}")
+                print(f"  สรุปวันทำงานจริง (actual_days) : {actual_days:.1f} วัน")
+                print(f"  วันขาดงาน (absent_days)        : {absent_days:.1f} วัน")
+                print(f"  ชม.หัก (penalty_hrs)           : {penalty_hrs:.2f} ชม.")
+                print(f"  ค่าจ้างฐาน = {actual_days:.1f} × {salary_db:,.2f} = {actual_days*salary_db:,.2f} บาท")
+                print(f"  ยอดหักสาย  = {penalty_hrs:.2f} × {salary_db/8:,.2f} = {penalty_hrs*(salary_db/8):,.2f} บาท")
+                print(f"{'='*65}\n")
 
             # --- [4] สรุปยอดเงิน และ OT ---
-            cursor.execute("SELECT position_allowance FROM salary_history WHERE emp_id = %s ORDER BY history_id DESC LIMIT 1", (emp_id,))
-            pa = cursor.fetchone()
-            result["position_allowance"] = float(pa[0]) if pa and pa[0] else 0.0
+            # ใช้ค่าตำแหน่งจาก entry ที่ตรงกับช่วงเวลา ถ้าไม่มีให้เป็น 0
+            result["position_allowance"] = _best_allowance if _best_allowance is not None else 0.0
 
             # 🛠️ [NEW] กฎพิเศษสำหรับ "กรรมการ" (รับเงินเต็มจำนวนเสมอ ไม่หักขาด/ลา/สาย)
             is_director = "กรรมการ" in emp_type
@@ -2243,38 +2344,56 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
 
             ot_rate = hourly_r * 1.5
             
-            # รวมเงิน OT
+            # รวมเงิน OT (round 2 ตำแหน่ง เพื่อให้ตรงกับ Excel)
             auto_ot_money = total_approved_ot_hours * ot_rate
-            result["ot"] = auto_ot_money + manual_ot_money
+            result["ot"] = round(auto_ot_money + manual_ot_money, 2)
 
             if is_daily_calculation:
-                result["base_salary"] = actual_days * salary_db
-                result["late_deduct"] = penalty_hrs * hourly_r # รายวัน หักแค่รายชั่วโมงที่หายไป วันที่ขาดจะไม่ได้เงินอยู่แล้ว
+                result["base_salary"] = round(actual_days * salary_db, 2)
+                result["late_deduct"] = round(penalty_hrs * hourly_r, 2)
             else:
                 result["base_salary"] = salary_db
-                result["late_deduct"] = (penalty_hrs * hourly_r) + (absent_days * day_r) + (no_pay_days * day_r)
+                result["late_deduct"] = round((penalty_hrs * hourly_r) + (absent_days * day_r) + (no_pay_days * day_r), 2)
 
-            result["driving_allowance"] = auto_trip
-            
-            # ยอดรวมรับทั้งหมด
-            result["total_income"] = (
-                result["base_salary"] + result["position_allowance"] + result["ot"] + 
-                result["commission"] + result["incentive"] + result["diligence"] + 
-                result["bonus"] + result["other_income"] + result["driving_allowance"]
+            result["driving_allowance"] = round(auto_trip, 2)
+            result["other_income"] = round(result["other_income"], 2)
+
+            # ยอดรวมรับทั้งหมด (round ทุก component ก่อน เพื่อให้ตรงกับ Excel)
+            result["total_income"] = round(
+                result["base_salary"] + result["position_allowance"] + result["ot"] +
+                result["commission"] + result["incentive"] + result["diligence"] +
+                result["bonus"] + result["other_income"] + result["driving_allowance"], 2
             )
 
             # --- [5] ภาษีและ SSO ---
-            if is_pnd3_applicable: result["pnd3"] = result["total_income"] * 0.03
-            else: result["pnd1"] = (result["commission"] * 0.03) + manual_tax
-            result["tax"] = result["pnd1"] + result["pnd3"]
+            if is_pnd3_applicable: result["pnd3"] = round(result["total_income"] * 0.03, 2)
+            else: result["pnd1"] = round((result["commission"] * 0.03) + manual_tax, 2)
+            result["tax"] = round(result["pnd1"] + result["pnd3"], 2)
 
             if not is_sso_exempt and not is_director and (end_date.day == calendar.monthrange(end_date.year, end_date.month)[1]):
                 sso_config = load_sso_config(end_date.year)
-                sso_base = min(max(result["base_salary"] + result["position_allowance"], 1650), float(sso_config.get("max_salary", 15000)))
+                sso_base = min(max(result["base_salary"], 1650), float(sso_config.get("max_salary", 15000)))
                 result["sso"] = int(sso_base * (float(sso_config.get("rate", 5.0))/100.0) + 0.5)
 
-            result["total_deduct"] = (result["sso"] + result["tax"] + result["provident_fund"] + result["late_deduct"] + result["loan"] + result["other_deduct"])
-            result["net_salary"] = result["total_income"] - result["total_deduct"]
+            result["total_deduct"] = round(result["sso"] + result["tax"] + result["provident_fund"] + result["late_deduct"] + result["loan"] + result["other_deduct"], 2)
+            result["net_salary"] = round(result["total_income"] - result["total_deduct"], 2)
+
+            if is_daily_calculation:
+                print(f"[DEBUG DAILY RESULT] รหัส: {emp_id}")
+                print(f"  base_salary    : {result['base_salary']:>10,.2f}  (actual_days × salary_db)")
+                print(f"  position_allow : {result['position_allowance']:>10,.2f}")
+                print(f"  ot             : {result['ot']:>10,.2f}")
+                print(f"  diligence      : {result['diligence']:>10,.2f}")
+                print(f"  other_income   : {result['other_income']:>10,.2f}")
+                print(f"  ──────────────────────────────────")
+                print(f"  total_income   : {result['total_income']:>10,.2f}")
+                print(f"  late_deduct    : {result['late_deduct']:>10,.2f}  ({penalty_hrs:.2f}ชม. × {salary_db/8:.2f})")
+                print(f"  sso            : {result['sso']:>10,.2f}  ({'คิดในรอบนี้' if result['sso'] > 0 else 'ไม่คิด (ไม่ใช่สิ้นเดือน)'})")
+                print(f"  tax            : {result['tax']:>10,.2f}")
+                print(f"  total_deduct   : {result['total_deduct']:>10,.2f}")
+                print(f"  ══════════════════════════════════")
+                print(f"  NET SALARY     : {result['net_salary']:>10,.2f}")
+                print(f"{'='*65}\n")
 
     except Exception as e:
         print(f"Payroll Error: {e}")
@@ -2497,13 +2616,13 @@ def process_attendance_summary(start_date, end_date):
                                     ot_out_t = datetime.strptime(saved_ot_out[:5], "%H:%M")
                                     ot_diff_mins = int((ot_out_t - ot_in_t).total_seconds() / 60)
                                     if ot_diff_mins >= 60:
-                                        ot_hours_to_save = float(int(ot_diff_mins / 60))
+                                        ot_hours_to_save = round(ot_diff_mins / 60.0, 2)
                                 except Exception:
                                     pass
                             else:
                                 if t_out_dt > required_out_dt:
                                     raw_ot_mins = int((t_out_dt - required_out_dt).total_seconds() / 60)
-                                    if raw_ot_mins >= 60: ot_hours_to_save = float(int(raw_ot_mins / 60))
+                                    if raw_ot_mins >= 60: ot_hours_to_save = round(raw_ot_mins / 60.0, 2)
 
                     else: 
                         if leave_info: 
@@ -2891,6 +3010,43 @@ def update_email_status(queue_id, new_status):
             return True
     except Exception:
         return False
+    finally:
+        conn.close()
+
+def get_vehicle_and_driver_suggestions():
+    """ดึงรายการทะเบียนรถและชื่อคนขับที่เคยใช้มาก่อน สำหรับ dropdown"""
+    conn = get_db_connection()
+    if not conn:
+        return {"plates": [], "drivers": [], "plate_to_driver": {}}
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT DISTINCT license_plate FROM employee_driving_details
+                WHERE license_plate IS NOT NULL AND license_plate != ''
+                ORDER BY license_plate
+            """)
+            plates = [r[0] for r in cursor.fetchall()]
+
+            cursor.execute("""
+                SELECT DISTINCT driver_name FROM employee_driving_details
+                WHERE driver_name IS NOT NULL AND driver_name != ''
+                ORDER BY driver_name
+            """)
+            drivers = [r[0] for r in cursor.fetchall()]
+
+            cursor.execute("""
+                SELECT DISTINCT ON (license_plate) license_plate, driver_name
+                FROM employee_driving_details
+                WHERE license_plate IS NOT NULL AND license_plate != ''
+                  AND driver_name IS NOT NULL AND driver_name != ''
+                ORDER BY license_plate, detail_id DESC
+            """)
+            plate_to_driver = {r[0]: r[1] for r in cursor.fetchall()}
+
+        return {"plates": plates, "drivers": drivers, "plate_to_driver": plate_to_driver}
+    except Exception as e:
+        print(f"Error get_vehicle_and_driver_suggestions: {e}")
+        return {"plates": [], "drivers": [], "plate_to_driver": {}}
     finally:
         conn.close()
 

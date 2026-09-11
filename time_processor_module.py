@@ -169,14 +169,20 @@ class TimeProcessorModule(ttk.Frame):
             
             if is_replace:
                 hr_database.delete_scan_logs_range(min_date, max_date)
-                
+
             # 3. บันทึกข้อมูลลง DB
             count = hr_database.insert_scan_logs(self.raw_log_data)
-            
-            messagebox.showinfo("สำเร็จ", f"นำเข้าข้อมูลเรียบร้อย {count} รายการ")
-            
-            # 4. สั่งประมวลผลทันที
-            self._save_logs_to_db()
+            self.raw_log_data = []
+            self.save_to_db_btn.config(state="disabled")
+            self.upload_status_label.config(
+                text=f"✅ บันทึก {count} รายการลง DB แล้ว — กำลังประมวลผล...", foreground="blue"
+            )
+            self.update_idletasks()
+
+            # 4. เซ็ตวันที่จากไฟล์ แล้วประมวลผลอัตโนมัติ
+            self.start_date_entry.set_date(min_date)
+            self.end_date_entry.set_date(max_date)
+            self._run_processing()
 
         except Exception as e:
             messagebox.showerror("Error", f"เกิดข้อผิดพลาด: {e}")
@@ -979,11 +985,9 @@ class TimeProcessorModule(ttk.Frame):
                     val_approved_old = bool(original_row.get('is_ot_approved', False))
                     
                     if val_ot_in_new and val_ot_out_new:
-                        # [FIX] คำนวณ OT โดยปัดลงเป็นชั่วโมงเต็ม (ตรงกับ Logic ใน hr_database)
-                        # เช่น 1 ชม. 30 นาที → 1 ชม. (ไม่ใช่ 1.5)
                         raw_diff_hrs = self._calculate_time_diff(val_ot_in_new, val_ot_out_new)
                         raw_diff_mins = int(raw_diff_hrs * 60)
-                        new_calculated_ot_hours = float(int(raw_diff_mins / 60)) if raw_diff_mins >= 60 else 0.0
+                        new_calculated_ot_hours = round(raw_diff_mins / 60.0, 2) if raw_diff_mins >= 60 else 0.0
                     
                     old_ot_hours = float(original_row.get('ot_hours', 0) or 0)
                     
