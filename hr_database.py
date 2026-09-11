@@ -3013,6 +3013,43 @@ def update_email_status(queue_id, new_status):
     finally:
         conn.close()
 
+def get_vehicle_and_driver_suggestions():
+    """ดึงรายการทะเบียนรถและชื่อคนขับที่เคยใช้มาก่อน สำหรับ dropdown"""
+    conn = get_db_connection()
+    if not conn:
+        return {"plates": [], "drivers": [], "plate_to_driver": {}}
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT DISTINCT license_plate FROM employee_driving_details
+                WHERE license_plate IS NOT NULL AND license_plate != ''
+                ORDER BY license_plate
+            """)
+            plates = [r[0] for r in cursor.fetchall()]
+
+            cursor.execute("""
+                SELECT DISTINCT driver_name FROM employee_driving_details
+                WHERE driver_name IS NOT NULL AND driver_name != ''
+                ORDER BY driver_name
+            """)
+            drivers = [r[0] for r in cursor.fetchall()]
+
+            cursor.execute("""
+                SELECT DISTINCT ON (license_plate) license_plate, driver_name
+                FROM employee_driving_details
+                WHERE license_plate IS NOT NULL AND license_plate != ''
+                  AND driver_name IS NOT NULL AND driver_name != ''
+                ORDER BY license_plate, detail_id DESC
+            """)
+            plate_to_driver = {r[0]: r[1] for r in cursor.fetchall()}
+
+        return {"plates": plates, "drivers": drivers, "plate_to_driver": plate_to_driver}
+    except Exception as e:
+        print(f"Error get_vehicle_and_driver_suggestions: {e}")
+        return {"plates": [], "drivers": [], "plate_to_driver": {}}
+    finally:
+        conn.close()
+
 def get_driving_details(emp_id, work_date):
     """ดึงรายการเที่ยวรถทั้งหมดของวันนั้น"""
     conn = get_db_connection()
