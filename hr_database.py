@@ -2620,9 +2620,18 @@ def process_attendance_summary(start_date, end_date):
                                 except Exception:
                                     pass
                             else:
+                                total_ot_mins = 0
+                                work_start_time = time(8, 0)
+                                # Early OT: เข้าก่อน 08:00
+                                if t_in_clean < work_start_time:
+                                    early_ot_mins = int((datetime.combine(dummy, work_start_time) - t_in_dt).total_seconds() / 60)
+                                    total_ot_mins += early_ot_mins
+                                # Late OT: ออกหลังเวลาเลิกงาน
                                 if t_out_dt > required_out_dt:
-                                    raw_ot_mins = int((t_out_dt - required_out_dt).total_seconds() / 60)
-                                    if raw_ot_mins >= 60: ot_hours_to_save = round(raw_ot_mins / 60.0, 2)
+                                    late_ot_mins = int((t_out_dt - required_out_dt).total_seconds() / 60)
+                                    total_ot_mins += late_ot_mins
+                                if total_ot_mins >= 60:
+                                    ot_hours_to_save = round(total_ot_mins / 60.0, 2)
 
                     else: 
                         if leave_info: 
