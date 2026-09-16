@@ -1062,8 +1062,15 @@ class TimeProcessorModule(ttk.Frame):
 
             if changes_detected > 0:
                 messagebox.showinfo("สำเร็จ", f"บันทึกข้อมูลเรียบร้อย ({changes_detected} รายการ)", parent=popup_window)
-                popup_window.destroy()
-                self._run_processing() 
+                # ไม่ปิดหน้าต่าง — reload ข้อมูลจาก DB ให้ใหม่แทน
+                try:
+                    s_date = self.start_date_entry.get_date()
+                    e_date = self.end_date_entry.get_date()
+                    new_records = hr_database.get_daily_records_range(emp_id, s_date, e_date)
+                    original_details_list.clear()
+                    original_details_list.extend(new_records)
+                except Exception:
+                    pass
             else:
                 messagebox.showinfo("ไม่เปลี่ยนแปลง", "ไม่พบการเปลี่ยนแปลงข้อมูล\n(อาจเพราะค่าใหม่เหมือนค่าเดิม)", parent=popup_window)
 
