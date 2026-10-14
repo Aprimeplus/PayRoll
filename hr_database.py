@@ -308,6 +308,12 @@ def init_db():
                     ADD COLUMN IF NOT EXISTS remark TEXT;
                 """)
             except Exception: conn.rollback()
+            try:
+                cursor.execute("""
+                    ALTER TABLE payroll_records
+                    ADD COLUMN IF NOT EXISTS welfare_fund_deduct REAL DEFAULT 0;
+                """)
+            except Exception: conn.rollback()
 
             # 7. ตารางเที่ยวรถ (Details & Records)
             cursor.execute("""
@@ -2078,8 +2084,8 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
         "emp_id": emp_id, "base_salary": 0.0, "position_allowance": 0.0,
         "ot": 0.0, "commission": 0.0, "bonus": 0.0, "incentive": 0.0, "diligence": 0.0,
         "other_income": 0.0, "driving_allowance": 0.0, "total_income": 0.0,
-        "sso": 0.0, "tax": 0.0, "provident_fund": 0.0, "loan": 0.0, 
-        "late_deduct": 0.0, "other_deduct": 0.0, "total_deduct": 0.0,
+        "sso": 0.0, "tax": 0.0, "provident_fund": 0.0, "loan": 0.0,
+        "late_deduct": 0.0, "other_deduct": 0.0, "welfare_fund": 0.0, "total_deduct": 0.0,
         "net_salary": 0.0, "pnd1": 0.0, "pnd3": 0.0
     }
 
@@ -2375,7 +2381,11 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
                 sso_base = min(max(result["base_salary"], 1650), float(sso_config.get("max_salary", 15000)))
                 result["sso"] = int(sso_base * (float(sso_config.get("rate", 5.0))/100.0) + 0.5)
 
-            result["total_deduct"] = round(result["sso"] + result["tax"] + result["provident_fund"] + result["late_deduct"] + result["loan"] + result["other_deduct"], 2)
+            # กองทุนสงเคราะห์ลูกจ้าง 0.25% ของเงินเดือน เริ่ม ต.ค. 2569
+            if end_date.year > 2026 or (end_date.year == 2026 and end_date.month >= 10):
+                result["welfare_fund"] = round(result["base_salary"] * 0.0025, 2)
+
+            result["total_deduct"] = round(result["sso"] + result["tax"] + result["provident_fund"] + result["late_deduct"] + result["loan"] + result["other_deduct"] + result["welfare_fund"], 2)
             result["net_salary"] = round(result["total_income"] - result["total_deduct"], 2)
 
             if is_daily_calculation:
@@ -3143,19 +3153,19 @@ def save_monthly_payroll(emp_id, month, year, pay_date, data, calc_mode=0):
             cursor.execute("""
                 INSERT INTO payroll_records (
                     emp_id, period_month, period_year, period_mode, payment_date,
-                    base_salary, position_allowance, ot_pay, commission, 
+                    base_salary, position_allowance, ot_pay, commission,
                     incentive, diligence, bonus,
                     driving_allowance, other_income, total_income,
                     sso_deduct, tax_deduct, provident_fund, loan_deduct,
-                    late_deduct, other_deduct, total_deduct, net_salary,
+                    late_deduct, other_deduct, welfare_fund_deduct, total_deduct, net_salary,
                     remark, note
                 ) VALUES (
                     %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s, 
-                    %s, %s, %s, 
+                    %s, %s, %s, %s,
+                    %s, %s, %s,
                     %s, %s, %s,
                     %s, %s, %s, %s,
-                    %s, %s, %s, %s, 
+                    %s, %s, %s, %s, %s,
                     %s, %s
                 )
                 ON CONFLICT (emp_id, period_month, period_year, period_mode) DO UPDATE SET
@@ -3176,6 +3186,7 @@ def save_monthly_payroll(emp_id, month, year, pay_date, data, calc_mode=0):
                     loan_deduct = EXCLUDED.loan_deduct,
                     late_deduct = EXCLUDED.late_deduct,
                     other_deduct = EXCLUDED.other_deduct,
+                    welfare_fund_deduct = EXCLUDED.welfare_fund_deduct,
                     total_deduct = EXCLUDED.total_deduct,
                     net_salary = EXCLUDED.net_salary,
                     remark = EXCLUDED.remark,
@@ -3188,7 +3199,7 @@ def save_monthly_payroll(emp_id, month, year, pay_date, data, calc_mode=0):
                 data.get('driving_allowance', 0), data.get('other_income', 0), data.get('total_income', 0),
                 data.get('sso', 0), data.get('tax', 0), data.get('provident_fund', 0),
                 data.get('loan', 0), data.get('late_deduct', 0), data.get('other_deduct', 0),
-                data.get('total_deduct', 0), data.get('net_salary', 0),
+                data.get('welfare_fund', 0), data.get('total_deduct', 0), data.get('net_salary', 0),
                 data.get('remark', ''), data.get('note', '')
             ))
             conn.commit()
