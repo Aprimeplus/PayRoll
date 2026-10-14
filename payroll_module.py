@@ -1118,12 +1118,13 @@ class PayrollModule(ttk.Frame):
                     "other_income": float(r.get("other_income", 0) or 0),
                     "total_income": float(r.get("total_income", 0) or 0),
                     "sso": float(r.get("sso_deduct", 0) or 0),
-                    "pnd1": float(r.get("tax_deduct", 0) or 0), 
-                    "pnd3": 0.0, 
+                    "pnd1": float(r.get("tax_deduct", 0) or 0),
+                    "pnd3": 0.0,
                     "provident_fund": float(r.get("provident_fund", 0) or 0),
                     "loan": float(r.get("loan_deduct", 0) or 0),
                     "late_deduct": float(r.get("late_deduct", 0) or 0),
                     "other_deduct": float(r.get("other_deduct", 0) or 0),
+                    "welfare_fund": float(r.get("welfare_fund_deduct", 0) or 0),
                     "total_deduct": float(r.get("total_deduct", 0) or 0),
                     "net_salary": float(r.get("net_salary", 0) or 0),
                     "remark": str(r.get("remark", ""))
@@ -1176,7 +1177,7 @@ class PayrollModule(ttk.Frame):
             t_base = 0.0; t_pos = 0.0; t_ot = 0.0; t_comm = 0.0; t_incen = 0.0
             t_dil = 0.0; t_bonus = 0.0; t_other_inc = 0.0; t_drive = 0.0; t_total_inc = 0.0
             t_sso = 0.0; t_tax = 0.0; t_prov = 0.0; t_loan = 0.0; t_late = 0.0
-            t_other_ded = 0.0; t_total_ded = 0.0; t_net = 0.0
+            t_other_ded = 0.0; t_welfare = 0.0; t_total_ded = 0.0; t_net = 0.0
 
             sheet_data = []
             pay_date_display = "-"
@@ -1203,6 +1204,7 @@ class PayrollModule(ttk.Frame):
                 t_loan += float(r.get('loan_deduct', 0))
                 t_late += float(r.get('late_deduct', 0))
                 t_other_ded += float(r.get('other_deduct', 0))
+                t_welfare += float(r.get('welfare_fund_deduct', 0))
                 t_total_ded += float(r.get('total_deduct', 0))
                 t_net += float(r.get('net_salary', 0))
 
@@ -1218,25 +1220,27 @@ class PayrollModule(ttk.Frame):
                     f"{r.get('sso_deduct', 0):,.2f}", f"{r.get('tax_deduct', 0):,.2f}", 
                     f"{r.get('provident_fund', 0):,.2f}", f"{r.get('loan_deduct', 0):,.2f}", 
                     f"{r.get('late_deduct', 0):,.2f}", f"{r.get('other_deduct', 0):,.2f}",
-                    f"{r.get('total_deduct', 0):,.2f}", 
+                    f"{r.get('welfare_fund_deduct', 0):,.2f}",
+                    f"{r.get('total_deduct', 0):,.2f}",
                     f"{r.get('net_salary', 0):,.2f}",
-                    r.get('remark', '') 
+                    r.get('remark', '')
                 ]
                 sheet_data.append(row)
-            
+
             if sheet_data:
                 summary_row = [
                     "TOTAL", "รวมทั้งสิ้น",
                     f"{t_base:,.2f}", f"{t_pos:,.2f}",
-                    f"{t_ot:,.2f}", f"{t_comm:,.2f}", 
+                    f"{t_ot:,.2f}", f"{t_comm:,.2f}",
                     f"{t_incen:,.2f}", f"{t_dil:,.2f}",
-                    f"{t_bonus:,.2f}", f"{t_other_inc:,.2f}", 
-                    f"{t_drive:,.2f}", 
-                    f"{t_total_inc:,.2f}", 
-                    f"{t_sso:,.2f}", f"{t_tax:,.2f}", 
-                    f"{t_prov:,.2f}", f"{t_loan:,.2f}", 
+                    f"{t_bonus:,.2f}", f"{t_other_inc:,.2f}",
+                    f"{t_drive:,.2f}",
+                    f"{t_total_inc:,.2f}",
+                    f"{t_sso:,.2f}", f"{t_tax:,.2f}",
+                    f"{t_prov:,.2f}", f"{t_loan:,.2f}",
                     f"{t_late:,.2f}", f"{t_other_ded:,.2f}",
-                    f"{t_total_ded:,.2f}", 
+                    f"{t_welfare:,.2f}",
+                    f"{t_total_ded:,.2f}",
                     f"{t_net:,.2f}",
                     ""
                 ]
@@ -1245,15 +1249,15 @@ class PayrollModule(ttk.Frame):
             headers = [
                 "รหัส", "ชื่อ-สกุล", "เงินเดือน", "ค่าตำแหน่ง", "OT", "คอมมิชชั่น", 
                 "Incentive", "เบี้ยขยัน", "โบนัส", "อื่นๆ(รับ)", "ค่าเที่ยว", "รวมรับ", 
-                "ประกันสังคม", "ภาษี", "กองทุนฯ", "เงินกู้", "มาสาย/ลา", "อื่นๆ(หัก)", "รวมหัก", 
+                "ประกันสังคม", "ภาษี", "กองทุนฯ", "เงินกู้", "มาสาย/ลา", "อื่นๆ(หัก)", "กองทุนสงเคราะห์ฯ", "รวมหัก",
                 "สุทธิ", "หมายเหตุ"
             ]
             history_sheet.headers(headers)
             history_sheet.set_sheet_data(sheet_data)
-            
-            history_sheet.highlight_columns(columns=list(range(2, 12)), bg="#e6f7ff", fg="black") 
-            history_sheet.highlight_columns(columns=list(range(12, 19)), bg="#fff7e6", fg="black") 
-            history_sheet.highlight_columns(columns=[19], bg="#ffffcc", fg="black") 
+
+            history_sheet.highlight_columns(columns=list(range(2, 12)), bg="#e6f7ff", fg="black")
+            history_sheet.highlight_columns(columns=list(range(12, 20)), bg="#fff7e6", fg="black")
+            history_sheet.highlight_columns(columns=[20], bg="#ffffcc", fg="black") 
             if sheet_data: 
                 history_sheet.highlight_rows(rows=[len(sheet_data)-1], bg="#ccffcc", fg="black") 
             
@@ -1463,8 +1467,8 @@ class PayrollModule(ttk.Frame):
             "welfare_taxable": 0.0, "welfare_nontaxable": 0.0,
             "total_income": 0.0, "net_salary": 0.0,
             "sso": 0.0, "tax": 0.0, "pnd1": 0.0, "pnd3": 0.0, 
-            "provident_fund": 0.0, "loan": 0.0, "late": 0.0, 
-            "other_deduct": 0.0, "total_deduct": 0.0,
+            "provident_fund": 0.0, "loan": 0.0, "late": 0.0,
+            "other_deduct": 0.0, "welfare_fund": 0.0, "total_deduct": 0.0,
             "driving_allowance": 0.0
         }
 
@@ -1538,6 +1542,7 @@ class PayrollModule(ttk.Frame):
                 total_sum['provident_fund'] += res['provident_fund']
                 total_sum['loan'] += res['loan']
                 total_sum['late'] += res['late_deduct']
+                total_sum['welfare_fund'] += res.get('welfare_fund', 0)
                 total_sum['total_deduct'] += res['total_deduct']
                 total_sum['net_salary'] += res['net_salary']
 
@@ -1561,6 +1566,7 @@ class PayrollModule(ttk.Frame):
                     f"{res.get('pnd3',0):,.2f}", 
                     f"{res['provident_fund']:,.2f}", f"{res['loan']:,.2f}", 
                     f"{res['late_deduct']:,.2f}", f"{res['other_deduct']:,.2f}",
+                    f"{res.get('welfare_fund', 0):,.2f}",
                     f"{res['total_deduct']:,.2f}", f"{res['net_salary']:,.2f}",
                     res['remark']  # 🛠️ เอาใส่ไว้ขวาสุด
                 ]
@@ -1578,13 +1584,14 @@ class PayrollModule(ttk.Frame):
             f"{total_sum['sso']:,.2f}", f"{total_sum['pnd1']:,.2f}", f"{total_sum['pnd3']:,.2f}", 
             f"{total_sum['provident_fund']:,.2f}", f"{total_sum['loan']:,.2f}",
             f"{total_sum['late']:,.2f}", f"{total_sum['other_deduct']:,.2f}",
+            f"{total_sum['welfare_fund']:,.2f}",
             f"{total_sum['total_deduct']:,.2f}", f"{total_sum['net_salary']:,.2f}",
             ""  # 🛠️ เพิ่มช่องว่างตรงคอลัมน์หมายเหตุ
         ]
         sheet_data.append(summary_row)
 
         # --- 6. อัปเดตตาราง Sheet ---
-        headers = ["รหัส", "ชื่อ-สกุล", "เงินเดือน", "ค่าตำแหน่ง", "OT", "คอมมิชชั่น", "Incentive", "เบี้ยขยัน", "โบนัส", "อื่นๆ(รับ)", "ค่าเที่ยว", "รวมรับ", "ประกันสังคม", "ภ.ง.ด.1", "ภ.ง.ด.3", "กองทุนฯ", "เงินกู้", "มาสาย/ลา", "อื่นๆ(หัก)", "รวมหัก", "สุทธิ", "หมายเหตุ"]
+        headers = ["รหัส", "ชื่อ-สกุล", "เงินเดือน", "ค่าตำแหน่ง", "OT", "คอมมิชชั่น", "Incentive", "เบี้ยขยัน", "โบนัส", "อื่นๆ(รับ)", "ค่าเที่ยว", "รวมรับ", "ประกันสังคม", "ภ.ง.ด.1", "ภ.ง.ด.3", "กองทุนฯ", "เงินกู้", "มาสาย/ลา", "อื่นๆ(หัก)", "กองทุนสงเคราะห์ฯ", "รวมหัก", "สุทธิ", "หมายเหตุ"]
 
         # แยกข้อมูล: 2 คอลัมน์แรก → frozen, ที่เหลือ → main
         frozen_headers  = headers[:2]
@@ -1602,8 +1609,8 @@ class PayrollModule(ttk.Frame):
 
         # ใส่สี Highlight (index เลื่อนซ้าย 2)
         self.results_sheet.highlight_columns(columns=list(range(0, 9)),   bg="#e6f7ff", fg="black")
-        self.results_sheet.highlight_columns(columns=list(range(10, 17)), bg="#fff7e6", fg="black")
-        self.results_sheet.highlight_columns(columns=[18],                bg="#ffffcc", fg="black")
+        self.results_sheet.highlight_columns(columns=list(range(10, 18)), bg="#fff7e6", fg="black")
+        self.results_sheet.highlight_columns(columns=[19],                bg="#ffffcc", fg="black")
         if main_data:
             self.results_sheet.highlight_rows(rows=[len(main_data)-1], bg="#ccffcc", fg="black")
             self.results_sheet_frozen.highlight_rows(rows=[len(frozen_data)-1], bg="#ccffcc", fg="black")
@@ -1645,6 +1652,7 @@ class PayrollModule(ttk.Frame):
                 "total_income": "รวมรับ",
                 "sso": "ประกันสังคม", "provident_fund": "กองทุนสำรองฯ",
                 "loan": "เงินกู้", "late_deduct": "ขาด/สาย", "other_deduct": "อื่นๆ(หัก)",
+                "welfare_fund": "กองทุนสงเคราะห์ฯ",
                 "total_deduct": "รวมหัก", "net_salary": "สุทธิ",
                 "remark": "หมายเหตุ" # 🛠️ [เพิ่มบรรทัดนี้]
             }
