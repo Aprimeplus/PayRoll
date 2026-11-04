@@ -2381,8 +2381,8 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
                 sso_base = min(max(result["base_salary"], 1650), float(sso_config.get("max_salary", 15000)))
                 result["sso"] = int(sso_base * (float(sso_config.get("rate", 5.0))/100.0) + 0.5)
 
-            # กองทุนสงเคราะห์ลูกจ้าง 0.25% ของเงินเดือน เริ่ม ต.ค. 2569
-            if end_date.year > 2026 or (end_date.year == 2026 and end_date.month >= 10):
+            # กองทุนสงเคราะห์ลูกจ้าง 0.25% ของเงินเดือน เริ่ม ม.ค. 2570
+            if end_date.year >= 2027:
                 result["welfare_fund"] = round(result["base_salary"] * 0.0025, 2)
 
             result["total_deduct"] = round(result["sso"] + result["tax"] + result["provident_fund"] + result["late_deduct"] + result["loan"] + result["other_deduct"] + result["welfare_fund"], 2)
