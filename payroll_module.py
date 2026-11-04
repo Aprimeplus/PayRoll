@@ -1773,9 +1773,15 @@ class PayrollModule(ttk.Frame):
         # --- Popup เลือกพนักงานที่จะพิมพ์สลิป ---
         popup = tk.Toplevel(self)
         popup.title("🖨️ เลือกพนักงานที่จะพิมพ์สลิป PDF")
-        popup.geometry("420x520")
         popup.resizable(False, False)
         popup.grab_set()
+
+        # จัดให้ popup อยู่กลางหน้าต่างหลัก
+        popup.update_idletasks()
+        w, h = 420, 520
+        px = self.winfo_rootx() + (self.winfo_width() - w) // 2
+        py = self.winfo_rooty() + (self.winfo_height() - h) // 2
+        popup.geometry(f"{w}x{h}+{px}+{py}")
 
         tk.Label(popup, text="เลือกพนักงานที่ต้องการพิมพ์สลิป", font=("", 11, "bold")).pack(pady=(12, 4))
 
