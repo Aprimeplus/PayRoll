@@ -1766,42 +1766,114 @@ class PayrollModule(ttk.Frame):
         return self._temp_pay_date
     
     def _print_selected_payslip(self):
-        # 1. เช็คการเลือก
-        selected_indexes = self.results_sheet.get_selected_rows(return_tuple=True)
-        
-        data_to_print = []
-        if not selected_indexes:
-            if not messagebox.askyesno("พิมพ์ทั้งหมด?", "คุณไม่ได้เลือกพนักงาน\nต้องการพิมพ์สลิปของ 'ทุกคน' ในรายการหรือไม่?"):
-                return
-            data_to_print = self.last_payroll_results
-            filename_prefix = "Payslip_All"
-        else:
-            data_to_print = [self.last_payroll_results[i] for i in selected_indexes]
-            filename_prefix = f"Payslip_{data_to_print[0]['emp_id']}" if len(data_to_print)==1 else "Payslip_Selected"
+        if not self.last_payroll_results:
+            messagebox.showwarning("เตือน", "ไม่มีข้อมูลเงินเดือน กรุณากดคำนวณก่อนครับ")
+            return
 
-        if not data_to_print: return
-        
-        # --- [NEW] 2. ถามวันที่จ่ายเงิน ---
-        pay_date_str = self._ask_pay_date()
-        if not pay_date_str: return # ถ้ากดยกเลิก ก็จบการทำงาน
-        
-        # 3. เลือกที่เซฟไฟล์
-        save_path = filedialog.asksaveasfilename(
-            defaultextension=".pdf",
-            filetypes=[("PDF Files", "*.pdf")],
-            initialfile=f"{filename_prefix}_{datetime.now().strftime('%Y%m%d')}.pdf",
-            title="บันทึกสลิปเงินเดือน"
-        )
-        if not save_path: return
-        
-        try:
-            # --- [NEW] ส่งวันที่จ่ายเงินไปด้วย ---
-            self._generate_pdf(data_to_print, save_path, pay_date_str)
-            
-            messagebox.showinfo("สำเร็จ", f"สร้างไฟล์ PDF เรียบร้อยแล้วที่:\n{save_path}")
-            os.startfile(save_path)
-        except Exception as e:
-            messagebox.showerror("PDF Error", f"เกิดข้อผิดพลาดในการสร้าง PDF:\n{e}")
+        # --- Popup เลือกพนักงานที่จะพิมพ์สลิป ---
+        popup = tk.Toplevel(self)
+        popup.title("🖨️ เลือกพนักงานที่จะพิมพ์สลิป PDF")
+        popup.geometry("420x520")
+        popup.resizable(False, False)
+        popup.grab_set()
+
+        tk.Label(popup, text="เลือกพนักงานที่ต้องการพิมพ์สลิป", font=("", 11, "bold")).pack(pady=(12, 4))
+
+        # --- แถวปุ่ม เลือกทั้งหมด / ยกเลิกทั้งหมด ---
+        btn_frame = ttk.Frame(popup)
+        btn_frame.pack(fill="x", padx=16, pady=(0, 6))
+
+        check_vars = []
+
+        def select_all():
+            for v in check_vars:
+                v.set(True)
+
+        def deselect_all():
+            for v in check_vars:
+                v.set(False)
+
+        ttk.Button(btn_frame, text="✅ เลือกทั้งหมด", command=select_all).pack(side="left", padx=(0, 6))
+        ttk.Button(btn_frame, text="☐ ยกเลิกทั้งหมด", command=deselect_all).pack(side="left")
+
+        # --- รายการพนักงานพร้อม checkbox (scrollable) ---
+        list_frame = ttk.Frame(popup, relief="sunken", borderwidth=1)
+        list_frame.pack(fill="both", expand=True, padx=16, pady=4)
+
+        canvas = tk.Canvas(list_frame, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=canvas.yview)
+        inner = ttk.Frame(canvas)
+
+        inner.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=inner, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # ผูก mouse wheel กับ canvas
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        # สร้าง checkbox ทีละคน
+        for idx, res in enumerate(self.last_payroll_results):
+            var = tk.BooleanVar(value=True)
+            check_vars.append(var)
+            name = res.get('name', f"{res.get('fname','')} {res.get('lname','')}").strip()
+            emp_id = res.get('emp_id', '')
+            ttk.Checkbutton(
+                inner,
+                text=f"  {emp_id}  {name}",
+                variable=var
+            ).pack(anchor="w", padx=8, pady=2)
+
+        # --- ปุ่มด้านล่าง ---
+        bottom_frame = ttk.Frame(popup)
+        bottom_frame.pack(fill="x", padx=16, pady=10)
+
+        def do_print():
+            selected_data = [
+                self.last_payroll_results[i]
+                for i, v in enumerate(check_vars) if v.get()
+            ]
+            if not selected_data:
+                messagebox.showwarning("เตือน", "กรุณาเลือกอย่างน้อย 1 คน", parent=popup)
+                return
+
+            canvas.unbind_all("<MouseWheel>")
+            popup.destroy()
+
+            pay_date_str = self._ask_pay_date()
+            if not pay_date_str:
+                return
+
+            n = len(selected_data)
+            filename_prefix = (
+                f"Payslip_{selected_data[0]['emp_id']}" if n == 1 else "Payslip_Selected"
+            )
+            save_path = filedialog.asksaveasfilename(
+                defaultextension=".pdf",
+                filetypes=[("PDF Files", "*.pdf")],
+                initialfile=f"{filename_prefix}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                title="บันทึกสลิปเงินเดือน"
+            )
+            if not save_path:
+                return
+
+            try:
+                self._generate_pdf(selected_data, save_path, pay_date_str)
+                messagebox.showinfo("สำเร็จ", f"สร้างไฟล์ PDF เรียบร้อยแล้วที่:\n{save_path}")
+                os.startfile(save_path)
+            except Exception as e:
+                messagebox.showerror("PDF Error", f"เกิดข้อผิดพลาดในการสร้าง PDF:\n{e}")
+
+        def on_cancel():
+            canvas.unbind_all("<MouseWheel>")
+            popup.destroy()
+
+        ttk.Button(bottom_frame, text="🖨️ พิมพ์ PDF", command=do_print, style="Primary.TButton").pack(side="left", padx=(0, 8))
+        ttk.Button(bottom_frame, text="ยกเลิก", command=on_cancel).pack(side="left")
 
     def _generate_pdf(self, data_list, filepath, pay_date_str):
         """
