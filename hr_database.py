@@ -502,11 +502,16 @@ def init_db():
             except Exception: conn.rollback()
 
             try:
+                # ถ้า constraint เก่า (emp_id, leave_date) ยังอยู่ ให้ลบก่อน แล้วสร้างใหม่เป็น (emp_id, leave_date, leave_type)
                 cursor.execute("""
                     ALTER TABLE employee_leave_records
-                    ADD CONSTRAINT unique_emp_leave_date UNIQUE (emp_id, leave_date);
+                    DROP CONSTRAINT IF EXISTS unique_emp_leave_date;
                 """)
-            except Exception: conn.rollback() 
+                cursor.execute("""
+                    ALTER TABLE employee_leave_records
+                    ADD CONSTRAINT unique_emp_leave_date_type UNIQUE (emp_id, leave_date, leave_type);
+                """)
+            except Exception: conn.rollback()
             
             try:
                 cursor.execute("""
@@ -1511,9 +1516,8 @@ def add_employee_leave(emp_id, leave_date, leave_type, num_days, reason="", leav
                 INSERT INTO employee_leave_records 
                 (emp_id, leave_date, leave_type, num_days, reason, leave_start_time, leave_end_time)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (emp_id, leave_date) 
-                DO UPDATE SET 
-                    leave_type = EXCLUDED.leave_type,
+                ON CONFLICT (emp_id, leave_date, leave_type)
+                DO UPDATE SET
                     num_days = EXCLUDED.num_days,
                     reason = EXCLUDED.reason,
                     leave_start_time = EXCLUDED.leave_start_time,
@@ -2229,7 +2233,14 @@ def calculate_payroll_for_employee(emp_id, start_date, end_date, user_inputs=Non
             cursor.execute("SELECT work_date, status, ot_hours, is_ot_approved, total_amount FROM employee_daily_records WHERE emp_id = %s AND work_date BETWEEN %s AND %s", (emp_id, start_date, end_date))
             daily_map = {row['work_date']: dict(row) for row in cursor.fetchall()}
             cursor.execute("SELECT leave_date, num_days, leave_type FROM employee_leave_records WHERE emp_id = %s AND leave_date BETWEEN %s AND %s", (emp_id, start_date, end_date))
-            leave_map = {row['leave_date']: dict(row) for row in cursor.fetchall()}
+            leave_map = {}
+            for _lr in cursor.fetchall():
+                _d = _lr['leave_date']
+                if _d not in leave_map:
+                    leave_map[_d] = {'num_days': 0.0, 'leave_type': ''}
+                leave_map[_d]['num_days'] = round(leave_map[_d]['num_days'] + float(_lr['num_days'] or 0), 4)
+                _t = str(_lr['leave_type']).strip()
+                leave_map[_d]['leave_type'] = (leave_map[_d]['leave_type'] + ',' + _t).strip(',') if leave_map[_d]['leave_type'] else _t
             cursor.execute("SELECT holiday_date FROM company_holidays WHERE holiday_date BETWEEN %s AND %s", (start_date, end_date))
             holiday_dates = {row['holiday_date'] for row in cursor.fetchall()}
 
@@ -2439,9 +2450,15 @@ def process_attendance_summary(start_date, end_date):
             
             cursor.execute("SELECT emp_id, leave_date, leave_type, num_days FROM employee_leave_records WHERE leave_date BETWEEN %s AND %s", (start_date, end_date))
             leaves = {}
-            for row in cursor.fetchall(): 
+            for row in cursor.fetchall():
                 eid = str(row['emp_id'])
-                leaves.setdefault(eid, {})[row['leave_date']] = row
+                _d = row['leave_date']
+                leaves.setdefault(eid, {})
+                if _d not in leaves[eid]:
+                    leaves[eid][_d] = {'emp_id': eid, 'leave_date': _d, 'num_days': 0.0, 'leave_type': ''}
+                leaves[eid][_d]['num_days'] = round(leaves[eid][_d]['num_days'] + float(row['num_days'] or 0), 4)
+                _t = str(row['leave_type']).strip()
+                leaves[eid][_d]['leave_type'] = (leaves[eid][_d]['leave_type'] + ',' + _t).strip(',') if leaves[eid][_d]['leave_type'] else _t
 
             cursor.execute("""SELECT emp_id, scan_timestamp FROM time_attendance_logs 
                               WHERE DATE(scan_timestamp) BETWEEN %s AND %s ORDER BY scan_timestamp ASC""", (start_date, end_date))
